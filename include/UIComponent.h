@@ -52,20 +52,43 @@ class UIComponent {
     bool pressed = false;    // Komponens lenyomva állapot
     bool needsRedraw = true; // Dirty flag, kinduláskor minden komponens újrarajzolást igényel
 
+    // Touch debounce
+    uint32_t lastClickTime = 0;                             // Utolsó érvényes kattintás ideje
+    static constexpr uint32_t DEFAULT_DEBOUNCE_DELAY = 200; // ms - Alapértelmezett debounce idő
+
   public:
+    /**
+     * @brief Konstruktor
+     * @param tft TFT display referencia
+     * @param bounds A komponens határai (Rect)
+     * @param colors Színpaletta a komponenshez
+     * @details A komponens alapértelmezett színpalettát használ, ha nem adunk meg másikat.
+     * @note A bounds szélessége és magassága 0 esetén az alapértelmezett méreteket használja (DEFAULT_COMPONENT_WIDTH és DEFAULT_COMPONENT_HEIGHT).
+     */
     UIComponent(TFT_eSPI &tft, const Rect &bounds, const ColorScheme &colors = ColorScheme::defaultScheme()) : tft(tft), bounds(bounds), colors(colors) {}
 
     virtual ~UIComponent() = default;
 
-    // Touch margin beállítása (felülírható a származtatott osztályokban)
+    /**
+     * @brief Touch margin getter
+     * @return A touch margin értéke (alapértelmezett 0, de a származtatott osztályok felülírhatják)
+     */
     virtual int16_t getTouchMargin() const { return 0; } // 2 pixel alapértelmezett tolerancia
 
-    // Touch területének ellenőrzése (kiterjesztett érzékenységgel)
+    /**
+     * @brief Ellenőrzi, hogy a megadott pont a komponens határain belül van-e (kiterjesztett érzékenységgel)
+     * @param x A pont X koordinátája
+     * @param y A pont Y koordinátája
+     * @return true, ha a pont a komponens határain belül van (figyelembe véve a touch margin-t), false egyébként
+     */
     virtual bool isPointInside(int16_t x, int16_t y) const {
         // Konfigurálható margin a pontosabb érintéshez - lehet hogy a származtatott osztályok felülírják
         const int16_t TOUCH_MARGIN = getTouchMargin();
         return (x >= bounds.x - TOUCH_MARGIN && x <= bounds.x + bounds.width + TOUCH_MARGIN && y >= bounds.y - TOUCH_MARGIN && y <= bounds.y + bounds.height + TOUCH_MARGIN);
     }
+
+    // Debounce idő beállítása (felülírható vagy beállítható példányonként, ha szükséges)
+    virtual uint32_t getDebounceDelay() const { return DEFAULT_DEBOUNCE_DELAY; }
 
     // Touch esemény kezelése - visszatérés: true ha feldolgozta az eseményt
     virtual bool handleTouch(const TouchEvent &event) {
@@ -99,10 +122,17 @@ class UIComponent {
                                   event.y <= bounds.y + bounds.height + RELEASE_TOLERANCE);
 
             onTouchUp(event);
-            if (releaseInside && touchDuration >= 30 && touchDuration <= 2000) { // Érvényes touch duration
-                onClick(event);
-                DEBUG("UIComponent: Valid click detected: duration=%dms\n", touchDuration);
-            } else {
+
+            // Debounce logika: csak akkor kezeljük a kattintást, ha a touchDuration érvényes és nem túl gyors
+            if (releaseInside && touchDuration >= 30 && touchDuration <= 2000) { // Érvényes touch duration feltételek
+                if (millis() - lastClickTime > getDebounceDelay()) {
+                    lastClickTime = millis(); // Frissítjük az utolsó kattintás idejét
+                    onClick(event);
+                    DEBUG("UIComponent: Valid click detected (debounced): duration=%dms\n", touchDuration);
+                } else {
+                    DEBUG("UIComponent: Click debounced (too fast): duration=%dms\n", touchDuration);
+                }
+            } else { // Nem volt érvényes kattintás (pl. túl rövid, túl hosszú, vagy kicsúszott)
                 onTouchCancel(event);
                 DEBUG("UIComponent: Touch cancelled: inside=%s duration=%dms\n", releaseInside ? "true" : "false", touchDuration);
             }
