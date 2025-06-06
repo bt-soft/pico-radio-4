@@ -51,10 +51,10 @@ class FMScreen : public UIScreen {
 
     /**
      * @brief Loop hívás felülírása
+     * animációs vagy egyéb saját logika végrehajtására
+     * @note Ez a metódus nem hívja meg a gyerek komponensek loop-ját, csak saját logikát tartalmaz.
      */
-    virtual void handleOwnLoop() override {
-        // Saját loop logika
-    }
+    virtual void handleOwnLoop() override {}
 
     /**
      * @brief Kirajzolja a képernyő saját tartalmát

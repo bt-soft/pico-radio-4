@@ -54,7 +54,8 @@ class UIButton : public UIComponent {
     bool useMiniFont = false;
     uint32_t longPressThreshold = 1000; // ms
     uint32_t pressStartTime = 0;
-    bool longPressDetected = false;
+    bool longPressThresholdMet = false; // Jelzi, ha a hosszú lenyomás küszöbét elértük
+    bool longPressEventFired = false;   // Jelzi, ha a hosszú lenyomás esemény már aktiválódott
 
     std::function<void(const ButtonEvent &)> eventCallback;
     std::function<void()> clickCallback; // Backward compatibility
@@ -425,8 +426,10 @@ class UIButton : public UIComponent {
         UIComponent::onTouchDown(event); // Alap implementáció (pressed = true, markForRedraw)
         if (currentState == ButtonState::Disabled)
             return;
+        // A UIComponent::handleTouch már ellenrőrzi a 'disabled' állapotot, így ez a fenti sor elvileg redundáns.
 
-        longPressDetected = false;
+        longPressThresholdMet = false;
+        longPressEventFired = false;
         pressStartTime = millis();
         // A vizuális "lenyomott" állapotot a UIComponent::pressed és a draw() kezeli
     }
@@ -434,16 +437,45 @@ class UIButton : public UIComponent {
     /**
      * @brief Gomb felengedése esemény kezelése
      */
-    virtual void onClick(const TouchEvent &event) override {
+    virtual void onTouchUp(const TouchEvent &event) override {
+        UIComponent::onTouchUp(event); // Alap osztály hívása (jelenleg csak DEBUG üzenet)
 
+        if (currentState == ButtonState::Disabled) {
+            // Biztonsági reset, bár a disabled állapotnak már korábban meg kellett volna akadályoznia az interakciót
+            pressStartTime = 0;
+            longPressThresholdMet = false;
+            longPressEventFired = false;
+            return;
+        }
+
+        // Ellenőrizzük, hogy a felengedés a gomb tényleges (nem margóval növelt) határain belül történt-e
+        bool releaseInsideActualBounds = bounds.contains(event.x, event.y);
+
+        if (longPressThresholdMet && releaseInsideActualBounds) {
+            if (eventCallback) {
+                DEBUG("UIButton: Long press event fired for button %d (%s)\n", buttonId, label);
+                eventCallback(ButtonEvent(buttonId, label, EventButtonState::LongPressed));
+            }
+            longPressEventFired = true; // Jelöljük, hogy a hosszú lenyomás eseményt kezeltük
+            markForRedraw();            // Újrarajzolás szükséges lehet
+        }
+
+        // A pressStartTime és longPressThresholdMet flag-eket az onClick vagy onTouchCancel fogja véglegesen resetelni,
+        // miután a UIComponent::handleTouch meghozta a döntést.
+        // A longPressEventFired itt beállításra kerül, hogy az onClick tudjon róla.
+    }
+
+    virtual void onClick(const TouchEvent &event) override {
         UIComponent::onClick(event); // Alap implementáció
 
         if (currentState == ButtonState::Disabled)
             return;
 
-        if (longPressDetected) {
-            // Ha hosszú lenyomás történt, az onClick eseményt esetleg nem kellene feldolgozni,
-            // vagy másképp kell kezelni. Most feltételezzük, hogy a hosszú nyomás eseménye különálló.
+        if (longPressEventFired) {
+            // Ha az onTouchUp már kezelt egy hosszú lenyomás eseményt,
+            // akkor itt már nem csinálunk semmit, csak resetelünk.
+            pressStartTime = 0;
+            longPressThresholdMet = false; // longPressEventFired már true, következő onTouchDown reseteli
             return;
         }
 
@@ -462,29 +494,46 @@ class UIButton : public UIComponent {
             clickCallback();
         }
         markForRedraw(); // Logikai állapot változott
+
+        // Reset a következő interakcióhoz (ha nem long press volt)
+        pressStartTime = 0;
+        longPressThresholdMet = false;
+        // longPressEventFired már false, vagy ha true volt, fentebb kiléptünk
     }
 
+    /**
+     * @brief Gomb lenyomás megszakítása esemény kezelése
+     * @param event A touch esemény, amely tartalmazza a koordinátákat és a lenyomás állapotát
+     */
     virtual void onTouchCancel(const TouchEvent &event) override {
+
         UIComponent::onTouchCancel(event); // Alap implementáció (pressed = false, markForRedraw)
+
         if (currentState == ButtonState::Disabled)
             return;
+
+        // Ha a lenyomás megszakadt (pl. ujj lecsúszott), töröljük a flag-eket.
+        // Hosszú lenyomás esemény nem aktiválódik.
         pressStartTime = 0;
-        longPressDetected = false;
+        longPressThresholdMet = false;
+        longPressEventFired = false;
+        // Az UIComponent::onTouchCancel már gondoskodik a markForRedraw-ról.
     }
 
   public:
+    /**
+     * @brief Gomb komponens loop függvénye
+     */
     virtual void loop() override {
         UIComponent::loop(); // Alap osztály loop-ja (ha van)
 
-        if (currentState == ButtonState::Disabled) // Módosítva
+        if (currentState == ButtonState::Disabled || !this->pressed) // `this->pressed` a UIComponent-ből jön
             return;
 
-        if (pressed && !longPressDetected && pressStartTime > 0) { // `pressed` a UIComponent-ből jön
+        if (!longPressThresholdMet && pressStartTime > 0) {
             if (millis() - pressStartTime >= longPressThreshold) {
-                longPressDetected = true;
-                if (eventCallback) {
-                    eventCallback(ButtonEvent(buttonId, label, EventButtonState::LongPressed));
-                }
+                longPressThresholdMet = true;
+                // Opcionális: markForRedraw(); ha vizuális visszajelzést szeretnénk arról, hogy a hosszú lenyomás "élesítve" van.
                 // Hosszú nyomásnak lehet saját vizuális állapota, vagy csak eseményt vált ki
                 // Ha a logikai állapot változik, itt kell beállítani és markForRedraw()
                 // Pl. setLogicalButtonState(LogicalButtonState::LongPressedState); (ha lenne ilyen) // Eredeti
@@ -494,13 +543,9 @@ class UIButton : public UIComponent {
         }
     }
 
-    // Az onClick felülírása az UIComponent-ben már nem szükséges, mert az új onClick ezt kezeli.
-    // A régi onClick(const TouchEvent &event) override törölhető, ha az UIComponent-ben
-    // a protected onClick üres volt, vagy az új logika lefedi.
-    // Jelenleg az UIComponent::onClick üres, tehát a UIButton-ban lévő onClick felülírása a helyes.
-
     // Touch sensitivity növelése gomboknál
-    virtual int16_t getTouchMargin() const override { return 6; } // 6 pixel tolerancia gomboknál (nagyobb mint az alapértelmezett 4)
+    // 6 pixel tolerancia gomboknál (nagyobb mint az alapértelmezett 4)
+    virtual int16_t getTouchMargin() const override { return 6; }
 };
 
 #endif // __UI_BUTTON_H
