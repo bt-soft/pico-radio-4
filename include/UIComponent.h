@@ -87,10 +87,19 @@ class UIComponent {
         return (x >= bounds.x - TOUCH_MARGIN && x <= bounds.x + bounds.width + TOUCH_MARGIN && y >= bounds.y - TOUCH_MARGIN && y <= bounds.y + bounds.height + TOUCH_MARGIN);
     }
 
-    // Debounce idő beállítása (felülírható vagy beállítható példányonként, ha szükséges)
+    /**
+     * @brief Debounce delay getter
+     * @return A debounce delay értéke (alapértelmezett 200 ms)
+     * @note A származtatott osztályok felülírhatják, ha más debounce időt szeretnének használni.
+     */
     virtual uint32_t getDebounceDelay() const { return DEFAULT_DEBOUNCE_DELAY; }
 
-    // Touch esemény kezelése - visszatérés: true ha feldolgozta az eseményt
+    /**
+     * @brief Touch esemény kezelése
+     * @param event A touch esemény, amely tartalmazza a koordinátákat és a lenyomás állapotát
+     * @return true, ha a touch eseményt a komponens kezelte, false egyébként
+     * @note Alapértelmezés szerint kezeli a touch eseményeket, de leszármazott osztályok felülírhatják.
+     */
     virtual bool handleTouch(const TouchEvent &event) {
 
         // Ha le van tiltva, akkor nem kezeljük az eseményt
@@ -147,7 +156,12 @@ class UIComponent {
         return false;
     };
 
-    // Rotary encoder esemény kezelése - visszatérés: true ha feldolgozta az eseményt
+    /**
+     * @brief Rotary encoder esemény kezelése
+     * @param event A rotary esemény, amely tartalmazza az irányt és a gomb állapotát
+     * @return true, ha a rotary eseményt a komponens kezelte, false egyébként
+     * @note Alapértelmezés szerint nem kezeli a rotary eseményeket, de leszármazott osztályok felülírhatják.
+     */
     virtual bool handleRotary(const RotaryEvent &event) { return false; }
 
     // Rajzolás

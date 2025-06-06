@@ -1,3 +1,9 @@
+/**
+ * @file main.cpp
+ * @brief Core0/1 fő programfájl, amely az Arduino környezetet inicializálja és elindítja a fő ciklust.
+ * @details Ez a fájl tartalmazza a szükséges könyvtárakat, a képernyőkezelést, a rotary enkódert és az SI4735 rádiómodult.
+ */
+
 #include <Arduino.h>
 
 #include "PicoMemoryInfo.h"

@@ -4,6 +4,10 @@
 #include "UIButton.h"
 #include "UIScreen.h"
 
+/**
+ * @file FMScreen.h
+ * @brief FM képernyő osztály
+ */
 class TestScreen : public UIScreen {
   private:
     // Navigációs gombok

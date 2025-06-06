@@ -12,7 +12,7 @@
  */
 class UIButton : public UIComponent {
   public:
-    // Alapértelmezett gomb méretek (növelve a jobb érinthetőség érdekében)
+    // Alapértelmezett gomb méretek
     static constexpr uint16_t DEFAULT_BUTTON_WIDTH = 63;
     static constexpr uint16_t DEFAULT_BUTTON_HEIGHT = 35;
 

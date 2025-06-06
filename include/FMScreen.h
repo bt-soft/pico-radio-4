@@ -4,6 +4,11 @@
 #include "UIButton.h"
 #include "UIScreen.h"
 
+/**
+ * @file FMScreen.h
+ * @brief FM képernyő osztály
+ * @details Ez az osztály kezeli az FM rádió vezérlő funkcióit és hibakeresést.
+ */
 class FMScreen : public UIScreen {
   private:
     // Navigációs gombok
