@@ -31,7 +31,7 @@ struct ColorScheme {
             TFT_LIGHTGREY, // border
             TFT_BLUE,      // pressedBackground
             TFT_WHITE,     // pressedForeground
-            TFT_ORANGE,    // pressedBorder
+            TFT_WHITE,     // pressedBorder
             TFT_BLACK,     // disabledBackground
             TFT_DARKGREY,  // disabledForeground
             TFT_DARKGREY,  // disabledBorder
@@ -72,6 +72,7 @@ class UIColorPalette {
     static constexpr uint16_t BUTTON_DEFAULT_TEXT = TFT_WHITE;
     static constexpr uint16_t BUTTON_DEFAULT_BORDER = TFT_WHITE;
     static constexpr uint16_t BUTTON_DEFAULT_PRESSED = TFT_BLUE;
+    static constexpr uint16_t BUTTON_DEFAULT_PRESSED_BORDER = TFT_WHITE;
 
     // Speciális gomb színek
     static constexpr uint16_t BUTTON_OK_BACKGROUND = TFT_DARKGREEN;
@@ -117,12 +118,14 @@ class UIColorPalette {
      * Alapértelmezett gomb ColorScheme létrehozása
      */
     static ColorScheme createDefaultButtonScheme() {
-        ColorScheme colors;
+        ColorScheme colors = ColorScheme::defaultScheme();
+
         colors.background = BUTTON_DEFAULT_BACKGROUND;
         colors.foreground = BUTTON_DEFAULT_TEXT;
         colors.border = BUTTON_DEFAULT_BORDER;
         colors.pressedBackground = BUTTON_DEFAULT_PRESSED;
         colors.pressedForeground = BUTTON_DEFAULT_TEXT;
+        colors.pressedBorder = BUTTON_DEFAULT_PRESSED_BORDER; // A lenyomott állapot szegélye
         colors.disabledBackground = BUTTON_DISABLED_BACKGROUND;
         colors.disabledForeground = BUTTON_DISABLED_TEXT;
         colors.disabledBorder = BUTTON_DISABLED_BORDER;
@@ -137,7 +140,7 @@ class UIColorPalette {
         colors.background = BUTTON_OK_BACKGROUND;
         colors.foreground = BUTTON_OK_TEXT;
         colors.border = BUTTON_OK_BORDER;
-        colors.pressedBackground = TFT_GREEN;
+        colors.pressedBackground = BUTTON_DEFAULT_PRESSED_BORDER; // A lenyomott állapot szegélye
         colors.pressedForeground = BUTTON_OK_TEXT;
         return colors;
     }

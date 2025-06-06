@@ -37,9 +37,7 @@ class UIButton : public UIComponent {
         uint8_t id;
         const char *label;
         EventButtonState state;
-        uint32_t timestamp;
-
-        ButtonEvent(uint8_t id, const char *label, EventButtonState state) : id(id), label(label), state(state), timestamp(millis()) {}
+        ButtonEvent(uint8_t id, const char *label, EventButtonState state) : id(id), label(label), state(state) {}
     };
 
     enum class ButtonState { Off, On, Disabled, CurrentActive };
@@ -465,6 +463,10 @@ class UIButton : public UIComponent {
         // A longPressEventFired itt beállításra kerül, hogy az onClick tudjon róla.
     }
 
+    /**
+     * @brief Gomb kattintás esemény kezelése
+     * @param event A touch esemény, amely tartalmazza a koordinátákat és a lenyomás állapotát
+     */
     virtual void onClick(const TouchEvent &event) override {
         UIComponent::onClick(event); // Alap implementáció
 
