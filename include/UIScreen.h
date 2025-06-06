@@ -41,6 +41,7 @@ class UIScreen : public UIContainerComponent {
      * @param mgr ScreenManager referencia
      */
     void setManager(IScreenManager *mgr) { manager = mgr; }
+    IScreenManager *getManager() const { return manager; }
 
     /**
      * @brief Paraméterek beállítása
