@@ -150,6 +150,18 @@ class UIButton : public UIComponent {
     }
 
   public:
+    /**
+     * @brief Gomb komponens konstruktora
+     * @param tft TFT_eSPI referencia
+     * @param id Gomb azonosítója
+     * @param bounds A gomb határai (Rect)
+     * @param label A gomb felirata
+     * @param type A gomb típusa (Pushable vagy Toggleable)
+     * @param state A gomb kezdeti állapota (Off, On, Disabled, CurrentActive)
+     * @param callback Eseménykezelő függvény, amely a gomb eseményeit kezeli
+     * @param colors Színpaletta a gombhoz
+     * @note A bounds szélessége és magassága 0 esetén az alapértelmezett méreteket használja (DEFAULT_BUTTON_WIDTH és DEFAULT_BUTTON_HEIGHT).
+     */
     UIButton(TFT_eSPI &tft,
              uint8_t id,                                                             // ID
              const Rect &bounds,                                                     // rect
@@ -159,7 +171,8 @@ class UIButton : public UIComponent {
              std::function<void(const ButtonEvent &)> callback = nullptr,            // callback
              const ColorScheme &colors = UIColorPalette::createDefaultButtonScheme() // colors
              )
-        : UIComponent(tft, Rect(bounds.x, bounds.y, (bounds.width == 0 ? DEFAULT_BUTTON_WIDTH : bounds.width), (bounds.height == 0 ? DEFAULT_BUTTON_HEIGHT : bounds.height)), colors),
+        : UIComponent(tft, Rect(bounds.x, bounds.y, (bounds.width == 0 ? DEFAULT_BUTTON_WIDTH : bounds.width), (bounds.height == 0 ? DEFAULT_BUTTON_HEIGHT : bounds.height)),
+                      colors),
           buttonId(id), label(label), buttonType(type), currentState(state), eventCallback(callback) {
         // Ha a gombot eleve letiltott állapottal hozzuk létre,
         // akkor az ősosztály 'disabled' flag-jét is be kell állítani.
@@ -168,6 +181,17 @@ class UIButton : public UIComponent {
         }
     }
 
+    /**
+     * @brief Gomb komponens konstruktora
+     * @param tft TFT_eSPI referencia
+     * @param id Gomb azonosítója
+     * @param bounds A gomb határai (Rect)
+     * @param label A gomb felirata
+     * @param type A gomb típusa (Pushable vagy Toggleable)
+     * @param callback Eseménykezelő függvény, amely a gomb eseményeit kezeli
+     * @param colors Színpaletta a gombhoz
+     * @note A bounds szélessége és magassága 0 esetén az alapértelmezett méreteket használja (DEFAULT_BUTTON_WIDTH és DEFAULT_BUTTON_HEIGHT).
+     */
     UIButton(TFT_eSPI &tft,
              uint8_t id,                                                             // ID
              const Rect &bounds,                                                     // rect
