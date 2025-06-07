@@ -8,7 +8,6 @@
 #include "UIButton.h"
 #include "UIContainerComponent.h"
 #include "UIScreen.h" // Szükséges lehet, ha a DerivedScreen mindig UIScreen leszármazott
-#include "defines.h"  // A DEBUG makróhoz
 
 // Struktúra a gombok definíciójához a csoportos elrendezéshez
 // Ezt a struktúrát használják a layout metódusok.
@@ -68,7 +67,6 @@ class ScreenButtonsManager {
             int16_t btnH = (def.height > 0) ? def.height : defaultButtonHeightRef;
 
             if (currentY_build == marginTop && btnH > maxColumnHeight) {
-                DEBUG("ScreenButtonsManager::layoutVerticalButtonGroup: Button %d ('%s') too tall for column (%d > %d), skipping.\n", def.id, def.label, btnH, maxColumnHeight);
                 if (!currentBuildingColButtons.empty()) { // Ha az előző oszlopban voltak gombok
                     colsOfButtons.push_back(currentBuildingColButtons);
                     colMaxWidhtsList.push_back(currentBuildingColMaxW);
@@ -87,8 +85,6 @@ class ScreenButtonsManager {
                 currentBuildingColMaxW = 0;
 
                 if (btnH > maxColumnHeight) { // Ellenőrizzük, hogy az új oszlopot kezdő gomb nem túl magas-e
-                    DEBUG("ScreenButtonsManager::layoutVerticalButtonGroup: Button %d ('%s') too tall for new column (%d > %d), skipping.\n", def.id, def.label, btnH,
-                          maxColumnHeight);
                     continue;
                 }
             }
@@ -171,7 +167,6 @@ class ScreenButtonsManager {
             int16_t btnHeight = (def.height > 0) ? def.height : defaultButtonHeightRef;
 
             if (currentX_build == marginLeft && btnWidth > maxRowWidth) {
-                DEBUG("ScreenButtonsManager::layoutHorizontalButtonGroup: Button %d ('%s') too wide for row (%d > %d), skipping.\n", def.id, def.label, btnWidth, maxRowWidth);
                 if (!currentBuildingRowButtons.empty()) { // Ha az előző sorban voltak gombok
                     rowsOfButtons.push_back(currentBuildingRowButtons);
                     rowMaxHeightsList.push_back(currentBuildingRowMaxH);
@@ -190,8 +185,6 @@ class ScreenButtonsManager {
                 currentBuildingRowMaxH = 0;
 
                 if (btnWidth > maxRowWidth) { // Ellenőrizzük, hogy az új sort kezdő gomb nem túl széles-e
-                    DEBUG("ScreenButtonsManager::layoutHorizontalButtonGroup: Button %d ('%s') too wide for new row (%d > %d), skipping.\n", def.id, def.label, btnWidth,
-                          maxRowWidth);
                     continue;
                 }
             }
