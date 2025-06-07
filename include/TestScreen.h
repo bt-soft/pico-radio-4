@@ -2,6 +2,7 @@
 #define __TEST_SCREEN_H
 
 #include "ButtonsGroupManager.h"
+#include "MessageDialog.h" // Hozzáadva a MessageDialog használatához
 #include "UIScreen.h"
 
 /**
@@ -79,11 +80,11 @@ class TestScreen : public UIScreen, public ButtonsGroupManager<TestScreen> {
     void layoutComponents() {
 
         // Előre definiált feliratok a vízszintes gombokhoz
-        const char *horizontalLabels[] = {"HBtn1", "HBtn2",  "HBtn3",  "HBtn4",  "HBtn5",  "HBtn6",  /*"HBtn7", "HBtn8",
-                                          "HBtn9", "HBtn10", "HBtn11", "HBtn12", "HBtn13", "HBtn14", "HBtn15"*/};
+        const char *horizontalLabels[] = {/*"HBtn1", "HBtn2",*/ "Msg Ok", "MsgOkCancel", "MsgYesNo", "MsgYesNoCancel"};
         constexpr size_t numHorizontalButtons = ARRAY_ITEM_COUNT(horizontalLabels);
 
         // Vízszintes gombok tesztelése (alsó sor)
+        // Meglévő gombok + új dialógus indító gombok
         std::vector<ButtonGroupDefinition> horizontalButtonDefs;
         for (size_t i = 0; i < numHorizontalButtons; ++i) {
             horizontalButtonDefs.push_back({static_cast<uint8_t>(i + 1), // ID
@@ -91,13 +92,49 @@ class TestScreen : public UIScreen, public ButtonsGroupManager<TestScreen> {
                                             UIButton::ButtonType::Pushable,
                                             [this, id = i + 1](const UIButton::ButtonEvent &event) {
                                                 if (event.state == UIButton::EventButtonState::Clicked) {
-                                                    DEBUG("TestScreen: Horizontal Button %d clicked\n", id);
+                                                    DEBUG("TestScreen: Horizontal Button %d ('%s') clicked\n", id, event.label);
+                                                    // Dialógusok indítása az új gombokkal
+                                                    MessageDialog::ButtonsType dialogType = MessageDialog::ButtonsType::Ok;
+                                                    const char *dialogMessage = "Default message";
+                                                    bool showSpecificDialog = true;
+
+                                                    if (STREQ(event.label, "Msg Ok")) {
+                                                        dialogType = MessageDialog::ButtonsType::Ok;
+                                                        dialogMessage = "This is an OK dialog.";
+                                                    } else if (STREQ(event.label, "MsgOkCancel")) {
+                                                        dialogType = MessageDialog::ButtonsType::OkCancel;
+                                                        dialogMessage = "This is an OK/Cancel dialog.";
+                                                    } else if (STREQ(event.label, "MsgYesNo")) {
+                                                        dialogType = MessageDialog::ButtonsType::YesNo;
+                                                        dialogMessage = "This is a Yes/No dialog.";
+                                                    } else if (STREQ(event.label, "MsgYesNoCancel")) {
+                                                        dialogType = MessageDialog::ButtonsType::YesNoCancel;
+                                                        dialogMessage = "This is a Yes/No/Cancel dialog.";
+                                                    } else {
+                                                        showSpecificDialog = false; // Nem dialógus indító gomb
+                                                    }
+
+                                                    if (showSpecificDialog) {
+                                                        Rect dialogBounds((tft.width() - 280) / 2, -1, 280, 0); // Centered X, auto Y, width 280, auto-height
+                                                        auto dialog = std::make_shared<MessageDialog>(this, this->tft, dialogBounds, "Test Dialog", dialogMessage, dialogType);
+                                                        dialog->setDialogCallback([this, label = event.label](MessageDialog::DialogResult result) {
+                                                            const char *resultStr = "Unknown";
+                                                            if (result == MessageDialog::DialogResult::Accepted)
+                                                                resultStr = "Accepted";
+                                                            else if (result == MessageDialog::DialogResult::Rejected)
+                                                                resultStr = "Rejected";
+                                                            else if (result == MessageDialog::DialogResult::Dismissed)
+                                                                resultStr = "Dismissed";
+                                                            DEBUG("TestScreen: Dialog from '%s' closed with: %s\n", label, resultStr);
+                                                        });
+                                                        this->showDialog(dialog);
+                                                    }
                                                 }
                                             },
                                             UIButton::ButtonState::Off});
         }
 
-        // A layoutHorizontalButtonGroup a ScreenButtonsManager-ből öröklődik és a TestScreen (ami UIScreen is) tft-jét és addChild-ját használja.
+        // A layoutHorizontalButtonGroup a ButtonsGroupManager-ből öröklődik
         layoutHorizontalButtonGroup(horizontalButtonDefs);
 
         // Előre definiált feliratok a függőleges gombokhoz
@@ -120,8 +157,12 @@ class TestScreen : public UIScreen, public ButtonsGroupManager<TestScreen> {
             });
         }
 
-        layoutVerticalButtonGroup(verticalButtonDefs, nullptr, 5, 5,
-                                  (5 + UIButton::DEFAULT_BUTTON_HEIGHT + 3) * 1); // Alsó margó növelése, hogy ne ütközzön a vízszintes gombokkal
+        // Alsó margó növelése a függőleges gombokhoz, hogy elférjenek a vízszintes gombok (akár 3 sorban is)
+        int16_t horizontal_margin_bottom_for_group = 5; // A layoutHorizontalButtonGroup alapértelmezett marginBottom-ja
+        int16_t horizontal_row_gap = 3;                 // A layoutHorizontalButtonGroup alapértelmezett buttonGap-je (sorok között is ezt használhatja)
+        int16_t marginBottomForVerticalLayout = horizontal_margin_bottom_for_group + 3 * UIButton::DEFAULT_BUTTON_HEIGHT + 2 * horizontal_row_gap;
+
+        layoutVerticalButtonGroup(verticalButtonDefs, nullptr, 5, 5, marginBottomForVerticalLayout);
     }
 };
 

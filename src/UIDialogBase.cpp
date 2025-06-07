@@ -166,6 +166,15 @@ bool UIDialogBase::handleTouch(const TouchEvent &event) {
     return false;
 }
 
+/**
+ * @brief Jelzi, hogy a dialógust újra kell rajzolni.
+ * @details Felülírja az UIComponent::markForRedraw metódusát, hogy biztosítsa
+ * a dialógus-specifikus újrarajzolási igények kezelését.
+ */
+void UIDialogBase::markForRedraw() {
+    UIContainerComponent::markForRedraw(); // Meghívja az ősosztály implementációját
+}
+
 void UIDialogBase::drawVeilOptimized() {
     // CSAK a dialógus területén KÍVÜL rajzoljuk a fátyolt!
     constexpr uint8_t VEIL_PIXEL_SIZE = 4; // Fátyol pixel mérete
