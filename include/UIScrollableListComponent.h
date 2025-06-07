@@ -69,7 +69,7 @@ class UIScrollableListComponent : public UIComponent {
             uint8_t prevSize = this->tft.textsize;     // Aktuális szövegméret mentése
             this->tft.setFreeFont(&FreeSansBold9pt7b); // Nagyobb font a magasság számításához
             this->tft.setTextSize(1);                  // Natív méret a FreeSansBold9pt7b-hez
-            itemHeight = tft.fontHeight() + 6;         // Kis padding (lehet, hogy 4 is elég, teszteld)
+            itemHeight = tft.fontHeight() + 8;         // Kis padding
             this->tft.setTextSize(prevSize);           // Eredeti szövegméret visszaállítása
         } else {
             itemHeight = itmHeight;

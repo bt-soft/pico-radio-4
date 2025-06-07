@@ -78,7 +78,6 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
                                 ItemAction::RTTY_FREQUENCIES});
 
         settingItems.push_back({"Factory Reset", "", ItemAction::FACTORY_RESET}); // Nincs érték, vagy "Execute"
-        settingItems.push_back({"Exit Setup", "", ItemAction::NONE});
 
         if (menuList) {
             menuList->markForRedraw(); // Frissítjük a listát, ha már létezik
