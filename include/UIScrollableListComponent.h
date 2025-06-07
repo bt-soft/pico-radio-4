@@ -49,7 +49,7 @@ class UIScrollableListComponent : public UIComponent {
         int totalItems = dataSource->getItemCount();
         if (totalItems > visibleItemCount) { // Csak akkor van értelme a görgetésnek, ha több elem van, mint amennyi látható
             thumbPosRatio = (float)topItemIndex / (totalItems - visibleItemCount);
-        } else { // Ha minden elem látható, vagy kevesebb van, mint a látható hely
+        } else {               // Ha minden elem látható, vagy kevesebb van, mint a látható hely
             thumbPosRatio = 0; // Ha minden látszik
         }
         // Biztosítjuk, hogy a thumbPosRatio 0 és 1 között legyen
@@ -61,19 +61,16 @@ class UIScrollableListComponent : public UIComponent {
     }
 
   public:
-    UIScrollableListComponent(TFT_eSPI &tft, const Rect &bounds, IScrollableListDataSource *ds,
-                              uint8_t visItems = DEFAULT_VISIBLE_ITEMS, uint8_t itmHeight = 0)
+    UIScrollableListComponent(TFT_eSPI &tft, const Rect &bounds, IScrollableListDataSource *ds, uint8_t visItems = DEFAULT_VISIBLE_ITEMS, uint8_t itmHeight = 0)
         : UIComponent(tft, bounds, ColorScheme::defaultScheme()), dataSource(ds) {
 
         if (itmHeight == 0) {
             // Item magasság számítása a font alapján, ha nincs megadva
-            uint8_t prevSize = this->tft.textsize; // Aktuális szövegméret mentése
-            // const GFXfont* prevFont = this->tft.gfxFont; // Aktuális font mentése, ha szükséges
-            this->tft.setFreeFont();                 // Alapértelmezett lista font
-            this->tft.setTextSize(1);                // Alapértelmezett lista szövegméret
-            itemHeight = tft.fontHeight() + 4; // Kis padding
-            this->tft.setTextSize(prevSize);         // Eredeti szövegméret visszaállítása
-            // this->tft.setFreeFont(prevFont);      // Eredeti font visszaállítása
+            uint8_t prevSize = this->tft.textsize;     // Aktuális szövegméret mentése
+            this->tft.setFreeFont(&FreeSansBold9pt7b); // Nagyobb font a magasság számításához
+            this->tft.setTextSize(1);                  // Natív méret a FreeSansBold9pt7b-hez
+            itemHeight = tft.fontHeight() + 6;         // Kis padding (lehet, hogy 4 is elég, teszteld)
+            this->tft.setTextSize(prevSize);           // Eredeti szövegméret visszaállítása
         } else {
             itemHeight = itmHeight;
         }
@@ -108,7 +105,8 @@ class UIScrollableListComponent : public UIComponent {
      * @param absoluteIndex A lista teljes hosszában vett indexe az újrarajzolandó elemnek.
      */
     void redrawListItem(int absoluteIndex) {
-        if (!dataSource) return;
+        if (!dataSource)
+            return;
 
         // Ellenőrizzük, hogy az elem látható-e
         if (absoluteIndex < topItemIndex || absoluteIndex >= topItemIndex + visibleItemCount) {
@@ -131,8 +129,7 @@ class UIScrollableListComponent : public UIComponent {
         // const GFXfont* prevFont = tft.gfxFont; // Ha egyedi fontot használnánk
 
         tft.setTextDatum(ML_DATUM);
-        tft.setFreeFont(); // Listaelemek alapértelmezett fontja
-        tft.setTextSize(1);   // Listaelemek alapértelmezett szövegmérete
+        // A fontot és méretet a label/value részeknél külön állítjuk
 
         if (absoluteIndex == selectedItemIndex) {
             tft.fillRect(itemBounds.x, itemBounds.y, itemBounds.width, itemBounds.height, selectedItemBackground);
@@ -141,7 +138,30 @@ class UIScrollableListComponent : public UIComponent {
             tft.fillRect(itemBounds.x, itemBounds.y, itemBounds.width, itemBounds.height, TFT_COLOR_BACKGROUND); // Fekete háttér
             tft.setTextColor(itemTextColor, TFT_COLOR_BACKGROUND);
         }
-        tft.drawString(dataSource->getItemAt(absoluteIndex), itemBounds.x + ITEM_TEXT_PADDING_X, itemBounds.y + itemHeight / 2);
+
+        String fullItemText = dataSource->getItemAt(absoluteIndex);
+        int tabPosition = fullItemText.indexOf('\t');
+        String labelPart = fullItemText;
+        String valuePart = "";
+
+        if (tabPosition != -1) {
+            labelPart = fullItemText.substring(0, tabPosition);
+            valuePart = fullItemText.substring(tabPosition + 1);
+        }
+
+        // Label rész rajzolása (nagyobb, balra igazított)
+        tft.setFreeFont(&FreeSansBold9pt7b); // Nagyobb font a labelnek
+        tft.setTextSize(1);                  // Natív méret
+        tft.drawString(labelPart, itemBounds.x + ITEM_TEXT_PADDING_X, itemBounds.y + itemHeight / 2);
+
+        // Value rész rajzolása (kisebb, jobbra igazított)
+        if (valuePart.length() > 0) {
+            tft.setFreeFont(); // Kisebb, alapértelmezett font
+            tft.setTextSize(1);
+            tft.setTextDatum(MR_DATUM); // Middle Right
+            tft.drawString(valuePart, itemBounds.x + itemBounds.width - ITEM_TEXT_PADDING_X, itemBounds.y + itemHeight / 2);
+            tft.setTextDatum(ML_DATUM); // Visszaállítás ML_DATUM-ra a következő elemhez/állapothoz
+        }
 
         // Szövegbeállítások visszaállítása
         tft.setTextDatum(prevDatum);
@@ -162,9 +182,7 @@ class UIScrollableListComponent : public UIComponent {
         uint8_t prevSize = tft.textsize;
         // const GFXfont* prevFont = tft.gfxFont;
 
-        tft.setTextDatum(ML_DATUM); // Middle Left
-        tft.setFreeFont();          // Listaelemek alapértelmezett fontja
-        tft.setTextSize(1);         // Listaelemek alapértelmezett szövegmérete
+        // A fontot és méretet a label/value részeknél külön állítjuk minden itemnél
 
         int itemCount = dataSource->getItemCount();
         for (int i = 0; i < visibleItemCount; ++i) {
@@ -186,7 +204,30 @@ class UIScrollableListComponent : public UIComponent {
                 // A háttér már fekete a fő fillRect miatt
                 tft.setTextColor(itemTextColor, TFT_COLOR_BACKGROUND);
             }
-            tft.drawString(dataSource->getItemAt(currentItemIndex), itemBounds.x + ITEM_TEXT_PADDING_X, itemBounds.y + itemHeight / 2);
+
+            String fullItemText = dataSource->getItemAt(currentItemIndex);
+            int tabPosition = fullItemText.indexOf('\t');
+            String labelPart = fullItemText;
+            String valuePart = "";
+
+            if (tabPosition != -1) {
+                labelPart = fullItemText.substring(0, tabPosition);
+                valuePart = fullItemText.substring(tabPosition + 1);
+            }
+
+            // Label rész rajzolása
+            tft.setTextDatum(ML_DATUM);
+            tft.setFreeFont(&FreeSansBold9pt7b);
+            tft.setTextSize(1);
+            tft.drawString(labelPart, itemBounds.x + ITEM_TEXT_PADDING_X, itemBounds.y + itemHeight / 2);
+
+            // Value rész rajzolása
+            if (valuePart.length() > 0) {
+                tft.setTextDatum(MR_DATUM);
+                tft.setFreeFont(); // Kisebb font
+                tft.setTextSize(1);
+                tft.drawString(valuePart, itemBounds.x + itemBounds.width - ITEM_TEXT_PADDING_X, itemBounds.y + itemHeight / 2);
+            }
         }
         // Szövegbeállítások visszaállítása
         tft.setTextDatum(prevDatum);
@@ -237,9 +278,9 @@ class UIScrollableListComponent : public UIComponent {
                 markForRedraw();
             } else {
                 // Csak a kiválasztás változott a látható elemeken belül
-                redrawListItem(oldSelectedIndex); // Régi kiválasztott normál stílussal
+                redrawListItem(oldSelectedIndex);  // Régi kiválasztott normál stílussal
                 redrawListItem(selectedItemIndex); // Új kiválasztott kiemelt stílussal
-                drawScrollBar(); // Görgetősáv frissítése
+                drawScrollBar();                   // Görgetősáv frissítése
             }
         }
         return handled;

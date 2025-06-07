@@ -30,30 +30,13 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
         NONE
     };
     struct SettingItem {
-        String label; // Módosítva String-re
+        const char *label; // Const char*-ra a statikus részhez
+        String value;      // Dinamikus érték Stringként
         ItemAction action;
     };
 
     std::shared_ptr<UIScrollableListComponent> menuList;
     std::vector<SettingItem> settingItems; // String helyett SettingItem
-
-    /**
-     * @brief MiniAudioFft konfiguráció dekódolása.
-     *
-     * Dekódolja a MiniAudioFft konfigurációs értéket emberi olvasható formára.
-     * -1.0f: Disabled, 0.0f: Auto, >0.0f: Manual Gain Factor
-     *
-     * @param value A MiniAudioFft konfigurációs érték.
-     * @return String Az emberi olvasható formátum.
-     */
-    String decodeMiniFftConfig(float value) const {
-        if (value == -1.0f)
-            return "Disabled";
-        else if (value == 0.0f)
-            return "Auto Gain";
-        else
-            return "Manual: " + String(value, 1) + "x";
-    }
 
     /**
      * @brief Menüelemek feltöltése.
@@ -65,22 +48,37 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
         // Mindent törlünk, hogy újra feltölthessük
         settingItems.clear();
 
+        // Lambda segédfüggvény a String konverzióhoz, ha szükséges
+        auto valToString = [](auto v) { return String(v); };
+
+        // Lambda segédfüggvény a MiniAudioFft konfiguráció dekódolásához
+        auto decodeMiniFftConfig = [](float value) -> String {
+            if (value == -1.0f)
+                return "Disabled";
+            else if (value == 0.0f)
+                return "Auto Gain";
+            else
+                return "Manual: " + String(value, 1) + "x";
+        };
+
         // Beállítások hozzáadása a menühöz
-        settingItems.push_back({String("Brightness: ") + String(config.data.tftBackgroundBrightness), ItemAction::BRIGHTNESS});
-        settingItems.push_back({String("Squelch Basis: ") + config.data.squelchUsesRSSI ? "RSSI" : "SNR", ItemAction::SQUELCH_BASIS});
-        settingItems.push_back({String("Screen Saver: ") + String(config.data.screenSaverTimeoutMinutes) + " min", ItemAction::SAVER_TIMEOUT});
-        settingItems.push_back({String("Inactive Digit Light: ") + (config.data.tftDigitLigth ? "ON" : "OFF"), ItemAction::INACTIVE_DIGIT_LIGHT});
-        settingItems.push_back({String("Beeper: ") + (config.data.beeperEnabled ? "ON" : "OFF"), ItemAction::BEEPER_ENABLED});
+        settingItems.push_back({"Brightness", valToString(config.data.tftBackgroundBrightness), ItemAction::BRIGHTNESS});
+        settingItems.push_back({"Squelch Basis", String(config.data.squelchUsesRSSI ? "RSSI" : "SNR"), ItemAction::SQUELCH_BASIS});
+        settingItems.push_back({"Screen Saver", String(config.data.screenSaverTimeoutMinutes) + " min", ItemAction::SAVER_TIMEOUT});
+        settingItems.push_back({"Inactive Digit Light", String(config.data.tftDigitLigth ? "ON" : "OFF"), ItemAction::INACTIVE_DIGIT_LIGHT});
+        settingItems.push_back({"Beeper", String(config.data.beeperEnabled ? "ON" : "OFF"), ItemAction::BEEPER_ENABLED});
 
-        settingItems.push_back({String("FFT Config AM: ") + decodeMiniFftConfig(config.data.miniAudioFftConfigAm), ItemAction::FFT_CONFIG_AM});
-        settingItems.push_back({String("FFT Config FM: ") + decodeMiniFftConfig(config.data.miniAudioFftConfigFm), ItemAction::FFT_CONFIG_FM});
+        settingItems.push_back({"FFT Config AM", decodeMiniFftConfig(config.data.miniAudioFftConfigAm), ItemAction::FFT_CONFIG_AM});
+        settingItems.push_back({"FFT Config FM", decodeMiniFftConfig(config.data.miniAudioFftConfigFm), ItemAction::FFT_CONFIG_FM});
 
-        settingItems.push_back({String("CW Receiver Offset: ") + String(config.data.cwReceiverOffsetHz) + " Hz", ItemAction::CW_RECEIVER_OFFSET});
-        settingItems.push_back({String("RTTY Frequencies: ") + String(round(config.data.rttyMarkFrequencyHz)) + " Hz / " + String(round(config.data.rttyShiftHz)) + " Hz",
+        settingItems.push_back({"CW Receiver Offset", String(config.data.cwReceiverOffsetHz) + " Hz", ItemAction::CW_RECEIVER_OFFSET});
+        settingItems.push_back({"RTTY Frequencies",
+                                "M:" + String(round(config.data.rttyMarkFrequencyHz)) + ", S:" + String(round(config.data.rttyMarkFrequencyHz - config.data.rttyShiftHz)) +
+                                    ", Sh:" + String(round(config.data.rttyShiftHz)) + " Hz",
                                 ItemAction::RTTY_FREQUENCIES});
 
-        settingItems.push_back({"Factory Reset", ItemAction::FACTORY_RESET}); // Ennek nincs dinamikus értéke a labelben
-        settingItems.push_back({"Exit Setup", ItemAction::NONE});
+        settingItems.push_back({"Factory Reset", "", ItemAction::FACTORY_RESET}); // Nincs érték, vagy "Execute"
+        settingItems.push_back({"Exit Setup", "", ItemAction::NONE});
 
         if (menuList) {
             menuList->markForRedraw(); // Frissítjük a listát, ha már létezik
@@ -123,8 +121,9 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
 
     virtual String getItemAt(int index) const override {
         if (index >= 0 && index < settingItems.size()) {
-            // Most már a teljes, formázott label-t adjuk vissza
-            return settingItems[index].label;
+            // Egyedi elválasztót használunk, amit a UIScrollableListComponent feldolgozhat
+            // Például: "Label\tValue"
+            return String(settingItems[index].label) + "\t" + settingItems[index].value;
         }
         return "";
     }
@@ -134,7 +133,7 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
             return;
 
         const SettingItem &item = settingItems[index];
-        DEBUG("SetupScreen: Item %d ('%s') clicked, action: %d\n", index, item.label, static_cast<int>(item.action));
+        DEBUG("SetupScreen: Item %d ('%s':'%s') clicked, action: %d\n", index, item.label, item.value.c_str(), static_cast<int>(item.action));
 
         switch (item.action) {
         case ItemAction::BRIGHTNESS:
