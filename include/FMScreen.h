@@ -10,9 +10,6 @@
  * @details Ez az osztály kezeli az FM rádió vezérlő funkcióit és hibakeresést.
  */
 class FMScreen : public UIScreen {
-  private:
-    // std::shared_ptr<UIButton> amButton;   ///< AM képernyőre váltás gomb
-    // std::shared_ptr<UIButton> testButton; ///< Test képernyőre váltás gomb
 
   public:
     /**
@@ -28,13 +25,12 @@ class FMScreen : public UIScreen {
      * @return true ha kezelte az eseményt, false egyébként
      */
     virtual bool handleRotary(const RotaryEvent &event) override {
-        DEBUG("FMScreen handleRotary: direction=%d, button=%d\n", (int)event.direction, (int)event.buttonState);
 
-        // // Ha van aktív dialógus, akkor a szülő implementációnak adjuk át
-        // if (isDialogActive()) {
-        //     DEBUG("FMScreen: Dialog active, forwarding to UIScreen\n");
-        //     return UIScreen::handleRotary(event);
-        // }
+        // Ha van aktív dialógus, akkor a szülő implementációnak adjuk át
+        if (isDialogActive()) {
+            DEBUG("FMScreen: Dialog active, forwarding to UIScreen\n");
+            return UIScreen::handleRotary(event);
+        }
 
         // Saját rotary logika itt
         if (event.direction == RotaryEvent::Direction::Up) {

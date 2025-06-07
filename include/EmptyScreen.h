@@ -28,13 +28,11 @@ class EmptyScreen : public UIScreen {
      * @return true ha kezelte az eseményt, false egyébként
      */
     virtual bool handleRotary(const RotaryEvent &event) override {
-        DEBUG("EmptyScreen handleRotary: direction=%d, button=%d\n", (int)event.direction, (int)event.buttonState);
 
-        // // Ha van aktív dialógus, akkor a szülő implementációnak adjuk át
-        // if (isDialogActive()) {
-        //     DEBUG("FMScreen: Dialog active, forwarding to UIScreen\n");
-        //     return UIScreen::handleRotary(event);
-        // }
+        // Ha van aktív dialógus, akkor a szülő implementációnak adjuk át
+        if (isDialogActive()) {
+            return UIScreen::handleRotary(event);
+        }
 
         // Saját rotary logika itt
         if (event.direction == RotaryEvent::Direction::Up) {
