@@ -16,8 +16,6 @@ MessageDialog::MessageDialog(UIScreen *parentScreen, TFT_eSPI &tft, const Rect &
                              const ColorScheme &cs, bool okClosesDialog)
     : UIDialogBase(parentScreen, tft, initialInputBounds, title, cs), message(message), buttonsType(buttonsType), _okClosesDialog(okClosesDialog) {
 
-    // setDialogCallback(nullptr); // UIDialogBase már nullptr-re inicializálja
-
     // Dialógus tartalmának létrehozása és elrendezése
     createDialogContent(); // Előkészíti a _buttonDefs-et
 
@@ -29,7 +27,8 @@ MessageDialog::MessageDialog(UIScreen *parentScreen, TFT_eSPI &tft, const Rect &
     // A UIDialogBase konstruktora már adhatott neki egy alapértelmezett magasságot.
     // Itt finomítjuk az üzenet és a gombok alapján.
     if (initialInputBounds.height == 0) {          // Az eredeti kérés volt auto-magasság
-        tft.setTextSize(2);                        // Üzenet szövegmérete a magasság kalkulációhoz
+        tft.setFreeFont(&FreeSansBold9pt7b);       // Üzenet fontja a magasság kalkulációhoz
+        tft.setTextSize(1);                        // Üzenet szövegmérete a magasság kalkulációhoz
         int16_t textHeight = tft.fontHeight() * 2; // Durva becslés 2 sorra (állítható)
         // TODO: Pontosabb szövegmagasság számítás a layoutDialogContent-ben
         uint16_t requiredHeight = getHeaderHeight() + PADDING + textHeight + PADDING + UIButton::DEFAULT_BUTTON_HEIGHT + (2 * PADDING); // Megduplázott alsó PADDING
@@ -37,6 +36,8 @@ MessageDialog::MessageDialog(UIScreen *parentScreen, TFT_eSPI &tft, const Rect &
             finalDialogBounds.height = requiredHeight;
             boundsHaveChanged = true;
         }
+
+        tft.setFreeFont(); // Visszaállítás alapértelmezett fontra
     }
 
     // Középre igazítás, ha x vagy y -1 volt az inputon
@@ -210,7 +211,8 @@ void MessageDialog::drawSelf() {
     UIDialogBase::drawSelf(); // Alap dialógus keret és fejléc rajzolása
 
     if (message) {
-        tft.setTextSize(2);                                     // Nagyobb betűméret az üzenetnek
+        tft.setTextSize(1);                                     // A FreeSansBold9pt7b natív mérete
+        tft.setFreeFont(&FreeSansBold9pt7b);                    // Nagyobb, vastagabb font az üzenetnek
         tft.setTextColor(colors.foreground, colors.background); // Dialógus színeit használva
 
         uint16_t headerH = getHeaderHeight();

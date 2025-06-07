@@ -101,7 +101,8 @@ void UIDialogBase::drawSelf() {
     // Cím kirajzolása
     if (title != nullptr) {
         tft.setTextColor(UIColorPalette::DIALOG_HEADER_TEXT, headerColor);
-        tft.setTextSize(2); // Nagyobb betűméret a címnek
+        tft.setFreeFont(&FreeSansBold9pt7b); // Nagyobb, vastagabb font a címnek
+        tft.setTextSize(1);                  // A FreeSansBold9pt7b natív mérete
         tft.setTextDatum(ML_DATUM);
         int16_t titleX = bounds.x + PADDING + 4;
         int16_t titleY = bounds.y + (HEADER_HEIGHT / 2);

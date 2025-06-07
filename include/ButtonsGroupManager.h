@@ -75,7 +75,7 @@ class ButtonsGroupManager {
         std::vector<ButtonGroupDefinition> currentBuildingColButtons;
         int16_t currentY_build = marginTop;
         int16_t currentBuildingColMaxW = 0;
-        
+
         // Szövegbeállítások mentése a TFT-n
         uint8_t prevDatum = self->getTFT().getTextDatum();
         // int32_t prevPadding = self->getTFT().getTextPadding(); // Nem használjuk közvetlenül a textWidth-hoz
@@ -89,8 +89,9 @@ class ButtonsGroupManager {
                 // A UIButton-nak van egy textSize tagja, ami alapból 2.
                 // A def.height vagy defaultButtonHeightRef adja a magasságot.
                 uint16_t btnActualHeight = (def.height > 0) ? def.height : defaultButtonHeightRef;
-                btnW = UIButton::calculateWidthForText(self->getTFT(), def.label, 2 /*default UIButton textSize*/, false /*default useMiniFont*/, btnActualHeight);
-                if (btnW <=0) btnW = defaultButtonWidthRef; // Fallback
+                btnW = UIButton::calculateWidthForText(self->getTFT(), def.label, false /*default useMiniFont*/, btnActualHeight);
+                if (btnW <= 0)
+                    btnW = defaultButtonWidthRef; // Fallback
             }
             int16_t btnH = (def.height > 0) ? def.height : defaultButtonHeightRef;
 
@@ -153,14 +154,15 @@ class ButtonsGroupManager {
             for (const auto &def : currentCol) {
                 int16_t btnWidth;
                 bool autoSizeBtn = (def.width == 0); // Ha a definícióban 0 a szélesség, akkor auto-méretezést kérünk
-                if (!autoSizeBtn) { // Explicit szélesség megadva
+                if (!autoSizeBtn) {                  // Explicit szélesség megadva
                     btnWidth = def.width;
                 } else { // Automatikus méretezés kérése
                     // A bounds-hoz az előfeldolgozásban kalkulált értéket használjuk.
                     // A UIButton konstruktora ezt felülírhatja, ha autoSizeBtn true.
                     uint16_t btnActualHeight = (def.height > 0) ? def.height : defaultButtonHeightRef;
-                    btnWidth = UIButton::calculateWidthForText(self->getTFT(), def.label, 2, false, btnActualHeight);
-                    if (btnWidth <=0) btnWidth = defaultButtonWidthRef;
+                    btnWidth = UIButton::calculateWidthForText(self->getTFT(), def.label, false, btnActualHeight);
+                    if (btnWidth <= 0)
+                        btnWidth = defaultButtonWidthRef;
                 }
                 int16_t btnHeight = (def.height > 0) ? def.height : defaultButtonHeightRef;
 
@@ -168,7 +170,8 @@ class ButtonsGroupManager {
                 // ha a UIButton konstruktora nem állítja be expliciten.
                 // Vagy a UIButton-nak kellene kezelnie a saját textSize-ét. Most feltételezzük, hogy a UIButton beállítja.
                 Rect bounds(currentLayoutX, currentLayoutY, btnWidth, btnHeight);
-                auto button = std::make_shared<UIButton>(self->getTFT(), def.id, bounds, def.label, def.type, def.initialState, def.callback, UIColorPalette::createDefaultButtonScheme(), autoSizeBtn);
+                auto button = std::make_shared<UIButton>(self->getTFT(), def.id, bounds, def.label, def.type, def.initialState, def.callback,
+                                                         UIColorPalette::createDefaultButtonScheme(), autoSizeBtn);
                 self->addChild(button);
                 if (out_createdButtons) {
                     out_createdButtons->push_back(button);
@@ -224,7 +227,7 @@ class ButtonsGroupManager {
         std::vector<ButtonGroupDefinition> currentBuildingRowButtons;
         int16_t currentX_build = marginLeft;
         int16_t currentBuildingRowMaxH = 0;
-        
+
         // Szövegbeállítások mentése és visszaállítása
         uint8_t prevDatum = self->getTFT().getTextDatum();
 
@@ -234,8 +237,9 @@ class ButtonsGroupManager {
                 btnWidth = def.width;
             } else { // def.width == 0, auto-size
                 uint16_t btnActualHeight = (def.height > 0) ? def.height : defaultButtonHeightRef;
-                btnWidth = UIButton::calculateWidthForText(self->getTFT(), def.label, 2, false, btnActualHeight);
-                if (btnWidth <=0) btnWidth = defaultButtonWidthRef;
+                btnWidth = UIButton::calculateWidthForText(self->getTFT(), def.label, false, btnActualHeight);
+                if (btnWidth <= 0)
+                    btnWidth = defaultButtonWidthRef;
             }
 
             // Gomb szélességének korlátozása a maximális sor szélességre
@@ -298,7 +302,6 @@ class ButtonsGroupManager {
         int16_t startY = screenHeight - marginBottom - totalRowsHeightWithGaps;
         int16_t currentLayoutY = startY;
 
-
         for (size_t rowIndex = 0; rowIndex < rowsOfButtons.size(); ++rowIndex) {
             const auto &currentRow = rowsOfButtons[rowIndex];
             int16_t currentLayoutX;
@@ -309,11 +312,11 @@ class ButtonsGroupManager {
                 for (size_t i = 0; i < currentRow.size(); ++i) {
                     const auto &def = currentRow[i];
                     bool autoSizeBtn = (def.width == 0);
-                    int16_t btnActualWidth = autoSizeBtn ? 
-                        UIButton::calculateWidthForText(self->getTFT(), def.label, 2, false, (def.height > 0) ? def.height : defaultButtonHeightRef) : 
-                        def.width;
-                    if (btnActualWidth <=0 && autoSizeBtn) btnActualWidth = defaultButtonWidthRef; // Fallback
-                    if (btnActualWidth > maxRowWidth) btnActualWidth = maxRowWidth; // Korlátozás
+                    int16_t btnActualWidth = autoSizeBtn ? UIButton::calculateWidthForText(self->getTFT(), def.label, false, (def.height > 0) ? def.height : defaultButtonHeightRef) : def.width;
+                    if (btnActualWidth <= 0 && autoSizeBtn)
+                        btnActualWidth = defaultButtonWidthRef; // Fallback
+                    if (btnActualWidth > maxRowWidth)
+                        btnActualWidth = maxRowWidth; // Korlátozás
                     totalWidthOfButtonsInRow += btnActualWidth;
                     if (i < currentRow.size() - 1) {
                         totalWidthOfButtonsInRow += buttonGap;
@@ -321,7 +324,8 @@ class ButtonsGroupManager {
                 }
                 currentLayoutX = marginLeft + (maxRowWidth - totalWidthOfButtonsInRow) / 2;
                 // Biztosítjuk, hogy ne legyen negatív, vagy kisebb, mint a bal margó
-                if (currentLayoutX < marginLeft) currentLayoutX = marginLeft;
+                if (currentLayoutX < marginLeft)
+                    currentLayoutX = marginLeft;
             } else {
                 // Alapértelmezett balra igazítás
                 currentLayoutX = marginLeft;
@@ -336,9 +340,9 @@ class ButtonsGroupManager {
                     // Az előfeldolgozásban kalkulált szélességet használjuk a Rect-hez.
                     // A gomb maga fogja beállítani a végleges szélességét, ha autoSizeBtn true.
                     uint16_t btnActualHeight = (def.height > 0) ? def.height : defaultButtonHeightRef;
-                    btnWidth = UIButton::calculateWidthForText(self->getTFT(), def.label, 2, false, btnActualHeight);
-                    if (btnWidth <=0) btnWidth = defaultButtonWidthRef;
-
+                    btnWidth = UIButton::calculateWidthForText(self->getTFT(), def.label, false, btnActualHeight);
+                    if (btnWidth <= 0)
+                        btnWidth = defaultButtonWidthRef;
                 }
                 int16_t btnHeight = (def.height > 0) ? def.height : defaultButtonHeightRef;
                 // Gomb szélességének korlátozása a maximális sor szélességre (újra, mert a def const ref)
@@ -347,7 +351,8 @@ class ButtonsGroupManager {
                 }
 
                 Rect bounds(currentLayoutX, currentLayoutY, btnWidth, btnHeight);
-                auto button = std::make_shared<UIButton>(self->getTFT(), def.id, bounds, def.label, def.type, def.initialState, def.callback, UIColorPalette::createDefaultButtonScheme(), autoSizeBtn);
+                auto button = std::make_shared<UIButton>(self->getTFT(), def.id, bounds, def.label, def.type, def.initialState, def.callback,
+                                                         UIColorPalette::createDefaultButtonScheme(), autoSizeBtn);
                 self->addChild(button);
                 if (out_createdButtons) {
                     out_createdButtons->push_back(button);

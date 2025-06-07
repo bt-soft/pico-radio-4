@@ -175,6 +175,7 @@ class UIButton : public UIComponent {
         uint8_t currentTftTextSize = tft.textsize; // Feltételezzük, hogy a tft.textsize tartalmazza az aktuális méretet
 
         // Betűtípus beállítása a felirathoz
+        tft.setTextSize(1);
         if (useMiniFont) {
             tft.setFreeFont(); // Alapértelmezett (kisebb) font
         } else {
@@ -193,7 +194,8 @@ class UIButton : public UIComponent {
             markForRedraw();
         }
 
-        tft.setTextSize(currentTftTextSize); // Visszaállítás az eredeti TFT szövegméretre
+        // Visszaállítás az eredeti TFT szövegméretre
+        tft.setTextSize(currentTftTextSize);
         tft.setTextDatum(prevDatum);
     }
 
@@ -202,21 +204,20 @@ class UIButton : public UIComponent {
      * @brief Számolja ki a gomb szélességét a szöveg, betűméret és aktuális gombmagasság alapján.
      * @param tftRef TFT_eSPI referencia
      * @param text A gomb felirata
-     * @param btnTextSize A gomb szövegmérete (1 vagy 2)
      * @param btnUseMiniFont Ha true, akkor a kisebb betűtípust használja
      * @param currentButtonHeight Az aktuális gombmagasság, amelyet figyelembe veszünk a minimális szélesség meghatározásakor
      * @return A gomb szélessége, amely figyelembe veszi a szöveg hosszát és a minimális méreteket
      * @note A gomb szélessége legalább a minimális gombmagasság vagy a DEFAULT_BUTTON_WIDTH / 2, ha a szöveg nem elég széles.
      */
-    static uint16_t calculateWidthForText(TFT_eSPI &tftRef, const char *text, uint8_t btnTextSize, bool btnUseMiniFont, uint16_t currentButtonHeight) {
+    static uint16_t calculateWidthForText(TFT_eSPI &tftRef, const char *text, bool btnUseMiniFont, uint16_t currentButtonHeight) {
         if (text == nullptr)
             text = ""; // Kezeljük a nullptr-t üres stringként
 
         uint8_t prevDatum = tftRef.getTextDatum();
         uint8_t currentTftTextSize = tftRef.textsize;
 
-        tftRef.setTextSize(1);
         // Betűtípus beállítása a felirathoz
+        tftRef.setTextSize(1);
         if (btnUseMiniFont) {
             tftRef.setFreeFont(); // Alapértelmezett (kisebb) font
         } else {
