@@ -8,7 +8,7 @@
  * @file FMScreen.h
  * @brief FM képernyő osztály
  */
-class TestScreen : public UIScreen {
+class EmptyScreen : public UIScreen {
   private:
     // Navigációs gombok
     std::shared_ptr<UIButton> amButton; ///< AM képernyőre váltás gomb
@@ -16,11 +16,11 @@ class TestScreen : public UIScreen {
 
   public:
     /**
-     * @brief TestScreen konstruktor
+     * @brief Konstruktor
      * @param tft TFT display referencia
      */
-    TestScreen(TFT_eSPI &tft) : UIScreen(tft, SCREEN_NAME_TEST) { layoutComponents(); }
-    virtual ~TestScreen() = default;
+    EmptyScreen(TFT_eSPI &tft) : UIScreen(tft, SCREEN_NAME_TEST) { layoutComponents(); }
+    virtual ~EmptyScreen() = default;
 
     /**
      * @brief Rotary encoder eseménykezelés felülírása
@@ -28,7 +28,7 @@ class TestScreen : public UIScreen {
      * @return true ha kezelte az eseményt, false egyébként
      */
     virtual bool handleRotary(const RotaryEvent &event) override {
-        DEBUG("TestScreen handleRotary: direction=%d, button=%d\n", (int)event.direction, (int)event.buttonState);
+        DEBUG("EmptyScreen handleRotary: direction=%d, button=%d\n", (int)event.direction, (int)event.buttonState);
 
         // // Ha van aktív dialógus, akkor a szülő implementációnak adjuk át
         // if (isDialogActive()) {
@@ -74,7 +74,7 @@ class TestScreen : public UIScreen {
 
         // Információs szöveg
         tft.setTextSize(1);
-        tft.drawString("TestScreen for debugging", tft.width() / 2, tft.height() / 2 + 20);
+        tft.drawString("EmptyScreen  for debugging", tft.width() / 2, tft.height() / 2 + 20);
     }
 
   private:
@@ -100,7 +100,7 @@ class TestScreen : public UIScreen {
                                               UIButton::ButtonState::Disabled,                    // initial state
                                               [this](const UIButton::ButtonEvent &event) {        // callback
                                                   if (event.state == UIButton::EventButtonState::Clicked) {
-                                                      DEBUG("TestScreen: Switching to AM screen\n");
+                                                      DEBUG("EmptyScreen: Switching to AM screen\n");
                                                       // Képernyőváltás AM-re
                                                       UIScreen::getManager()->switchToScreen(SCREEN_NAME_AM);
                                                   }
@@ -117,7 +117,7 @@ class TestScreen : public UIScreen {
                                               UIButton::ButtonType::Pushable,                     // type
                                               [this](const UIButton::ButtonEvent &event) {        // callback
                                                   if (event.state == UIButton::EventButtonState::Clicked) {
-                                                      DEBUG("TestScreen: Switching to FM screen\n");
+                                                      DEBUG("EmptyScreen: Switching to FM screen\n");
                                                       // Képernyőváltás FM-re
                                                       UIScreen::getManager()->switchToScreen(SCREEN_NAME_FM);
                                                   }

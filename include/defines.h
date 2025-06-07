@@ -17,6 +17,7 @@
 #define SCREEN_NAME_FM "FMScreen"
 #define SCREEN_NAME_AM "AMScreen"
 #define SCREEN_NAME_TEST "TestScreen"
+#define SCREEN_NAME_EMPTY "EmptyScreen"
 
 //--- Debug ---
 #define __DEBUG // Debug mód vezérlése
