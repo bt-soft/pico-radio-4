@@ -17,6 +17,9 @@ class UIScrollableListComponent : public UIComponent {
     static constexpr uint8_t DEFAULT_ITEM_HEIGHT = 20; // Vagy számoljuk a font magasságból
     static constexpr uint8_t SCROLL_BAR_WIDTH = 8;
     static constexpr uint8_t ITEM_TEXT_PADDING_X = 5;
+    static constexpr uint8_t SELECTED_ITEM_PADDING = 2; // Hány pixellel legyen kisebb a kijelölés minden oldalon
+    static constexpr uint8_t COMPONENT_BORDER_THICKNESS = 1; // A komponens saját keretének vastagsága
+    static constexpr uint8_t SELECTED_ITEM_RECT_REDUCTION = SELECTED_ITEM_PADDING * 2; // Teljes csökkentés a szélességben/magasságban
 
   private:
     IScrollableListDataSource *dataSource = nullptr;
@@ -32,35 +35,51 @@ class UIScrollableListComponent : public UIComponent {
     uint16_t scrollBarColor;
     uint16_t scrollBarBackgroundColor;
 
+    /**
+     * @brief A lista elemeinek újrarajzolása a jelenlegi állapot alapján.
+     */
     void drawScrollBar() {
         // Ha nincs dataSource, vagy nincs elég elem a görgetéshez, ne rajzolj scrollbart.
         if (!dataSource || dataSource->getItemCount() <= visibleItemCount) {
             return; // Nincs szükség scrollbarra
         }
 
-        int16_t scrollBarX = bounds.x + bounds.width - SCROLL_BAR_WIDTH;
-        tft.fillRect(scrollBarX, bounds.y, SCROLL_BAR_WIDTH, bounds.height, scrollBarBackgroundColor);
+        // A görgetősáv a komponens belső keretén belül helyezkedik el
+        int16_t scrollBarContainerX = bounds.x + bounds.width - COMPONENT_BORDER_THICKNESS - SCROLL_BAR_WIDTH;
+        int16_t scrollBarContainerY = bounds.y + COMPONENT_BORDER_THICKNESS;
+        uint16_t scrollBarContainerHeight = bounds.height - (2 * COMPONENT_BORDER_THICKNESS);
+
+        if (scrollBarContainerHeight <= 0 || SCROLL_BAR_WIDTH <= 0) return; // Nincs hely a scrollbarnak
+
+        tft.fillRect(scrollBarContainerX, scrollBarContainerY, SCROLL_BAR_WIDTH, scrollBarContainerHeight, scrollBarBackgroundColor);
 
         float ratio = (float)visibleItemCount / dataSource->getItemCount();
-        uint16_t thumbHeight = std::max((int)(bounds.height * ratio), 10); // Minimális magasság
+        uint16_t thumbHeight = std::max((int)(scrollBarContainerHeight * ratio), 10); // Minimális magasság
 
         // A thumbPosRatio számításának javítása, hogy elkerüljük a 0-val való osztást
         float thumbPosRatio = 0;
         int totalItems = dataSource->getItemCount();
         if (totalItems > visibleItemCount) { // Csak akkor van értelme a görgetésnek, ha több elem van, mint amennyi látható
             thumbPosRatio = (float)topItemIndex / (totalItems - visibleItemCount);
-        } else {               // Ha minden elem látható, vagy kevesebb van, mint a látható hely
-            thumbPosRatio = 0; // Ha minden látszik
         }
         // Biztosítjuk, hogy a thumbPosRatio 0 és 1 között legyen
         thumbPosRatio = std::max(0.0f, std::min(thumbPosRatio, 1.0f));
 
-        uint16_t thumbY = bounds.y + (int)((bounds.height - thumbHeight) * thumbPosRatio);
+        uint16_t thumbYInContainer = (int)((scrollBarContainerHeight - thumbHeight) * thumbPosRatio);
+        uint16_t thumbActualY = scrollBarContainerY + thumbYInContainer;
 
-        tft.fillRect(scrollBarX, thumbY, SCROLL_BAR_WIDTH, thumbHeight, scrollBarColor);
+        tft.fillRect(scrollBarContainerX, thumbActualY, SCROLL_BAR_WIDTH, thumbHeight, scrollBarColor);
     }
 
   public:
+    /**
+     * @brief Konstruktor a görgethető lista komponenshez.
+     * @param tft TFT_eSPI referencia
+     * @param bounds A komponens határai (Rect)
+     * @param ds Az IScrollableListDataSource interfész implementációja, amely az adatokat szolgáltatja
+     * @param visItems A látható elemek száma (alapértelmezett: 5)
+     * @param itmHeight Az egyes listaelemek magassága (alapértelmezett: 0, ami a font magasságából számítódik)
+     */
     UIScrollableListComponent(TFT_eSPI &tft, const Rect &bounds, IScrollableListDataSource *ds, uint8_t visItems = DEFAULT_VISIBLE_ITEMS, uint8_t itmHeight = 0)
         : UIComponent(tft, bounds, ColorScheme::defaultScheme()), dataSource(ds) {
 
@@ -79,7 +98,7 @@ class UIScrollableListComponent : public UIComponent {
         this->colors.background = TFT_COLOR_BACKGROUND; // UIComponent::colors.background
 
         // Listaelemek színeinek explicit beállítása
-        itemTextColor = TFT_WHITE;          // Nem kiválasztott elem szövege
+        itemTextColor = TFT_WHITE;              // Nem kiválasztott elem szövege
         selectedItemTextColor = TFT_BLACK;      // Kiválasztott elem szövege (fekete)
         selectedItemBackground = TFT_LIGHTGREY; // Kiválasztott elem háttere (világosszürke)
 
@@ -87,11 +106,16 @@ class UIScrollableListComponent : public UIComponent {
         scrollBarColor = TFT_LIGHTGREY;
         scrollBarBackgroundColor = TFT_DARKGREY;
 
-        if (bounds.height > 0 && itemHeight > 0) {
-            visibleItemCount = bounds.height / itemHeight;
+        uint16_t contentAreaHeight = bounds.height - (2 * COMPONENT_BORDER_THICKNESS);
+        if (contentAreaHeight > 0 && itemHeight > 0) {
+            visibleItemCount = contentAreaHeight / itemHeight;
         }
     }
 
+    /**
+     * @brief Beállítja a látható elemek számát.
+     * @param count A látható elemek száma.
+     */
     void setDataSource(IScrollableListDataSource *ds) {
         dataSource = ds;
         topItemIndex = 0;
@@ -113,29 +137,42 @@ class UIScrollableListComponent : public UIComponent {
             return; // Nem látható, nincs teendő
         }
 
+        // Tartalomterület meghatározása a komponens keretén belül
+        int16_t contentX = bounds.x + COMPONENT_BORDER_THICKNESS;
+        int16_t contentY = bounds.y + COMPONENT_BORDER_THICKNESS;
+        uint16_t contentWidth = bounds.width - (2 * COMPONENT_BORDER_THICKNESS) - SCROLL_BAR_WIDTH;
+        uint16_t contentHeight = bounds.height - (2 * COMPONENT_BORDER_THICKNESS);
+
+        if (contentWidth <=0 || contentHeight <=0) return;
+
         int visibleItemSlot = absoluteIndex - topItemIndex; // 0-tól (visibleItemCount-1)-ig
-        int16_t itemY = bounds.y + visibleItemSlot * itemHeight;
+        int16_t itemRelY = visibleItemSlot * itemHeight; // Y pozíció a contentY-hoz képest
 
-        // Biztosítjuk, hogy ne rajzoljunk a komponens határain kívülre
-        if (itemY < bounds.y || itemY + itemHeight > bounds.y + bounds.height + 1) { // +1 a kerekítési hibák miatt
-            return;
+        Rect itemVisualBounds(contentX, contentY + itemRelY, contentWidth, itemHeight);
+
+        // Biztosítjuk, hogy az elem ne lógjon ki a tartalomterületből vertikálisan
+        if (itemVisualBounds.y < contentY) {
+            itemVisualBounds.height -= (contentY - itemVisualBounds.y);
+            itemVisualBounds.y = contentY;
         }
-
-        Rect itemBounds(bounds.x, itemY, bounds.width - SCROLL_BAR_WIDTH, itemHeight);
+        if (itemVisualBounds.y + itemVisualBounds.height > contentY + contentHeight) {
+            itemVisualBounds.height = (contentY + contentHeight) - itemVisualBounds.y;
+        }
+        if (itemVisualBounds.height <= 0) return; // Nincs mit rajzolni
 
         // Szövegbeállítások mentése és visszaállítása
         uint8_t prevDatum = tft.getTextDatum();
         uint8_t prevSize = tft.textsize;
-        // const GFXfont* prevFont = tft.gfxFont; // Ha egyedi fontot használnánk
-
         tft.setTextDatum(ML_DATUM);
-        // A fontot és méretet a label/value részeknél külön állítjuk
 
+        // A fontot és méretet a label/value részeknél külön állítjuk
         if (absoluteIndex == selectedItemIndex) {
-            tft.fillRect(itemBounds.x, itemBounds.y, itemBounds.width, itemBounds.height, selectedItemBackground);
+            // Kijelölés SELECTED_ITEM_PADDING pixellel kisebb
+            tft.fillRect(itemVisualBounds.x + SELECTED_ITEM_PADDING, itemVisualBounds.y + SELECTED_ITEM_PADDING, itemVisualBounds.width - SELECTED_ITEM_RECT_REDUCTION, itemVisualBounds.height - SELECTED_ITEM_RECT_REDUCTION, selectedItemBackground);
             tft.setTextColor(selectedItemTextColor, selectedItemBackground);
         } else {
-            tft.fillRect(itemBounds.x, itemBounds.y, itemBounds.width, itemBounds.height, TFT_COLOR_BACKGROUND); // Fekete háttér
+            // Normál elem háttere (ez a "törlés" is, ha korábban ki volt választva)
+            tft.fillRect(itemVisualBounds.x, itemVisualBounds.y, itemVisualBounds.width, itemVisualBounds.height, TFT_COLOR_BACKGROUND);
             tft.setTextColor(itemTextColor, TFT_COLOR_BACKGROUND);
         }
 
@@ -143,23 +180,21 @@ class UIScrollableListComponent : public UIComponent {
         int tabPosition = fullItemText.indexOf('\t');
         String labelPart = fullItemText;
         String valuePart = "";
-
         if (tabPosition != -1) {
             labelPart = fullItemText.substring(0, tabPosition);
             valuePart = fullItemText.substring(tabPosition + 1);
         }
-
         // Label rész rajzolása (nagyobb, balra igazított)
         tft.setFreeFont(&FreeSansBold9pt7b); // Nagyobb font a labelnek
         tft.setTextSize(1);                  // Natív méret
-        tft.drawString(labelPart, itemBounds.x + ITEM_TEXT_PADDING_X, itemBounds.y + itemHeight / 2);
+        tft.drawString(labelPart, itemVisualBounds.x + ITEM_TEXT_PADDING_X, itemVisualBounds.y + itemVisualBounds.height / 2);
 
         // Value rész rajzolása (kisebb, jobbra igazított)
         if (valuePart.length() > 0) {
             tft.setFreeFont(); // Kisebb, alapértelmezett font
             tft.setTextSize(1);
             tft.setTextDatum(MR_DATUM); // Middle Right
-            tft.drawString(valuePart, itemBounds.x + itemBounds.width - ITEM_TEXT_PADDING_X, itemBounds.y + itemHeight / 2);
+            tft.drawString(valuePart, itemVisualBounds.x + itemVisualBounds.width - ITEM_TEXT_PADDING_X, itemVisualBounds.y + itemVisualBounds.height / 2);
             tft.setTextDatum(ML_DATUM); // Visszaállítás ML_DATUM-ra a következő elemhez/állapothoz
         }
 
@@ -170,35 +205,51 @@ class UIScrollableListComponent : public UIComponent {
     }
 
   public:
+    /**
+     * @brief Beállítja a látható elemek számát.
+     * @param count A látható elemek száma.
+     */
     virtual void draw() override {
         if (!needsRedraw || !dataSource)
             return;
 
-        tft.fillRect(bounds.x, bounds.y, bounds.width, bounds.height, TFT_COLOR_BACKGROUND); // Háttér törlése feketére
-        tft.drawRect(bounds.x, bounds.y, bounds.width, bounds.height, scrollBarColor); // Keret rajzolása (világosszürke)
+        // 1. Teljes komponens háttér törlése
+        tft.fillRect(bounds.x, bounds.y, bounds.width, bounds.height, colors.background); // Használjuk a UIComponent háttérszínét
+        // 2. Komponens keretének rajzolása
+        tft.drawRect(bounds.x, bounds.y, bounds.width, bounds.height, scrollBarColor); // Keret (pl. világosszürke)
+
+        // Tartalomterület meghatározása a komponens keretén belül
+        int16_t contentX = bounds.x + COMPONENT_BORDER_THICKNESS;
+        int16_t contentY = bounds.y + COMPONENT_BORDER_THICKNESS;
+        uint16_t contentWidth = bounds.width - (2 * COMPONENT_BORDER_THICKNESS) - SCROLL_BAR_WIDTH;
+        uint16_t contentHeight = bounds.height - (2 * COMPONENT_BORDER_THICKNESS);
+
+        if (contentWidth <=0 || contentHeight <=0) { // Nincs hely a tartalomnak
+            drawScrollBar(); // Scrollbar még lehet, ha csak az fér el
+            needsRedraw = false;
+            return;
+        }
 
         // Szövegbeállítások mentése és visszaállítása a teljes lista rajzolásához
         uint8_t prevDatum = tft.getTextDatum();
         uint8_t prevSize = tft.textsize;
-        // const GFXfont* prevFont = tft.gfxFont;
-
-        // A fontot és méretet a label/value részeknél külön állítjuk minden itemnél
-
         int itemCount = dataSource->getItemCount();
+
         for (int i = 0; i < visibleItemCount; ++i) {
             int currentItemIndex = topItemIndex + i;
             if (currentItemIndex >= itemCount)
                 break;
 
-            int16_t itemY = bounds.y + i * itemHeight;
-            // Biztosítjuk, hogy ne rajzoljunk a komponens határain kívülre
-            if (itemY < bounds.y || itemY + itemHeight > bounds.y + bounds.height + 1) { // +1 a kerekítési hibák miatt
-                continue;
-            }
-            Rect itemBounds(bounds.x, itemY, bounds.width - SCROLL_BAR_WIDTH, itemHeight);
+            int16_t itemRelY = i * itemHeight; // Y pozíció a contentY-hoz képest
+            Rect itemVisualBounds(contentX, contentY + itemRelY, contentWidth, itemHeight);
+
+            // Biztosítjuk, hogy az elem ne lógjon ki a tartalomterületből vertikálisan
+            if (itemVisualBounds.y < contentY) { itemVisualBounds.height -= (contentY - itemVisualBounds.y); itemVisualBounds.y = contentY; }
+            if (itemVisualBounds.y + itemVisualBounds.height > contentY + contentHeight) { itemVisualBounds.height = (contentY + contentHeight) - itemVisualBounds.y; }
+            if (itemVisualBounds.height <= 0) continue;
 
             if (currentItemIndex == selectedItemIndex) {
-                tft.fillRect(itemBounds.x, itemBounds.y, itemBounds.width, itemBounds.height, selectedItemBackground);
+                tft.fillRect(itemVisualBounds.x + SELECTED_ITEM_PADDING, itemVisualBounds.y + SELECTED_ITEM_PADDING, itemVisualBounds.width - SELECTED_ITEM_RECT_REDUCTION, itemVisualBounds.height - SELECTED_ITEM_RECT_REDUCTION, selectedItemBackground);
                 tft.setTextColor(selectedItemTextColor, selectedItemBackground);
             } else {
                 // A háttér már fekete a fő fillRect miatt
@@ -210,33 +261,34 @@ class UIScrollableListComponent : public UIComponent {
             String labelPart = fullItemText;
             String valuePart = "";
 
-            if (tabPosition != -1) {
-                labelPart = fullItemText.substring(0, tabPosition);
-                valuePart = fullItemText.substring(tabPosition + 1);
-            }
+            if (tabPosition != -1) { labelPart = fullItemText.substring(0, tabPosition); valuePart = fullItemText.substring(tabPosition + 1); }
 
             // Label rész rajzolása
             tft.setTextDatum(ML_DATUM);
             tft.setFreeFont(&FreeSansBold9pt7b);
             tft.setTextSize(1);
-            tft.drawString(labelPart, itemBounds.x + ITEM_TEXT_PADDING_X, itemBounds.y + itemHeight / 2);
+            tft.drawString(labelPart, itemVisualBounds.x + ITEM_TEXT_PADDING_X, itemVisualBounds.y + itemVisualBounds.height / 2);
 
             // Value rész rajzolása
             if (valuePart.length() > 0) {
                 tft.setTextDatum(MR_DATUM);
                 tft.setFreeFont(); // Kisebb font
                 tft.setTextSize(1);
-                tft.drawString(valuePart, itemBounds.x + itemBounds.width - ITEM_TEXT_PADDING_X, itemBounds.y + itemHeight / 2);
+                tft.drawString(valuePart, itemVisualBounds.x + itemVisualBounds.width - ITEM_TEXT_PADDING_X, itemVisualBounds.y + itemVisualBounds.height / 2);
             }
         }
         // Szövegbeállítások visszaállítása
         tft.setTextDatum(prevDatum);
         tft.setTextSize(prevSize);
-        // tft.setFreeFont(prevFont);
+
         drawScrollBar();
         needsRedraw = false;
     }
 
+    /**
+     * @brief Beállítja, hogy a lista elemei ne legyenek láthatóak.
+     * @param disable true, ha el akarjuk rejteni a listát, false, ha újra meg akarjuk jeleníteni.
+     */
     virtual bool handleRotary(const RotaryEvent &event) override {
         if (disabled || !dataSource || dataSource->getItemCount() == 0)
             return false;
@@ -292,13 +344,24 @@ class UIScrollableListComponent : public UIComponent {
         }
 
         if (event.pressed) { // Csak a lenyomásra reagálunk itt, a kattintást a UIComponent kezeli
-            int touchedItemOffset = (event.y - bounds.y) / itemHeight;
+            // Érintés helyének ellenőrzése a tényleges tartalomterületen belül
+            int16_t contentMinY = bounds.y + COMPONENT_BORDER_THICKNESS;
+            int16_t contentMaxY = bounds.y + bounds.height - COMPONENT_BORDER_THICKNESS;
+            int16_t contentMinX = bounds.x + COMPONENT_BORDER_THICKNESS;
+            int16_t contentMaxX = bounds.x + bounds.width - COMPONENT_BORDER_THICKNESS - SCROLL_BAR_WIDTH;
+
+            if (event.y < contentMinY || event.y >= contentMaxY || event.x < contentMinX || event.x >= contentMaxX) {
+                return UIComponent::handleTouch(event); // Scrollbar vagy border touch, adjuk tovább
+            }
+
+            int touchedItemOffset = (event.y - contentMinY) / itemHeight;
             if (touchedItemOffset >= 0 && touchedItemOffset < visibleItemCount) {
                 int newSelectedItemIndex = topItemIndex + touchedItemOffset;
                 if (newSelectedItemIndex < dataSource->getItemCount()) {
                     if (selectedItemIndex != newSelectedItemIndex) {
-                        selectedItemIndex = newSelectedItemIndex;
-                        markForRedraw();
+                        // A selectedItemIndex frissítését és az újrarajzolást az onClick-re bízzuk,
+                        // hogy a debounce után történjen meg, de a logikát itt előkészítjük.
+                        // Az UIComponent::handleTouch fogja ezt tovább vinni az onClick-ig.
                     }
                     // A tényleges onItemClicked hívást az UIComponent::onClick-re bízzuk,
                     // miután a debounce és egyéb ellenőrzések lefutottak.
@@ -310,8 +373,25 @@ class UIScrollableListComponent : public UIComponent {
 
   protected:
     virtual void onClick(const TouchEvent &event) override {
-        if (dataSource && selectedItemIndex >= 0 && selectedItemIndex < dataSource->getItemCount()) {
-            dataSource->onItemClicked(selectedItemIndex);
+        if (disabled || !dataSource || dataSource->getItemCount() == 0) {
+             UIComponent::onClick(event); return;
+        }
+
+        int16_t contentMinY = bounds.y + COMPONENT_BORDER_THICKNESS;
+        int16_t contentMaxY = bounds.y + bounds.height - COMPONENT_BORDER_THICKNESS;
+        int16_t contentMinX = bounds.x + COMPONENT_BORDER_THICKNESS;
+        int16_t contentMaxX = bounds.x + bounds.width - COMPONENT_BORDER_THICKNESS - SCROLL_BAR_WIDTH;
+
+        if (event.y >= contentMinY && event.y < contentMaxY && event.x >= contentMinX && event.x < contentMaxX) {
+            int touchedItemOffset = (event.y - contentMinY) / itemHeight;
+            if (touchedItemOffset >= 0 && touchedItemOffset < visibleItemCount) {
+                int newSelectedItemIndex = topItemIndex + touchedItemOffset;
+                if (newSelectedItemIndex < dataSource->getItemCount()) {
+                    selectedItemIndex = newSelectedItemIndex; // Itt frissítjük a kiválasztást
+                    dataSource->onItemClicked(selectedItemIndex); // És itt hívjuk a callback-et
+                    markForRedraw(); // Teljes újrarajzolás a kattintás után
+                }
+            }
         }
         UIComponent::onClick(event); // Hívjuk az ősosztályt is, ha van benne logika
     }
