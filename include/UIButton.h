@@ -260,7 +260,7 @@ class UIButton : public UIComponent {
              ButtonState state = ButtonState::Off,                                    // initial state
              std::function<void(const ButtonEvent &)> callback = nullptr,             // callback
              const ColorScheme &colors = UIColorPalette::createDefaultButtonScheme(), // colors
-             bool autoSizeToText = false                                              // ÚJ: Automatikus méretezés flag
+             bool autoSizeToText = false                                              // Automatikus méretezés flag
              )
         : UIComponent(tft,
                       Rect(bounds.x, bounds.y,
@@ -294,6 +294,7 @@ class UIButton : public UIComponent {
      * @param type A gomb típusa (Pushable vagy Toggleable)
      * @param callback Eseménykezelő függvény, amely a gomb eseményeit kezeli
      * @param colors Színpaletta a gombhoz
+     * @param autoSizeToText Ha true, akkor a gomb szélessége automatikusan igazodik a szöveghez
      * @note A bounds szélessége és magassága 0 esetén az alapértelmezett méreteket használja (DEFAULT_BUTTON_WIDTH és DEFAULT_BUTTON_HEIGHT).
      */
     // Második konstruktor overload az autoSizeToText paraméterrel
@@ -304,7 +305,7 @@ class UIButton : public UIComponent {
              ButtonType type,                                                         // Nincs alapértelmezett
              std::function<void(const ButtonEvent &)> callback,                       // Nincs alapértelmezett
              const ColorScheme &colors = UIColorPalette::createDefaultButtonScheme(), // colors
-             bool autoSizeToText = false                                              // ÚJ: Automatikus méretezés flag
+             bool autoSizeToText = false                                              // Automatikus méretezés flag
              )
         : UIComponent(
               tft,
@@ -322,7 +323,10 @@ class UIButton : public UIComponent {
      * @param tft TFT_eSPI referencia
      * @param id Gomb azonosítója
      * @param bounds A gomb határai (Rect)
-     *
+     * @param label A gomb felirata
+     * @param callback Eseménykezelő függvény, amely a gomb eseményeit kezeli
+     * @param autoSizeToText Ha true, akkor a gomb szélessége automatikusan igazodik a szöveghez
+     * @note Ez a konstruktor csak pushable gombokat hoz létre, a gomb típusa mindig Pushable lesz.
      */
     // Harmadik konstruktor overload az autoSizeToText paraméterrel
     UIButton(TFT_eSPI &tft,
@@ -330,7 +334,7 @@ class UIButton : public UIComponent {
              const Rect &bounds,                                          // rect
              const char *label,                                           // label
              std::function<void(const ButtonEvent &)> callback = nullptr, // callback
-             bool autoSizeToText = false                                  // ÚJ: Automatikus méretezés flag
+             bool autoSizeToText = false                                  // Automatikus méretezés flag
              )
         : UIComponent(
               tft,
@@ -394,6 +398,11 @@ class UIButton : public UIComponent {
         }
     }
 
+    /**
+     * @brief Gomb aktuális állapotának lekérdezése
+     * @return A gomb aktuális állapota (ButtonState)
+     * @details Ez az állapot a logikai állapotot tükrözi, amelyet a gomb kezelése során használunk.
+     */
     ButtonState getButtonState() const { return currentState; }
 
     /**
@@ -462,7 +471,10 @@ class UIButton : public UIComponent {
         }
     }
 
-    // Automatikus méretezés be/ki kapcsolása
+    /**
+     * @brief Automatikus méretezés bekapcsolása vagy kikapcsolása
+     * @param enable true ha engedélyezni szeretnénk az automatikus méretezést, false ha kikapcsolni
+     */
     void setAutoSizeToText(bool enable) {
         if (autoSizeToText != enable) {
             autoSizeToText = enable;
@@ -477,9 +489,17 @@ class UIButton : public UIComponent {
             }
         }
     }
+    /**
+     * @brief Lekérdezi, hogy a gomb automatikusan méreteződik-e a szöveghez
+     * @return true ha az automatikus méretezés engedélyezve van, false ha nem
+     */
     bool getAutoSizeToText() const { return autoSizeToText; }
 
-    // Szöveg beállítása
+    /**
+     * @brief Gomb feliratának beállítása
+     * @param newLabel Az új felirat, amelyet be szeretnénk állítani
+     * @details Ha a felirat megváltozik, frissíti a gomb szélességét, ha az automatikus méretezés engedélyezve van.
+     */
     void setLabel(const char *newLabel) {
         bool labelChanged =
             (label == nullptr && newLabel != nullptr) || (label != nullptr && newLabel == nullptr) || (label != nullptr && newLabel != nullptr && strcmp(label, newLabel) != 0);
@@ -494,6 +514,11 @@ class UIButton : public UIComponent {
             }
         }
     }
+
+    /**
+     * @brief Gomb feliratának lekérdezése
+     * @return A gomb felirata (const char*)
+     */
     const char *getText() const { return label; }
 
     // Mini font használata
@@ -503,16 +528,35 @@ class UIButton : public UIComponent {
             markForRedraw();
         }
     }
+
+    /**
+     * @brief Lekérdezi, hogy a gomb mini fontot használ-e
+     * @return true ha a mini font engedélyezve van, false ha nem
+     * @details A mini font kisebb méretű betűtípust jelent, amelyet a gomb szövegének megjelenítésére használunk.
+     */
     bool isUseMiniFont() const { return useMiniFont; }
 
-    // Event callback beállítása
+    /**
+     * @brief Esemény callback beállítása
+     * @param callback A callback függvény, amely a gomb eseményeit kezeli
+     * @details Ez a callback függvény akkor hívódik meg, amikor a gomb esemény történik (pl. lenyomás, hosszú nyomás).
+     * @note A callback függvénynek egy ButtonEvent struktúrát kell fogadnia, amely tartalmazza a gomb azonosítóját, feliratát és állapotát.
+     */
     void setEventCallback(std::function<void(const ButtonEvent &)> callback) { eventCallback = callback; }
 
-    // Kattintás callback (backward compatibility)
+    /**
+     * @brief Visszahívási függvény beállítása a gomb lenyomására
+     * @param callback A visszahívási függvény, amely a gomb lenyomásakor hívódik meg
+     * @details Ez a visszahívási függvény akkor hívódik meg, amikor a gombot lenyomják, és a gomb eseménykezelője nem lett beállítva.
+     * @note Ez a funkció visszafelé kompatibilis, és a gomb lenyomására reagál, de nem kezeli a hosszú nyomást vagy más eseményeket.
+     */
     void setClickCallback(std::function<void()> callback) { clickCallback = callback; }
 
-    // "Default" gomb stílus beállítása (MultiButtonDialog-ban használatos)
-    // Beállítja a gombot letiltott állapotba és alkalmazza a default choice színsémát
+    /**
+     * @brief Beállítja a gombot "default choice" gombként
+     * @details Ez a gombot letiltja és alkalmazza a "default choice" színsémát, amelyet a MultiButtonDialog használ.
+     * A gomb nem lesz interaktív, és a felhasználó nem tudja megnyomni.
+     */
     void setAsDefaultChoiceButton() {
         setEnabled(false);                                                 // Letiltjuk a gombot
         setColorScheme(UIColorPalette::createDefaultChoiceButtonScheme()); // Alkalmazzuk a default choice színsémát
@@ -520,6 +564,8 @@ class UIButton : public UIComponent {
 
     /**
      * @brief Gomb megjelenítése
+     * @details Ez a metódus rajzolja ki a gombot a TFT képernyőre.
+     * Ha a gomb lenyomva van, akkor a lenyomott effektust rajzolja ki.
      */
     virtual void draw() override {
         if (!needsRedraw)
@@ -567,12 +613,11 @@ class UIButton : public UIComponent {
     }
 
   protected:
-    // UIComponent::pressed már kezeli a lenyomott vizuális állapotot
-    // UIComponent::handleTouch hívja ezeket
-
     /**
      * @brief Gomb lenyomása esemény kezelése
      * @param event A touch esemény, amely tartalmazza a koordinátákat és a lenyomás állapotát
+     * @details Ez a metódus kezeli a gomb lenyomását, és beállítja a hosszú lenyomás eseményeket.
+     * A hosszú lenyomás esemény akkor aktiválódik, ha a gombot legalább a longPressThreshold időn keresztül lenyomva tartják.
      */
     virtual void onTouchDown(const TouchEvent &event) override {
         UIComponent::onTouchDown(event); // Alap implementáció (pressed = true, markForRedraw)
@@ -588,6 +633,8 @@ class UIButton : public UIComponent {
 
     /**
      * @brief Gomb felengedése esemény kezelése
+     * @param event A touch esemény, amely tartalmazza a koordinátákat és a lenyomás állapotát
+     * @details Ez a metódus kezeli a gomb felengedését, és ellenőrzi, hogy hosszú lenyomás történt-e.
      */
     virtual void onTouchUp(const TouchEvent &event) override {
         UIComponent::onTouchUp(event); // Alap osztály hívása (jelenleg csak DEBUG üzenet)
@@ -620,6 +667,8 @@ class UIButton : public UIComponent {
     /**
      * @brief Gomb kattintás esemény kezelése
      * @param event A touch esemény, amely tartalmazza a koordinátákat és a lenyomás állapotát
+     * @details Ez a metódus kezeli a gomb kattintását, és végrehajtja a megfelelő eseményeket.
+     * Ha a gomb toggleable, akkor az állapotot váltja, ha pushable, akkor csak eseményt küld.
      */
     virtual void onClick(const TouchEvent &event) override {
 
@@ -661,6 +710,8 @@ class UIButton : public UIComponent {
     /**
      * @brief Gomb lenyomás megszakítása esemény kezelése
      * @param event A touch esemény, amely tartalmazza a koordinátákat és a lenyomás állapotát
+     * @details Ez a metódus kezeli a gomb lenyomásának megszakítását, például ha az ujj lecsúszik a gomb határain kívülre.
+     * A hosszú lenyomás esemény nem aktiválódik, és a gomb állapota visszaáll az alapértelmezett lenyomott állapotba.
      */
     virtual void onTouchCancel(const TouchEvent &event) override {
 
@@ -680,6 +731,8 @@ class UIButton : public UIComponent {
   public:
     /**
      * @brief Gomb komponens loop függvénye
+     * Ez a metódus folyamatosan ellenőrzi a gomb állapotát és kezeli a hosszú lenyomás eseményeket.
+     * Ha a gomb lenyomva van, és a hosszú lenyomás küszöbértéke elérve van, akkor beállítja a hosszú lenyomás eseményt.
      */
     virtual void loop() override {
         UIComponent::loop(); // Alap osztály loop-ja (ha van)
@@ -700,8 +753,12 @@ class UIButton : public UIComponent {
         }
     }
 
-    // Touch sensitivity növelése gomboknál
-    // 6 pixel tolerancia gomboknál (nagyobb mint az alapértelmezett 4)
+    /**
+     * @brief Lekérdezi a gomb érintési érzékenységét
+     * @return Az érintési érzékenység margója (6 pixel)
+     * @details Ez a margó határozza meg, hogy mennyire érzékeny a gomb az érintésekre.
+     * A gomb akkor is reagál, ha az érintés a gomb határain kívül van, de a margón belül.
+     */
     virtual int16_t getTouchMargin() const override { return 6; }
 };
 
