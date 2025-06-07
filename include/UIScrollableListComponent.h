@@ -80,8 +80,8 @@ class UIScrollableListComponent : public UIComponent {
 
         // Listaelemek színeinek explicit beállítása
         itemTextColor = TFT_WHITE;          // Nem kiválasztott elem szövege
-        selectedItemTextColor = TFT_BLACK;  // Kiválasztott elem szövege
-        selectedItemBackground = TFT_GREEN; // Kiválasztott elem háttere
+        selectedItemTextColor = TFT_BLACK;      // Kiválasztott elem szövege (fekete)
+        selectedItemBackground = TFT_LIGHTGREY; // Kiválasztott elem háttere (világosszürke)
 
         // Görgetősáv színei
         scrollBarColor = TFT_LIGHTGREY;
@@ -175,7 +175,7 @@ class UIScrollableListComponent : public UIComponent {
             return;
 
         tft.fillRect(bounds.x, bounds.y, bounds.width, bounds.height, TFT_COLOR_BACKGROUND); // Háttér törlése feketére
-        // tft.drawRect(bounds.x, bounds.y, bounds.width, bounds.height, colors.border); // Opcionális keret
+        tft.drawRect(bounds.x, bounds.y, bounds.width, bounds.height, scrollBarColor); // Keret rajzolása (világosszürke)
 
         // Szövegbeállítások mentése és visszaállítása a teljes lista rajzolásához
         uint8_t prevDatum = tft.getTextDatum();

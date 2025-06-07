@@ -37,6 +37,7 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
 
     std::shared_ptr<UIScrollableListComponent> menuList;
     std::vector<SettingItem> settingItems; // String helyett SettingItem
+    std::shared_ptr<UIButton> exitButton;
 
     /**
      * @brief Menüelemek feltöltése.
@@ -48,11 +49,11 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
         // Mindent törlünk, hogy újra feltölthessük
         settingItems.clear();
 
-        // Lambda segédfüggvény a String konverzióhoz, ha szükséges
+        // Segédfüggvény a String konverzióhoz, ha szükséges
         auto valToString = [](auto v) { return String(v); };
 
-        // Lambda segédfüggvény a MiniAudioFft konfiguráció dekódolásához
-        auto decodeMiniFftConfig = [](float value) -> String {
+        // Segédfüggvény a MiniAudioFft konfiguráció dekódolásához
+        auto decodeMiniFftConfigLambda = [](float value) -> String {
             if (value == -1.0f)
                 return "Disabled";
             else if (value == 0.0f)
@@ -68,16 +69,15 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
         settingItems.push_back({"Inactive Digit Light", String(config.data.tftDigitLigth ? "ON" : "OFF"), ItemAction::INACTIVE_DIGIT_LIGHT});
         settingItems.push_back({"Beeper", String(config.data.beeperEnabled ? "ON" : "OFF"), ItemAction::BEEPER_ENABLED});
 
-        settingItems.push_back({"FFT Config AM", decodeMiniFftConfig(config.data.miniAudioFftConfigAm), ItemAction::FFT_CONFIG_AM});
-        settingItems.push_back({"FFT Config FM", decodeMiniFftConfig(config.data.miniAudioFftConfigFm), ItemAction::FFT_CONFIG_FM});
+        settingItems.push_back({"FFT Config AM", decodeMiniFftConfigLambda(config.data.miniAudioFftConfigAm), ItemAction::FFT_CONFIG_AM});
+        settingItems.push_back({"FFT Config FM", decodeMiniFftConfigLambda(config.data.miniAudioFftConfigFm), ItemAction::FFT_CONFIG_FM});
 
         settingItems.push_back({"CW Receiver Offset", String(config.data.cwReceiverOffsetHz) + " Hz", ItemAction::CW_RECEIVER_OFFSET});
-        settingItems.push_back({"RTTY Frequencies",
-                                "M:" + String(round(config.data.rttyMarkFrequencyHz)) + ", S:" + String(round(config.data.rttyMarkFrequencyHz - config.data.rttyShiftHz)) +
-                                    ", Sh:" + String(round(config.data.rttyShiftHz)) + " Hz",
-                                ItemAction::RTTY_FREQUENCIES});
+        settingItems.push_back(
+            {"RTTY Frequencies", String(round(config.data.rttyMarkFrequencyHz)) + "/" + String(round(config.data.rttyShiftHz)) + " Hz", ItemAction::RTTY_FREQUENCIES});
 
         settingItems.push_back({"Factory Reset", "", ItemAction::FACTORY_RESET}); // Nincs érték, vagy "Execute"
+        // Az "Exit Setup" menüpontot eltávolítottuk, helyette dedikált gomb lesz
 
         if (menuList) {
             menuList->markForRedraw(); // Frissítjük a listát, ha már létezik
@@ -88,12 +88,30 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
     SetupScreen(TFT_eSPI &tft) : UIScreen(tft, "SetupScreen") {
         populateMenuItems();
 
+        const int16_t screenW = tft.width();
+        const int16_t screenH = tft.height();
+        const int16_t margin = 5;
+        const int16_t buttonHeight = UIButton::DEFAULT_BUTTON_HEIGHT;
+        const int16_t listTopMargin = 30; // Hely a képernyő címének
+        const int16_t listBottomPadding = buttonHeight + margin * 2; // Hely az Exit gombnak és alatta/felette lévő résnek
+
         // Lista komponens létrehozása és hozzáadása
-        // A bounds-ot úgy állítsd be, hogy a képernyő nagy részét elfoglalja,
-        // esetleg hagyva helyet egy fejlécnek vagy láblécnek.
-        Rect listBounds(10, 30, tft.width() - 20, tft.height() - 40);
+        Rect listBounds(margin, listTopMargin, screenW - (2 * margin), screenH - listTopMargin - listBottomPadding);
         menuList = std::make_shared<UIScrollableListComponent>(tft, listBounds, this);
         addChild(menuList);
+
+        // Exit gomb létrehozása
+        int16_t exitButtonWidth = UIButton::DEFAULT_BUTTON_WIDTH;
+        // Ha az autoSizeToText-et használnánk, akkor:
+        // exitButtonWidth = UIButton::calculateWidthForText(tft, "Exit", false, buttonHeight);
+        Rect exitButtonBounds(screenW - exitButtonWidth - margin, screenH - buttonHeight - margin, exitButtonWidth, buttonHeight);
+        exitButton = std::make_shared<UIButton>(tft, 0, exitButtonBounds, "Exit", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
+                                                [this](const UIButton::ButtonEvent &event) {
+                                                    if (event.state == UIButton::EventButtonState::Clicked && getManager()) {
+                                                        getManager()->goBack();
+                                                    }
+                                                });
+        addChild(exitButton);
     }
 
     virtual ~SetupScreen() = default;
