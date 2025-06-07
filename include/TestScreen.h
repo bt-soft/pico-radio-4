@@ -77,29 +77,76 @@ class TestScreen : public UIScreen, public ScreenButtonsManager<TestScreen> {
      * @brief UI komponensek létrehozása és elhelyezése
      */
     void layoutComponents() {
-        std::vector<ButtonDefinition> bottomButtonDefs = {
-            {1, "AM", UIButton::ButtonType::Pushable,
-             [this](const UIButton::ButtonEvent &event) {
-                 if (event.state == UIButton::EventButtonState::Clicked) {
-                     DEBUG("TestScreen: Switching to AM screen\n");
-                     getManager()->switchToScreen(SCREEN_NAME_AM); // UIScreen::getManager()
-                 }
-             },
-             UIButton::ButtonState::Disabled},
-            {2, "FM", UIButton::ButtonType::Pushable,
-             [this](const UIButton::ButtonEvent &event) {
-                 if (event.state == UIButton::EventButtonState::Clicked) {
-                     DEBUG("TestScreen: Switching to FM screen\n");
-                     getManager()->switchToScreen(SCREEN_NAME_FM); // UIScreen::getManager()
-                 }
-             }}
-            // ...további gombok...
-        };
 
-        std::vector<std::shared_ptr<UIButton>> createdBottomButtons;
-        // A layoutHorizontalButtonGroup a ScreenButtonsManager-ből öröklődik
-        // és a TestScreen (ami UIScreen is) tft-jét és addChild-ját használja.
-        layoutHorizontalButtonGroup(bottomButtonDefs, &createdBottomButtons);
+        // Előre definiált feliratok a vízszintes gombokhoz
+        const char *horizontalLabels[] = {"HBtn1", "HBtn2",  "HBtn3",  "HBtn4",  "HBtn5",  "HBtn6",  "HBtn7", "HBtn8",
+                                          "HBtn9", "HBtn10", "HBtn11", "HBtn12", "HBtn13", "HBtn14", "HBtn15"};
+        const size_t numHorizontalButtons = sizeof(horizontalLabels) / sizeof(horizontalLabels[0]);
+
+        // Vízszintes gombok tesztelése (alsó sor)
+        std::vector<ButtonDefinition> horizontalButtonDefs;
+        for (size_t i = 0; i < numHorizontalButtons; ++i) {
+            horizontalButtonDefs.push_back({static_cast<uint8_t>(i + 1), // ID
+                                            horizontalLabels[i],         // Felirat a tömbből
+                                            UIButton::ButtonType::Pushable,
+                                            [this, id = i + 1](const UIButton::ButtonEvent &event) {
+                                                if (event.state == UIButton::EventButtonState::Clicked) {
+                                                    DEBUG("TestScreen: Horizontal Button %d clicked\n", id);
+                                                }
+                                            },
+                                            UIButton::ButtonState::Off});
+        }
+
+        std::vector<std::shared_ptr<UIButton>> createdHorizontalButtons;
+        // A layoutHorizontalButtonGroup a ScreenButtonsManager-ből öröklődik és a TestScreen (ami UIScreen is) tft-jét és addChild-ját használja.
+        layoutHorizontalButtonGroup(horizontalButtonDefs, &createdHorizontalButtons);
+
+        // Előre definiált feliratok a függőleges gombokhoz
+        const char *verticalLabels[] = {"VBtn1", "VBtn2", "VBtn3", "VBtn4", "VBtn5", "VBtn6", "VBtn7", "VBtn8", "VBtn9", "VBtn10", "VBtn11", "VBtn12"};
+        const size_t numVerticalButtons = sizeof(verticalLabels) / sizeof(verticalLabels[0]);
+
+        // Függőleges gombok tesztelése (jobb oldali oszlop)
+        std::vector<ButtonDefinition> verticalButtonDefs;
+        for (size_t i = 0; i < numVerticalButtons; ++i) {
+            verticalButtonDefs.push_back({
+                static_cast<uint8_t>(100 + i + 1), // Eltérő ID tartomány
+                verticalLabels[i],                 // Felirat a tömbből
+                UIButton::ButtonType::Toggleable,
+                [this, id = 100 + i + 1](const UIButton::ButtonEvent &event) {
+                    if (event.state == UIButton::EventButtonState::On || event.state == UIButton::EventButtonState::Off) {
+                        DEBUG("TestScreen: Vertical Button %d toggled to %s\n", id, event.state == UIButton::EventButtonState::On ? "ON" : "OFF");
+                    }
+                },
+                (i % 2 == 0) ? UIButton::ButtonState::Off : UIButton::ButtonState::On, // Váltakozó kezdeti állapot
+            });
+        }
+
+        std::vector<std::shared_ptr<UIButton>> createdVerticalButtons;
+        layoutVerticalButtonGroup(verticalButtonDefs, &createdVerticalButtons, 5, 5,
+                                  5 + (UIButton::DEFAULT_BUTTON_HEIGHT + 3) * 1); // Alsó margó növelése, hogy ne ütközzön a vízszintes gombokkal
+
+        // std::vector<ButtonDefinition> bottomButtonDefs = {
+        //     {1, "AM", UIButton::ButtonType::Pushable,
+        //      [this](const UIButton::ButtonEvent &event) {
+        //          if (event.state == UIButton::EventButtonState::Clicked) {
+        //              DEBUG("TestScreen: Switching to AM screen\n");
+        //              getManager()->switchToScreen(SCREEN_NAME_AM); // UIScreen::getManager()
+        //          }
+        //      },
+        //      UIButton::ButtonState::Disabled},
+        //     {2, "FM", UIButton::ButtonType::Pushable,
+        //      [this](const UIButton::ButtonEvent &event) {
+        //          if (event.state == UIButton::EventButtonState::Clicked) {
+        //              DEBUG("TestScreen: Switching to FM screen\n");
+        //              getManager()->switchToScreen(SCREEN_NAME_FM); // UIScreen::getManager()
+        //          }
+        //      }}
+        //     // ...további gombok...
+        // };
+
+        // std::vector<std::shared_ptr<UIButton>> createdBottomButtons;
+        // // A layoutHorizontalButtonGroup a ScreenButtonsManager-ből öröklődik és a TestScreen (ami UIScreen is) tft-jét és addChild-ját használja.
+        // layoutHorizontalButtonGroup(bottomButtonDefs, &createdBottomButtons);
     }
 };
 
