@@ -82,18 +82,18 @@ class UIButton : public UIComponent {
             resultColors.text = this->colors.pressedForeground;
 
             // LED színe lenyomott állapotban
-            if (buttonType == ButtonType::Toggleable) {
+            if (buttonType == ButtonType::Toggleable) { // Toggleable esetén a LED a logikai állapotot mutatja lenyomáskor is
                 resultColors.led = (currentState == ButtonState::On) ? this->colors.ledOnColor : this->colors.ledOffColor;
-                // Vagy egyedi szín lenyomáskor, pl. TFT_ORANGE
-            } else {
+            } else { // Pushable
                 resultColors.led = TFT_BLACK;
             }
 
         } else {
-            if (currentState == ButtonState::On && buttonType == ButtonType::Toggleable) {
-                resultColors.background = this->colors.activeBackground;
-                resultColors.border = this->colors.activeBorder;
-                resultColors.text = this->colors.activeForeground;
+            // Ha On állapotban van, az a konstruktor és a setButtonState miatt csak Toggleable lehet.
+            if (currentState == ButtonState::On) {
+                resultColors.background = this->colors.background; // Alapértelmezett háttér
+                resultColors.border = this->colors.ledOnColor;     // Keret színe a LED "On" színével
+                resultColors.text = this->colors.foreground;       // Alapértelmezett szövegszín
                 resultColors.led = this->colors.ledOnColor;
 
             } else if (currentState == ButtonState::CurrentActive) {
@@ -101,11 +101,9 @@ class UIButton : public UIComponent {
                 resultColors.border = TFT_BLUE;                    // Speciális eset, vagy this->colors.activeBorder
                 resultColors.text = this->colors.foreground;       // Vagy this->colors.activeForeground
 
-                resultColors.led = (buttonType == ButtonType::Toggleable && currentState == ButtonState::On)
-                                       ? this->colors.ledOnColor
-                                       : ((buttonType == ButtonType::Toggleable && currentState == ButtonState::Off) ? this->colors.ledOffColor : TFT_BLACK); // Módosítva
-
-            } else { // Normal Off state for Toggleable, or any state for Pushable
+                // CurrentActive állapotban a LED jellemzően nem releváns, a kiemelés a háttér/keret színeivel történik.
+                resultColors.led = TFT_BLACK;
+            } else { // ButtonState::Off (Pushable és Toggleable esetén is)
                 resultColors.background = this->colors.background;
                 resultColors.border = this->colors.border;
                 resultColors.text = this->colors.foreground;
@@ -172,7 +170,13 @@ class UIButton : public UIComponent {
              )
         : UIComponent(tft, Rect(bounds.x, bounds.y, (bounds.width == 0 ? DEFAULT_BUTTON_WIDTH : bounds.width), (bounds.height == 0 ? DEFAULT_BUTTON_HEIGHT : bounds.height)),
                       colors),
-          buttonId(id), label(label), buttonType(type), currentState(state), eventCallback(callback) {
+          buttonId(id), label(label), buttonType(type), eventCallback(callback) {
+        // Kezdeti állapot beállítása, Pushable gomb nem lehet On
+        this->currentState = state;
+        if (buttonType == ButtonType::Pushable && this->currentState == ButtonState::On) {
+            DEBUG("UIButton Constructor: Pushable button %d ('%s') initialized with On state. Setting to Off.\n", buttonId, label);
+            this->currentState = ButtonState::Off;
+        }
         // Ha a gombot eleve letiltott állapottal hozzuk létre,
         // akkor az ősosztály 'disabled' flag-jét is be kell állítani.
         if (this->currentState == ButtonState::Disabled) {
@@ -261,6 +265,11 @@ class UIButton : public UIComponent {
      * @param newState Az új állapot, amelyet be szeretnénk állítani
      */
     void setButtonState(ButtonState newState) {
+        // Pushable gomb nem lehet On állapotú
+        if (buttonType == ButtonType::Pushable && newState == ButtonState::On) {
+            newState = ButtonState::Off;
+        }
+
         if (currentState == newState) {
             // Ha az állapot már ugyanaz, ellenőrizzük és javítjuk a konzisztenciát UIComponent::enabled-del
             if (newState == ButtonState::Disabled) {

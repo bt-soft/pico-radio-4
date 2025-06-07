@@ -123,30 +123,7 @@ class TestScreen : public UIScreen, public ScreenButtonsManager<TestScreen> {
 
         std::vector<std::shared_ptr<UIButton>> createdVerticalButtons;
         layoutVerticalButtonGroup(verticalButtonDefs, &createdVerticalButtons, 5, 5,
-                                  5 + (UIButton::DEFAULT_BUTTON_HEIGHT + 3) * 1); // Alsó margó növelése, hogy ne ütközzön a vízszintes gombokkal
-
-        // std::vector<ButtonDefinition> bottomButtonDefs = {
-        //     {1, "AM", UIButton::ButtonType::Pushable,
-        //      [this](const UIButton::ButtonEvent &event) {
-        //          if (event.state == UIButton::EventButtonState::Clicked) {
-        //              DEBUG("TestScreen: Switching to AM screen\n");
-        //              getManager()->switchToScreen(SCREEN_NAME_AM); // UIScreen::getManager()
-        //          }
-        //      },
-        //      UIButton::ButtonState::Disabled},
-        //     {2, "FM", UIButton::ButtonType::Pushable,
-        //      [this](const UIButton::ButtonEvent &event) {
-        //          if (event.state == UIButton::EventButtonState::Clicked) {
-        //              DEBUG("TestScreen: Switching to FM screen\n");
-        //              getManager()->switchToScreen(SCREEN_NAME_FM); // UIScreen::getManager()
-        //          }
-        //      }}
-        //     // ...további gombok...
-        // };
-
-        // std::vector<std::shared_ptr<UIButton>> createdBottomButtons;
-        // // A layoutHorizontalButtonGroup a ScreenButtonsManager-ből öröklődik és a TestScreen (ami UIScreen is) tft-jét és addChild-ját használja.
-        // layoutHorizontalButtonGroup(bottomButtonDefs, &createdBottomButtons);
+                                  (5 + UIButton::DEFAULT_BUTTON_HEIGHT + 3) * 1); // Alsó margó növelése, hogy ne ütközzön a vízszintes gombokkal
     }
 };
 
