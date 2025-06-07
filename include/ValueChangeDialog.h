@@ -1,0 +1,240 @@
+/**
+ * @file ValueChangeDialog.h
+ * @brief Érték módosító dialógus osztály definíciója
+ *
+ * A ValueChangeDialog egy univerzális dialógus, amely képes integer, float
+ * és boolean értékek interaktív módosítására. Támogatja a min/max/step
+ * beállításokat és valós idejű érték frissítést pointeren/referencián keresztül.
+ *
+ * Főbb funkciók:
+ * - Integer, float és boolean értékek szerkesztése
+ * - Min/max/step beállítások
+ * - Valós idejű érték frissítés
+ * - Cancel esetén eredeti érték visszaállítása
+ * - Callback támogatás
+ * - Rotary encoder támogatás
+ *
+ * @version 1.0
+ * @date 2025.06.01
+ */
+
+#ifndef __VALUE_CHANGE_DIALOG_H
+#define __VALUE_CHANGE_DIALOG_H
+
+#include "UIDialogBase.h"
+#include <functional>
+#include <variant>
+
+/**
+ * @class ValueChangeDialog
+ * @brief Univerzális érték módosító dialógus
+ *
+ * Ez a dialógus képes különböző típusú értékek (int, float, bool) módosítására
+ * egy egységes interfészen keresztül. Az értékek közvetlenül a megadott
+ * pointeren vagy referencián keresztül frissülnek.
+ */
+class ValueChangeDialog : public UIDialogBase {
+
+    public:
+    /**
+     * @brief Támogatott érték típusok
+     */
+    enum class ValueType {
+        Integer, ///< Egész szám
+        Float,   ///< Lebegőpontos szám
+        Boolean  ///< Logikai érték
+    };
+
+    /**
+     * @brief Érték módosítási callback típus
+     * @param newValue Az új érték (variant típusként)
+     */
+    using ValueChangeCallback = std::function<void(const std::variant<int, float, bool> &)>;
+
+  protected:
+    // Dialógus adatok
+    String _message;      ///< Érték magyarázó szöveg
+    ValueType _valueType; ///< Az érték típusa
+
+    // Érték pointerek (csak az egyik használatos a típus alapján)
+    int *_intPtr = nullptr;
+    float *_floatPtr = nullptr;
+    bool *_boolPtr = nullptr;
+
+    // Eredeti értékek a Cancel funkcióhoz
+    int _originalIntValue = 0;
+    float _originalFloatValue = 0.0f;
+    bool _originalBoolValue = false;
+
+    // Beállítások
+    int _minInt = 0, _maxInt = 100, _stepInt = 1;
+    float _minFloat = 0.0f, _maxFloat = 100.0f, _stepFloat = 1.0f;
+
+    // Callback
+    ValueChangeCallback _valueCallback = nullptr;
+
+    // UI komponensek
+    std::shared_ptr<UIButton> _okButton;
+    std::shared_ptr<UIButton> _cancelButton;
+    std::shared_ptr<UIButton> _decreaseButton; ///< Érték csökkentő gomb
+    std::shared_ptr<UIButton> _increaseButton; ///< Érték növelő gomb
+
+    // Gomb méretek és elrendezés
+    static constexpr uint16_t BUTTON_WIDTH = 60;
+    static constexpr uint16_t BUTTON_HEIGHT = 30;
+    static constexpr uint16_t SMALL_BUTTON_WIDTH = 40;
+    static constexpr uint16_t BUTTON_SPACING = 8;
+    static constexpr uint16_t VALUE_DISPLAY_HEIGHT = 40;
+    static constexpr uint16_t FOOTER_AREA_HEIGHT = BUTTON_HEIGHT + 2 * PADDING;
+    static constexpr uint16_t VERTICAL_OFFSET_FOR_VALUE_AREA = 35;
+    static constexpr uint8_t VALUE_TEXT_FONT_SIZE = 2; ///< Az érték kijelzésének betűmérete (setTextSize)
+
+    // Gombállapotok optimalizáláshoz
+    mutable bool _lastCanDecrement = true;
+    mutable bool _lastCanIncrement = true;
+
+    /**
+     * @brief Dialógus tartalom létrehozása
+     */
+    virtual void createDialogContent() override;
+
+    /**
+     * @brief Dialógus tartalom elrendezése
+     */
+    virtual void layoutDialogContent() override;
+
+    /**
+     * @brief Saját tartalom rajzolása (üzenet + aktuális érték)
+     */
+    virtual void drawSelf() override;
+
+    /**
+     * @brief Rotary encoder kezelés érték módosításhoz
+     */
+    virtual bool handleRotary(const RotaryEvent &event) override;
+
+  private:
+    /**
+     * @brief Aktuális érték lekérése string formátumban
+     */
+    String getCurrentValueAsString() const;
+
+    /**
+     * @brief Érték növelése
+     */
+    void incrementValue();
+
+    /**
+     * @brief Érték csökkentése
+     */
+    void decrementValue();
+
+    /**
+     * @brief Eredeti érték visszaállítása (Cancel esetén)
+     */
+    void restoreOriginalValue();
+
+    /**
+     * @brief Érték boundary ellenőrzés és korrekció
+     */
+    void validateAndClampValue();
+
+    /**
+     * @brief Callback hívása ha van
+     */
+    void notifyValueChange();
+
+    /**
+     * @brief Csak az érték terület újrarajzolása (optimalizálás)
+     */
+    void redrawValueArea();
+
+    /**
+     * @brief Ellenőrzi, hogy az aktuális érték megegyezik-e az eredetivel
+     * @return true ha az aktuális érték = eredeti érték
+     */
+    bool isCurrentValueOriginal() const;
+
+    /**
+     * @brief Egyszerű gombok rajzolása (vizuális optimalizálás)
+     */
+    void drawCustomButtons();
+
+    /**
+     * @brief Boolean gombok állapotának frissítése
+     */
+    void updateBooleanButtonStates();
+
+    /**
+     * @brief Csak az érték szöveg újrarajzolása (Boolean gombokhoz optimalizált)
+     */
+    void redrawValueTextOnly();
+
+    /**
+     * @brief Ellenőrzi, hogy növelhető-e az érték
+     * @return true ha növelhető, false ha elérte a maximumot
+     */
+    bool canIncrement() const;
+
+    /**
+     * @brief Ellenőrzi, hogy csökkenthető-e az érték
+     * @return true ha csökkenthető, false ha elérte a minimumot
+     */
+    bool canDecrement() const;
+
+  public:
+    /**
+     * @brief Konstruktor integer értékhez
+     * @param parentScreen Szülő képernyő
+     * @param tft TFT meghajtó referencia
+     * @param title Dialógus címe
+     * @param message Érték magyarázó szöveg
+     * @param valuePtr Módosítandó integer pointer
+     * @param minValue Minimum érték
+     * @param maxValue Maximum érték
+     * @param stepValue Lépésköz
+     * @param callback Értékváltozás callback
+     * @param bounds Dialógus mérete és pozíciója
+     * @param cs Színséma
+     */
+    ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, const char *title, const char *message, int *valuePtr, int minValue, int maxValue, int stepValue = 1,
+                      ValueChangeCallback callback = nullptr, const Rect &bounds = {-1, -1, 0, 0}, const ColorScheme &cs = ColorScheme::defaultScheme());
+
+    /**
+     * @brief Konstruktor float értékhez
+     * @param parentScreen Szülő képernyő
+     * @param tft TFT meghajtó referencia
+     * @param title Dialógus címe
+     * @param message Érték magyarázó szöveg
+     * @param valuePtr Módosítandó float pointer
+     * @param minValue Minimum érték
+     * @param maxValue Maximum érték
+     * @param stepValue Lépésköz
+     * @param callback Értékváltozás callback
+     * @param bounds Dialógus mérete és pozíciója
+     * @param cs Színséma
+     */
+    ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, const char *title, const char *message, float *valuePtr, float minValue, float maxValue, float stepValue = 1.0f,
+                      ValueChangeCallback callback = nullptr, const Rect &bounds = {-1, -1, 0, 0}, const ColorScheme &cs = ColorScheme::defaultScheme());
+
+    /**
+     * @brief Konstruktor boolean értékhez
+     * @param parentScreen Szülő képernyő
+     * @param tft TFT meghajtó referencia
+     * @param title Dialógus címe
+     * @param message Érték magyarázó szöveg
+     * @param valuePtr Módosítandó boolean pointer
+     * @param callback Értékváltozás callback
+     * @param bounds Dialógus mérete és pozíciója
+     * @param cs Színséma
+     */
+    ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, const char *title, const char *message, bool *valuePtr, ValueChangeCallback callback = nullptr,
+                      const Rect &bounds = {-1, -1, 0, 0}, const ColorScheme &cs = ColorScheme::defaultScheme());
+
+    /**
+     * @brief Destruktor
+     */
+    virtual ~ValueChangeDialog() = default;
+};
+
+#endif // __VALUE_CHANGE_DIALOG_H

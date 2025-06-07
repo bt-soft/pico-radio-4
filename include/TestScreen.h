@@ -4,18 +4,21 @@
 #include "ButtonsGroupManager.h"
 #include "MessageDialog.h" // Hozzáadva a MessageDialog használatához
 #include "UIScreen.h"
+#include "ValueChangeDialog.h" // Hozzáadva a ValueChangeDialog használatához
 
 /**
  * @file TestScreen.h
  * @brief Test képernyő osztály, amely használja a ButtonsGroupManager-t
  */
+
 class TestScreen : public UIScreen, public ButtonsGroupManager<TestScreen> {
   public:
     /**
      * @brief TestScreen konstruktor
+     * Inicializálja a teszt értékeket.
      * @param tft TFT display referencia
      */
-    TestScreen(TFT_eSPI &tft) : UIScreen(tft, SCREEN_NAME_TEST) { layoutComponents(); }
+    TestScreen(TFT_eSPI &tft) : UIScreen(tft, SCREEN_NAME_TEST), _testBool(false), _testInt(50), _testFloat(12.5f) { layoutComponents(); }
     virtual ~TestScreen() = default;
 
     /**
@@ -73,13 +76,17 @@ class TestScreen : public UIScreen, public ButtonsGroupManager<TestScreen> {
     }
 
   private:
+    // Tagváltozók a ValueChangeDialog teszteléséhez
+    bool _testBool;
+    int _testInt;
+    float _testFloat;
+
     /**
      * @brief UI komponensek létrehozása és elhelyezése
      */
     void layoutComponents() {
-
         // Előre definiált feliratok a vízszintes gombokhoz
-        const char *horizontalLabels[] = {"Msg Ok", "MsgOkCancel", "MsgYesNo", "MsgYesNoCancel", "NestedDlg"};
+        const char *horizontalLabels[] = {"Msg Ok", "MsgOkCancel", "NestedDlg", "Bool Dlg", "Int Dlg", "Float Dlg"};
         constexpr size_t numHorizontalButtons = ARRAY_ITEM_COUNT(horizontalLabels);
 
         // Vízszintes gombok tesztelése (alsó sor)
@@ -104,12 +111,6 @@ class TestScreen : public UIScreen, public ButtonsGroupManager<TestScreen> {
                          } else if (STREQ(event.label, "MsgOkCancel")) {
                              dialogType = MessageDialog::ButtonsType::OkCancel;
                              dialogMessage = "This is an OK/Cancel dialog.";
-                         } else if (STREQ(event.label, "MsgYesNo")) {
-                             dialogType = MessageDialog::ButtonsType::YesNo;
-                             dialogMessage = "This is a Yes/No dialog.";
-                         } else if (STREQ(event.label, "MsgYesNoCancel")) {
-                             dialogType = MessageDialog::ButtonsType::YesNoCancel;
-                             dialogMessage = "This is a Yes/No/Cancel dialog.";
                          } else if (STREQ(event.label, "NestedDlg")) {
                              // Nested Dialog Chain
                              DEBUG("Starting nested dialog chain...\n");
@@ -159,6 +160,48 @@ class TestScreen : public UIScreen, public ButtonsGroupManager<TestScreen> {
                              });
                              this->showDialog(dialog1);
                              return; // Kilépés a showSpecificDialog logikából
+
+                         } else if (STREQ(event.label, "Bool Dlg")) {
+                             Rect dlgBounds(-1, -1, 280, 0); // Auto-magasság
+                             auto boolDialog = std::make_shared<ValueChangeDialog>(
+                                 this, this->tft, "Boolean Test", "Change boolean value:", &_testBool,
+                                 [this](const std::variant<int, float, bool> &newValue) {
+                                     if (std::holds_alternative<bool>(newValue)) {
+                                         DEBUG("TestScreen: Boolean value changed to: %s\n", std::get<bool>(newValue) ? "true" : "false");
+                                     }
+                                 },
+                                 dlgBounds);
+                             this->showDialog(boolDialog);
+                             return;
+
+                         } else if (STREQ(event.label, "Int Dlg")) {
+                             Rect dlgBounds(-1, -1, 280, 0); // Auto-magasság
+                             auto intDialog = std::make_shared<ValueChangeDialog>(
+                                 this, this->tft, "Integer Test", "Change integer value:", &_testInt, 0, 100, 5,
+                                 [this](const std::variant<int, float, bool> &newValue) {
+                                     if (std::holds_alternative<int>(newValue)) {
+                                         DEBUG("TestScreen: Integer value changed to: %d\n", std::get<int>(newValue));
+                                     }
+                                 },
+                                 dlgBounds);
+                             this->showDialog(intDialog);
+                             return;
+
+                         } else if (STREQ(event.label, "Float Dlg")) {
+                             Rect dlgBounds(-1, -1, 280, 0); // Auto-magasság
+                             auto floatDialog = std::make_shared<ValueChangeDialog>(
+                                 this, this->tft, "Float Test", "Change float value:", &_testFloat, 0.0f, 50.0f, 0.5f,
+                                 [this](const std::variant<int, float, bool> &newValue) {
+                                     if (std::holds_alternative<float>(newValue)) {
+                                         char floatStr[10];
+                                         dtostrf(std::get<float>(newValue), 4, 2, floatStr); // Formázzuk a floatot stringgé
+                                         DEBUG("TestScreen: Float value changed to: %s\n", floatStr);
+                                     }
+                                 },
+                                 dlgBounds);
+                             this->showDialog(floatDialog);
+                             return; // Kilépés a showSpecificDialog logikából
+
                          } else {
                              showSpecificDialog = false; // Nem dialógus indító gomb
                          }
