@@ -1,14 +1,14 @@
 #ifndef __TEST_SCREEN_H
 #define __TEST_SCREEN_H
 
-#include "ScreenButtonsManager.h"
+#include "ButtonsGroupManager.h"
 #include "UIScreen.h"
 
 /**
  * @file TestScreen.h
- * @brief Test képernyő osztály, amely használja a ScreenButtonsManager-t
+ * @brief Test képernyő osztály, amely használja a ButtonsGroupManager-t
  */
-class TestScreen : public UIScreen, public ScreenButtonsManager<TestScreen> {
+class TestScreen : public UIScreen, public ButtonsGroupManager<TestScreen> {
   public:
     /**
      * @brief TestScreen konstruktor
@@ -79,12 +79,12 @@ class TestScreen : public UIScreen, public ScreenButtonsManager<TestScreen> {
     void layoutComponents() {
 
         // Előre definiált feliratok a vízszintes gombokhoz
-        const char *horizontalLabels[] = {"HBtn1", "HBtn2",  "HBtn3",  "HBtn4",  "HBtn5",  "HBtn6",  "HBtn7", "HBtn8",
-                                          "HBtn9", "HBtn10", "HBtn11", "HBtn12", "HBtn13", "HBtn14", "HBtn15"};
-        const size_t numHorizontalButtons = sizeof(horizontalLabels) / sizeof(horizontalLabels[0]);
+        const char *horizontalLabels[] = {"HBtn1", "HBtn2",  "HBtn3",  "HBtn4",  "HBtn5",  "HBtn6",  /*"HBtn7", "HBtn8",
+                                          "HBtn9", "HBtn10", "HBtn11", "HBtn12", "HBtn13", "HBtn14", "HBtn15"*/};
+        constexpr size_t numHorizontalButtons = ARRAY_ITEM_COUNT(horizontalLabels);
 
         // Vízszintes gombok tesztelése (alsó sor)
-        std::vector<ButtonDefinition> horizontalButtonDefs;
+        std::vector<ButtonGroupDefinition> horizontalButtonDefs;
         for (size_t i = 0; i < numHorizontalButtons; ++i) {
             horizontalButtonDefs.push_back({static_cast<uint8_t>(i + 1), // ID
                                             horizontalLabels[i],         // Felirat a tömbből
@@ -97,16 +97,15 @@ class TestScreen : public UIScreen, public ScreenButtonsManager<TestScreen> {
                                             UIButton::ButtonState::Off});
         }
 
-        std::vector<std::shared_ptr<UIButton>> createdHorizontalButtons;
         // A layoutHorizontalButtonGroup a ScreenButtonsManager-ből öröklődik és a TestScreen (ami UIScreen is) tft-jét és addChild-ját használja.
-        layoutHorizontalButtonGroup(horizontalButtonDefs, &createdHorizontalButtons);
+        layoutHorizontalButtonGroup(horizontalButtonDefs);
 
         // Előre definiált feliratok a függőleges gombokhoz
-        const char *verticalLabels[] = {"VBtn1", "VBtn2", "VBtn3", "VBtn4", "VBtn5", "VBtn6", "VBtn7", "VBtn8", "VBtn9", "VBtn10", "VBtn11", "VBtn12"};
-        const size_t numVerticalButtons = sizeof(verticalLabels) / sizeof(verticalLabels[0]);
+        const char *verticalLabels[] = {"VBtn1", "VBtn2", "VBtn3", "VBtn4", "VBtn5", "VBtn6", "VBtn7" /*, "VBtn8", "VBtn9", "VBtn10", "VBtn11", "VBtn12"*/};
+        constexpr size_t numVerticalButtons = ARRAY_ITEM_COUNT(verticalLabels);
 
         // Függőleges gombok tesztelése (jobb oldali oszlop)
-        std::vector<ButtonDefinition> verticalButtonDefs;
+        std::vector<ButtonGroupDefinition> verticalButtonDefs;
         for (size_t i = 0; i < numVerticalButtons; ++i) {
             verticalButtonDefs.push_back({
                 static_cast<uint8_t>(100 + i + 1), // Eltérő ID tartomány
@@ -121,8 +120,7 @@ class TestScreen : public UIScreen, public ScreenButtonsManager<TestScreen> {
             });
         }
 
-        std::vector<std::shared_ptr<UIButton>> createdVerticalButtons;
-        layoutVerticalButtonGroup(verticalButtonDefs, &createdVerticalButtons, 5, 5,
+        layoutVerticalButtonGroup(verticalButtonDefs, nullptr, 5, 5,
                                   (5 + UIButton::DEFAULT_BUTTON_HEIGHT + 3) * 1); // Alsó margó növelése, hogy ne ütközzön a vízszintes gombokkal
     }
 };

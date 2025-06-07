@@ -1,5 +1,5 @@
-#ifndef __SCREEN_BUTTONS_MANAGER_H
-#define __SCREEN_BUTTONS_MANAGER_H
+#ifndef __BUTTONS_GROUP_MANAGER_H
+#define __BUTTONS_GROUP_MANAGER_H
 
 #include <functional>
 #include <memory>
@@ -7,11 +7,11 @@
 
 #include "UIButton.h"
 #include "UIContainerComponent.h"
-#include "UIScreen.h" // Szükséges lehet, ha a DerivedScreen mindig UIScreen leszármazott
+#include "UIScreen.h"
 
 // Struktúra a gombok definíciójához a csoportos elrendezéshez
 // Ezt a struktúrát használják a layout metódusok.
-struct ButtonDefinition {
+struct ButtonGroupDefinition {
     uint8_t id;                                                      // Gomb egyedi azonosítója
     const char *label;                                               // Gomb felirata
     UIButton::ButtonType type;                                       // Gomb típusa (Pushable, Toggleable)
@@ -22,20 +22,34 @@ struct ButtonDefinition {
 };
 
 template <typename DerivedScreen> // Curiously Recurring Template Pattern (CRTP): A DerivedScreen lesz a konkrét képernyő osztály (pl. TestScreen)
-class ScreenButtonsManager {
+class ButtonsGroupManager {
   protected:
     // A konstruktor és destruktor lehet default, mivel ez az osztály
     // elsősorban metódusokat biztosít, nem saját állapotot.
-    ScreenButtonsManager() = default;
-    virtual ~ScreenButtonsManager() = default;
+    ButtonsGroupManager() = default;
+    virtual ~ButtonsGroupManager() = default;
 
     /**
      * @brief Gombokat rendez el függőlegesen, a képernyő jobb széléhez igazítva.
-     * A metódus a leszármazott képernyő (ami UIScreen-ből is származik)
-     * tft referenciáját és addChild metódusát használja.
+     * A metódus a leszármazott képernyő (ami UIScreen-ből is származik) tft referenciáját és addChild metódusát használja.
+     *
+     * @param buttonDefs A gombok definíciói, amelyek tartalmazzák az ID-t, feliratot, típust, kezdeti állapotot és callback-et.
+     * @param out_createdButtons Opciósan visszaadja a létrehozott gombokat, ha nem nullptr.
+     * @param marginRight A jobb margó a képernyő szélétől (alapértelmezett 5 pixel).
+     * @param marginTop A felső margó a képernyő tetejétől (alapértelmezett 5 pixel).
+     * @param marginBottom Az alsó margó a képernyő aljától (alapértelmezett 5 pixel).
+     * @param defaultButtonWidthRef Az alapértelmezett gomb szélessége, ha a gomb definícióban nincs megadva (alapértelmezett UIButton::DEFAULT_BUTTON_WIDTH).
+     * @param defaultButtonHeightRef Az alapértelmezett gomb magassága, ha a gomb definícióban nincs megadva (alapértelmezett UIButton::DEFAULT_BUTTON_HEIGHT).
+     * @param columnGap Az oszlopok közötti távolság (alapértelmezett 3 pixel).
+     * @param buttonGap A gombok közötti függőleges távolság (alapértelmezett 3 pixel).
+     *
+     *
+     * Ha kell a létrehozott gombok listája, akkor a `out_createdButtons` paramétert meg kell adni.
+     * std::vector<std::shared_ptr<UIButton>> createdVerticalButtons
+     * layoutVerticalButtonGroup(horizontalButtonDefs, &createdVerticalButtons);
      */
-    void layoutVerticalButtonGroup(const std::vector<ButtonDefinition> &buttonDefs, std::vector<std::shared_ptr<UIButton>> *out_createdButtons = nullptr, int16_t marginRight = 5,
-                                   int16_t marginTop = 5, int16_t marginBottom = 5, int16_t defaultButtonWidthRef = UIButton::DEFAULT_BUTTON_WIDTH,
+    void layoutVerticalButtonGroup(const std::vector<ButtonGroupDefinition> &buttonDefs, std::vector<std::shared_ptr<UIButton>> *out_createdButtons = nullptr,
+                                   int16_t marginRight = 5, int16_t marginTop = 5, int16_t marginBottom = 5, int16_t defaultButtonWidthRef = UIButton::DEFAULT_BUTTON_WIDTH,
                                    int16_t defaultButtonHeightRef = UIButton::DEFAULT_BUTTON_HEIGHT, int16_t columnGap = 3, int16_t buttonGap = 3) {
 
         DerivedScreen *self = static_cast<DerivedScreen *>(this);
@@ -56,9 +70,9 @@ class ScreenButtonsManager {
         }
 
         // --- Előfeldolgozási fázis: Oszlopok struktúrájának és méreteinek meghatározása ---
-        std::vector<std::vector<ButtonDefinition>> colsOfButtons;
+        std::vector<std::vector<ButtonGroupDefinition>> colsOfButtons;
         std::vector<int16_t> colMaxWidhtsList;
-        std::vector<ButtonDefinition> currentBuildingColButtons;
+        std::vector<ButtonGroupDefinition> currentBuildingColButtons;
         int16_t currentY_build = marginTop;
         int16_t currentBuildingColMaxW = 0;
 
@@ -67,7 +81,8 @@ class ScreenButtonsManager {
             int16_t btnH = (def.height > 0) ? def.height : defaultButtonHeightRef;
 
             if (currentY_build == marginTop && btnH > maxColumnHeight) {
-                if (!currentBuildingColButtons.empty()) { // Ha az előző oszlopban voltak gombok
+                // Ha az előző oszlopban voltak gombok
+                if (!currentBuildingColButtons.empty()) {
                     colsOfButtons.push_back(currentBuildingColButtons);
                     colMaxWidhtsList.push_back(currentBuildingColMaxW);
                     currentBuildingColButtons.clear();
@@ -77,14 +92,16 @@ class ScreenButtonsManager {
                 continue;
             }
 
-            if (currentY_build + btnH > maxColumnHeight && currentY_build != marginTop) { // Új oszlopot kell kezdeni
+            // Új oszlopot kell kezdeni
+            if (currentY_build + btnH > maxColumnHeight && currentY_build != marginTop) {
                 colsOfButtons.push_back(currentBuildingColButtons);
                 colMaxWidhtsList.push_back(currentBuildingColMaxW);
                 currentBuildingColButtons.clear();
                 currentY_build = marginTop;
                 currentBuildingColMaxW = 0;
 
-                if (btnH > maxColumnHeight) { // Ellenőrizzük, hogy az új oszlopot kezdő gomb nem túl magas-e
+                // Ellenőrizzük, hogy az új oszlopot kezdő gomb nem túl magas-e
+                if (btnH > maxColumnHeight) {
                     continue;
                 }
             }
@@ -92,6 +109,7 @@ class ScreenButtonsManager {
             currentBuildingColMaxW = std::max(currentBuildingColMaxW, btnW);
             currentY_build += btnH + buttonGap;
         }
+
         if (!currentBuildingColButtons.empty()) {
             colsOfButtons.push_back(currentBuildingColButtons);
             colMaxWidhtsList.push_back(currentBuildingColMaxW);
@@ -134,11 +152,25 @@ class ScreenButtonsManager {
 
     /**
      * @brief Gombokat rendez el vízszintesen, a képernyő aljához igazítva.
-     * A metódus a leszármazott képernyő (ami UIScreen-ből is származik)
-     * tft referenciáját és addChild metódusát használja.
+     * A metódus a leszármazott képernyő (ami UIScreen-ből is származik) tft referenciáját és addChild metódusát használja.
+     *
+     * @param buttonDefs A gombok definíciói, amelyek tartalmazzák az ID-t, feliratot, típust, kezdeti állapotot és callback-et.
+     * @param out_createdButtons Opcionális kimeneti paraméter, amelybe a létrehozott gombok pointereit tárolja.
+     * @param marginLeft Bal oldali margó a gombok elhelyezéséhez (alapértelmezett 5 pixel).
+     * @param marginRight Jobb oldali margó a gombok elhelyezéséhez (alapértelmezett 5 pixel).
+     * @param marginBottom Alsó margó a gombok elhelyezéséhez (alapértelmezett 5 pixel).
+     * @param defaultButtonWidthRef Alapértelmezett gomb szélesség referencia (alapértelmezett UIButton::DEFAULT_BUTTON_WIDTH).
+     * @param defaultButtonHeightRef Alapértelmezett gomb magasság referencia (alapértelmezett UIButton::DEFAULT_BUTTON_HEIGHT).
+     * @param rowGap Sorok közötti függőleges rés (alapértelmezett 3 pixel).
+     * @param buttonGap Gombok közötti vízszintes rés (alapértelmezett 3 pixel).
+     *
+     * Ha kell a létrehozott gombok listája, akkor a `out_createdButtons` paramétert meg kell adni.
+     * std::vector<std::shared_ptr<UIButton>> createdHorizontalButtons;
+     * layoutHorizontalButtonGroup(horizontalButtonDefs, &createdHorizontalButtons);
+     *
      */
-    void layoutHorizontalButtonGroup(const std::vector<ButtonDefinition> &buttonDefs, std::vector<std::shared_ptr<UIButton>> *out_createdButtons = nullptr, int16_t marginLeft = 5,
-                                     int16_t marginRight = 5, int16_t marginBottom = 5, int16_t defaultButtonWidthRef = UIButton::DEFAULT_BUTTON_WIDTH,
+    void layoutHorizontalButtonGroup(const std::vector<ButtonGroupDefinition> &buttonDefs, std::vector<std::shared_ptr<UIButton>> *out_createdButtons = nullptr,
+                                     int16_t marginLeft = 5, int16_t marginRight = 5, int16_t marginBottom = 5, int16_t defaultButtonWidthRef = UIButton::DEFAULT_BUTTON_WIDTH,
                                      int16_t defaultButtonHeightRef = UIButton::DEFAULT_BUTTON_HEIGHT, int16_t rowGap = 3, int16_t buttonGap = 3) {
 
         DerivedScreen *self = static_cast<DerivedScreen *>(this);
@@ -156,9 +188,9 @@ class ScreenButtonsManager {
         }
 
         // --- Előfeldolgozási fázis: Sorok struktúrájának és méreteinek meghatározása ---
-        std::vector<std::vector<ButtonDefinition>> rowsOfButtons;
+        std::vector<std::vector<ButtonGroupDefinition>> rowsOfButtons;
         std::vector<int16_t> rowMaxHeightsList;
-        std::vector<ButtonDefinition> currentBuildingRowButtons;
+        std::vector<ButtonGroupDefinition> currentBuildingRowButtons;
         int16_t currentX_build = marginLeft;
         int16_t currentBuildingRowMaxH = 0;
 
@@ -167,7 +199,9 @@ class ScreenButtonsManager {
             int16_t btnHeight = (def.height > 0) ? def.height : defaultButtonHeightRef;
 
             if (currentX_build == marginLeft && btnWidth > maxRowWidth) {
-                if (!currentBuildingRowButtons.empty()) { // Ha az előző sorban voltak gombok
+
+                // Ha az előző sorban voltak gombok
+                if (!currentBuildingRowButtons.empty()) {
                     rowsOfButtons.push_back(currentBuildingRowButtons);
                     rowMaxHeightsList.push_back(currentBuildingRowMaxH);
                     currentBuildingRowButtons.clear();
@@ -177,14 +211,16 @@ class ScreenButtonsManager {
                 continue;
             }
 
-            if (currentX_build + btnWidth > maxRowWidth && currentX_build != marginLeft) { // Új sort kell kezdeni
+            // Új sort kell kezdeni
+            if (currentX_build + btnWidth > maxRowWidth && currentX_build != marginLeft) {
                 rowsOfButtons.push_back(currentBuildingRowButtons);
                 rowMaxHeightsList.push_back(currentBuildingRowMaxH);
                 currentBuildingRowButtons.clear();
                 currentX_build = marginLeft;
                 currentBuildingRowMaxH = 0;
 
-                if (btnWidth > maxRowWidth) { // Ellenőrizzük, hogy az új sort kezdő gomb nem túl széles-e
+                // Ellenőrizzük, hogy az új sort kezdő gomb nem túl széles-e
+                if (btnWidth > maxRowWidth) {
                     continue;
                 }
             }
@@ -192,6 +228,7 @@ class ScreenButtonsManager {
             currentBuildingRowMaxH = std::max(currentBuildingRowMaxH, btnHeight);
             currentX_build += btnWidth + buttonGap;
         }
+
         if (!currentBuildingRowButtons.empty()) {
             rowsOfButtons.push_back(currentBuildingRowButtons);
             rowMaxHeightsList.push_back(currentBuildingRowMaxH);
@@ -233,4 +270,4 @@ class ScreenButtonsManager {
     }
 };
 
-#endif // __SCREEN_BUTTONS_MANAGER_H
+#endif // __BUTTONS_GROUP_MANAGER_H
