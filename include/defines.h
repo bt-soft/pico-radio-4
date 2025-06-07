@@ -50,7 +50,7 @@
 //--- ScreenSaver
 #define SCREEN_SAVER_TIMEOUT_MIN 1
 #define SCREEN_SAVER_TIMEOUT_MAX 60
-#define SCREEN_SAVER_TIMEOUT 1 // 10 perc a képernyővédő időzítése
+#define SCREEN_SAVER_TIMEOUT 1 // 1 perc a képernyővédő időzítése - tesztelés
 
 //--- CW Decoder ---
 #define CW_DECODER_DEFAULT_FREQUENCY 750 // Alapértelmezett CW dekóder frekvencia (Hz)
