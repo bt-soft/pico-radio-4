@@ -11,9 +11,8 @@
  */
 class FMScreen : public UIScreen {
   private:
-    // Navigációs gombok
-    std::shared_ptr<UIButton> amButton;   ///< AM képernyőre váltás gomb
-    std::shared_ptr<UIButton> testButton; ///< Test képernyőre váltás gomb
+    // std::shared_ptr<UIButton> amButton;   ///< AM képernyőre váltás gomb
+    // std::shared_ptr<UIButton> testButton; ///< Test képernyőre váltás gomb
 
   public:
     /**
@@ -93,37 +92,54 @@ class FMScreen : public UIScreen {
         int16_t currentX = margin;
 
         // AM gomb létrehozása
-        amButton = std::make_shared<UIButton>(tft,
-                                              1,                                                  // ID
-                                              Rect(currentX, buttonY, buttonWidth, buttonHeight), // rect
-                                              "AM",                                               // label
-                                              UIButton::ButtonType::Pushable,                     // type
-                                              UIButton::ButtonState::Disabled,                    // initial state
-                                              [this](const UIButton::ButtonEvent &event) {        // callback
-                                                  if (event.state == UIButton::EventButtonState::Clicked) {
-                                                      DEBUG("FMScreen: Switching to AM screen\n");
-                                                      // Képernyőváltás AM-re
-                                                      UIScreen::getManager()->switchToScreen(SCREEN_NAME_AM);
-                                                  }
-                                              });
+        std::shared_ptr<UIButton> amButton = std::make_shared<UIButton>(tft,
+                                                                        1,                                                  // ID
+                                                                        Rect(currentX, buttonY, buttonWidth, buttonHeight), // rect
+                                                                        "AM",                                               // label
+                                                                        UIButton::ButtonType::Pushable,                     // type
+                                                                        UIButton::ButtonState::Disabled,                    // initial state
+                                                                        [this](const UIButton::ButtonEvent &event) {        // callback
+                                                                            if (event.state == UIButton::EventButtonState::Clicked) {
+                                                                                DEBUG("FMScreen: Switching to AM screen\n");
+                                                                                // Képernyőváltás AM-re
+                                                                                UIScreen::getManager()->switchToScreen(SCREEN_NAME_AM);
+                                                                            }
+                                                                        });
         addChild(amButton);
 
         currentX += buttonWidth + gap;
 
-        // FM gomb létrehozása
-        testButton = std::make_shared<UIButton>(tft,
-                                                2,                                                  // Id
-                                                Rect(currentX, buttonY, buttonWidth, buttonHeight), // rect
-                                                "Test",                                             // label
-                                                UIButton::ButtonType::Pushable,                     // type
-                                                [this](const UIButton::ButtonEvent &event) {        // callback
-                                                    if (event.state == UIButton::EventButtonState::Clicked) {
-                                                        DEBUG("FMScreen: Switching to Test screen\n");
-                                                        // Képernyőváltás FM-re
-                                                        UIScreen::getManager()->switchToScreen(SCREEN_NAME_TEST);
-                                                    }
-                                                });
+        // Test gomb létrehozása
+        std::shared_ptr<UIButton> testButton = std::make_shared<UIButton>(tft,
+                                                                          2,                                                  // Id
+                                                                          Rect(currentX, buttonY, buttonWidth, buttonHeight), // rect
+                                                                          "Test",                                             // label
+                                                                          UIButton::ButtonType::Pushable,                     // type
+                                                                          [this](const UIButton::ButtonEvent &event) {        // callback
+                                                                              if (event.state == UIButton::EventButtonState::Clicked) {
+                                                                                  DEBUG("FMScreen: Switching to Test screen\n");
+                                                                                  // Képernyőváltás Test-re
+                                                                                  UIScreen::getManager()->switchToScreen(SCREEN_NAME_TEST);
+                                                                              }
+                                                                          });
         addChild(testButton);
+
+        currentX += buttonWidth + gap;
+
+        // Test gomb létrehozása
+        std::shared_ptr<UIButton> setupButton = std::make_shared<UIButton>(tft,
+                                                                           2,                                                  // Id
+                                                                           Rect(currentX, buttonY, buttonWidth, buttonHeight), // rect
+                                                                           "Setup",                                            // label
+                                                                           UIButton::ButtonType::Pushable,                     // type
+                                                                           [this](const UIButton::ButtonEvent &event) {        // callback
+                                                                               if (event.state == UIButton::EventButtonState::Clicked) {
+                                                                                   DEBUG("FMScreen: Switching to Setup screen\n");
+                                                                                   // Képernyőváltás Setup-re
+                                                                                   UIScreen::getManager()->switchToScreen(SCREEN_NAME_SETUP);
+                                                                               }
+                                                                           });
+        addChild(setupButton);
     }
 };
 

@@ -19,6 +19,7 @@
 #define SCREEN_NAME_TEST "TestScreen"
 #define SCREEN_NAME_EMPTY "EmptyScreen"
 #define SCREEN_NAME_SCREENSAVER "ScreenSaver"
+#define SCREEN_NAME_SETUP "SetupScreen"
 
 //--- Debug ---
 #define __DEBUG // Debug mód vezérlése
@@ -28,7 +29,7 @@
 #define MEMORY_INFO_INTERVAL 20 * 1000 // 20mp
 
 // Soros portra várakozás a debug üzenetek előtt
-//#define DEBUG_WAIT_FOR_SERIAL
+// #define DEBUG_WAIT_FOR_SERIAL
 
 #endif
 
