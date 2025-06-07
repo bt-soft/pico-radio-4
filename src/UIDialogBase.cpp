@@ -13,14 +13,22 @@
 UIDialogBase::UIDialogBase(UIScreen *parentScreen, TFT_eSPI &tft, const Rect &initialBounds, const char *title, const ColorScheme &cs)
     : UIContainerComponent(tft, initialBounds, cs), parentScreen(parentScreen), title(title) {
 
-    // Dialógus méretének és pozíciójának beállítása, ha alapértelmezett értékekkel jött létre
     Rect finalBounds = initialBounds;
-    if (finalBounds.width == 0 || finalBounds.height == 0) { // Automatikus méretezés placeholder
-        finalBounds.width = tft.width() * 0.8;
-        finalBounds.height = tft.height() * 0.6;
+
+    // Szélesség beállítása: ha 0, akkor alapértelmezett, egyébként a megadott
+    if (finalBounds.width == 0) {
+        finalBounds.width = tft.width() * 0.8f; // Alapértelmezett szélesség
     }
-    if (finalBounds.x == -1 && finalBounds.y == -1) { // Középre igazítás placeholder
+    // Magasság beállítása: ha 0, akkor alapértelmezett, egyébként a megadott
+    if (finalBounds.height == 0) {
+        finalBounds.height = tft.height() * 0.6f; // Alapértelmezett magasság (ezt a MessageDialog felülírhatja)
+    }
+
+    // Középre igazítás, ha x vagy y -1
+    if (finalBounds.x == -1) {
         finalBounds.x = (tft.width() - finalBounds.width) / 2;
+    }
+    if (finalBounds.y == -1) {
         finalBounds.y = (tft.height() - finalBounds.height) / 2;
     }
     setBounds(finalBounds); // UIComponent::setBounds

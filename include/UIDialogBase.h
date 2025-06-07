@@ -70,6 +70,9 @@ class UIDialogBase : public UIContainerComponent {
     // Legyen virtual, hogy a leszármazottak is felülírhassák helyesen
     virtual void markForRedraw() override;
 
+    // Új metódus a veilDrawn flag resetelésére
+    void resetVeilDrawnFlag() { veilDrawn = false; }
+
     /**
      * @brief Touch esemény kezelése, amely először a gyerek komponenseken próbálkozik,
      * majd ha egyik sem, akkor maga a UIDialogBase kezeli.

@@ -80,7 +80,7 @@ class TestScreen : public UIScreen, public ButtonsGroupManager<TestScreen> {
     void layoutComponents() {
 
         // Előre definiált feliratok a vízszintes gombokhoz
-        const char *horizontalLabels[] = {/*"HBtn1", "HBtn2",*/ "Msg Ok", "MsgOkCancel", "MsgYesNo", "MsgYesNoCancel"};
+        const char *horizontalLabels[] = {"Msg Ok", "MsgOkCancel", "MsgYesNo", "MsgYesNoCancel", "NestedDlg"};
         constexpr size_t numHorizontalButtons = ARRAY_ITEM_COUNT(horizontalLabels);
 
         // Vízszintes gombok tesztelése (alsó sor)
@@ -110,13 +110,59 @@ class TestScreen : public UIScreen, public ButtonsGroupManager<TestScreen> {
                                                     } else if (STREQ(event.label, "MsgYesNoCancel")) {
                                                         dialogType = MessageDialog::ButtonsType::YesNoCancel;
                                                         dialogMessage = "This is a Yes/No/Cancel dialog.";
+                                                    } else if (STREQ(event.label, "NestedDlg")) {
+                                                        // Nested Dialog Chain
+                                                        DEBUG("Starting nested dialog chain...\n");
+                                                        // Dialog 3 (innermost)
+                                                        // Ez a dialógus bezárul az OK-ra
+                                                        auto showDialog3 = [this]() {
+                                                            Rect dlg3Bounds(90, 110, 200, 0);
+                                                            auto dialog3 = std::make_shared<MessageDialog>(this, this->tft, dlg3Bounds, "Dialog 3/3", "Final. Click OK.", MessageDialog::ButtonsType::Ok, ColorScheme::defaultScheme(), true /*okClosesDialog=true*/);
+                                                            dialog3->setDialogCallback([this](MessageDialog::DialogResult result) {
+                                                                if (result == MessageDialog::DialogResult::Accepted) {
+                                                                    DEBUG("Dialog 3 OK. Closing Dialog 3.\n");
+                                                                }
+                                                            });
+                                                            this->showDialog(dialog3);
+                                                        };
+                                                        // Dialog 2
+                                                        // Ennek az "OK" (Next) gombja nem zárja be, csak a callback-et hívja
+                                                        auto showDialog2 = [this, showDialog3]() {
+                                                            Rect dlg2Bounds(60, 70, 200, 0);
+                                                            auto dialog2 = std::make_shared<MessageDialog>(this, this->tft, dlg2Bounds, "Dialog 2/3", "Next or Cancel.", MessageDialog::ButtonsType::OkCancel, ColorScheme::defaultScheme(), false /*okClosesDialog=false*/);
+                                                            dialog2->setDialogCallback([this, showDialog3](MessageDialog::DialogResult result) {
+                                                                if (result == MessageDialog::DialogResult::Accepted) {
+                                                                    DEBUG("Dialog 2 Next. Showing Dialog 3.\n");
+                                                                    showDialog3();
+                                                                } else if (result == MessageDialog::DialogResult::Rejected) {
+                                                                    DEBUG("Dialog 2 Cancel. Closing Dialog 2.\n");
+                                                                    // A MessageDialog "Cancel" gombja automatikusan hívja a close()-t,
+                                                                    // ami az onDialogClosed-ot triggereli.
+                                                                }
+                                                            });
+                                                            this->showDialog(dialog2);
+                                                        };
+                                                        // Dialog 1 (outermost)
+                                                        // Ennek az "OK" (Next) gombja nem zárja be, csak a callback-et hívja
+                                                        Rect dlg1Bounds(30, 30, 200, 0);
+                                                        auto dialog1 = std::make_shared<MessageDialog>(this, this->tft, dlg1Bounds, "Dialog 1/3", "Next or Cancel.", MessageDialog::ButtonsType::OkCancel, ColorScheme::defaultScheme(), false /*okClosesDialog=false*/);
+                                                        dialog1->setDialogCallback([this, showDialog2](MessageDialog::DialogResult result) {
+                                                            if (result == MessageDialog::DialogResult::Accepted) {
+                                                                DEBUG("Dialog 1 Next. Showing Dialog 2.\n");
+                                                                showDialog2();
+                                                            } else if (result == MessageDialog::DialogResult::Rejected) {
+                                                                DEBUG("Dialog 1 Cancel. Closing Dialog 1.\n");
+                                                            }
+                                                        });
+                                                        this->showDialog(dialog1);
+                                                        return; // Kilépés a showSpecificDialog logikából
                                                     } else {
                                                         showSpecificDialog = false; // Nem dialógus indító gomb
                                                     }
 
                                                     if (showSpecificDialog) {
-                                                        Rect dialogBounds(-1, -1, 180, 0); // Centered X, auto Y, width 280, auto-height
-                                                        auto dialog = std::make_shared<MessageDialog>(this, this->tft, dialogBounds, "Test Dialog", dialogMessage, dialogType);
+                                                        Rect dialogBounds(-1, -1, 180, 0); // Centered X, auto Y, width 180, auto-height
+                                                        auto dialog = std::make_shared<MessageDialog>(this, this->tft, dialogBounds, "Test Dialog", dialogMessage, dialogType, ColorScheme::defaultScheme(), true /*okClosesDialog=true alapértelmezetten*/);
                                                         dialog->setDialogCallback([this, label = event.label](MessageDialog::DialogResult result) {
                                                             const char *resultStr = "Unknown";
                                                             if (result == MessageDialog::DialogResult::Accepted)

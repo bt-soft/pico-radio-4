@@ -326,6 +326,7 @@ void UIScreen::onDialogClosed(UIDialogBase *closedDialog) {
 
             // Előző dialógus reaktiválása
             topDialog->setTopDialog(true);
+            topDialog->resetVeilDrawnFlag(); // Fátyol újrarajzolásának engedélyezése
             topDialog->markForRedraw();
             currentDialog = topDialog;
 

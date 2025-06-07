@@ -12,6 +12,7 @@ class MessageDialog : public UIDialogBase, public ButtonsGroupManager<MessageDia
   protected:
     const char *message;
     ButtonsType buttonsType;
+    bool _okClosesDialog; // Új flag: az OK/Yes gomb bezárja-e a dialógust
 
     std::vector<std::shared_ptr<UIButton>> _buttonsList; // Megmarad a létrehozott gombok tárolására és eltávolítására
     std::vector<ButtonGroupDefinition> _buttonDefs;      // Gombdefiníciók tárolására
@@ -25,7 +26,7 @@ class MessageDialog : public UIDialogBase, public ButtonsGroupManager<MessageDia
 
   public:
     MessageDialog(UIScreen *parentScreen, TFT_eSPI &tft, const Rect &bounds, const char *title, const char *message, ButtonsType buttonsType = ButtonsType::Ok,
-                  const ColorScheme &cs = ColorScheme::defaultScheme());
+                  const ColorScheme &cs = ColorScheme::defaultScheme(), bool okClosesDialog = true);
 
     virtual ~MessageDialog() override = default;
 };

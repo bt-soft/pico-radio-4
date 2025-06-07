@@ -89,6 +89,15 @@ class UIContainerComponent : public UIComponent {
     }
 
     /**
+     * @brief Jelzi, hogy a konténert és annak összes gyerekét újra kell rajzolni.
+     */
+    virtual void markForRedraw() override {
+        UIComponent::markForRedraw(); // Mark the container itself
+        for (auto &child : children) {
+            if (child) child->markForRedraw(); // Mark all children
+        }
+    }
+    /**
      * @brief Loop metódus, amely először saját loop logikáját kezeli, majd a gyerek komponensek loop-ját hívja meg.
      */
     virtual void loop() override {

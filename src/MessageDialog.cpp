@@ -13,10 +13,10 @@
  *          A gombok típusa meghatározza, hogy milyen gombok jelennek meg a dialógusban.
  */
 MessageDialog::MessageDialog(UIScreen *parentScreen, TFT_eSPI &tft, const Rect &initialInputBounds, const char *title, const char *message, ButtonsType buttonsType,
-                             const ColorScheme &cs)
-    : UIDialogBase(parentScreen, tft, initialInputBounds, title, cs), message(message), buttonsType(buttonsType) {
+                             const ColorScheme &cs, bool okClosesDialog)
+    : UIDialogBase(parentScreen, tft, initialInputBounds, title, cs), message(message), buttonsType(buttonsType), _okClosesDialog(okClosesDialog) {
 
-    setDialogCallback(callback);
+    // setDialogCallback(nullptr); // UIDialogBase már nullptr-re inicializálja
 
     // Dialógus tartalmának létrehozása és elrendezése
     createDialogContent(); // Előkészíti a _buttonDefs-et
@@ -73,16 +73,30 @@ void MessageDialog::createDialogContent() {
     case ButtonsType::Ok:
         _buttonDefs.push_back({buttonIdCounter++, "OK", UIButton::ButtonType::Pushable,
                                [this](const UIButton::ButtonEvent &event) {
-                                   if (event.state == UIButton::EventButtonState::Clicked)
-                                       close(DialogResult::Accepted);
+                                   if (event.state == UIButton::EventButtonState::Clicked) {
+                                       if (_okClosesDialog) {
+                                           close(DialogResult::Accepted);
+                                       } else {
+                                           if (this->callback) { // UIDialogBase::callback
+                                               this->callback(DialogResult::Accepted);
+                                           }
+                                       }
+                                   }
                                },
                                UIButton::ButtonState::Off, 0, UIButton::DEFAULT_BUTTON_HEIGHT});
         break;
     case ButtonsType::OkCancel:
         _buttonDefs.push_back({buttonIdCounter++, "OK", UIButton::ButtonType::Pushable,
                                [this](const UIButton::ButtonEvent &event) {
-                                   if (event.state == UIButton::EventButtonState::Clicked)
-                                       close(DialogResult::Accepted);
+                                   if (event.state == UIButton::EventButtonState::Clicked) {
+                                       if (_okClosesDialog) {
+                                           close(DialogResult::Accepted);
+                                       } else {
+                                           if (this->callback) {
+                                               this->callback(DialogResult::Accepted);
+                                           }
+                                       }
+                                   }
                                },
                                UIButton::ButtonState::Off, 0, UIButton::DEFAULT_BUTTON_HEIGHT});
         _buttonDefs.push_back({buttonIdCounter++, "Cancel", UIButton::ButtonType::Pushable,
@@ -95,8 +109,15 @@ void MessageDialog::createDialogContent() {
     case ButtonsType::YesNo:
         _buttonDefs.push_back({buttonIdCounter++, "Yes", UIButton::ButtonType::Pushable,
                                [this](const UIButton::ButtonEvent &event) {
-                                   if (event.state == UIButton::EventButtonState::Clicked)
-                                       close(DialogResult::Accepted);
+                                   if (event.state == UIButton::EventButtonState::Clicked) {
+                                       if (_okClosesDialog) {
+                                           close(DialogResult::Accepted);
+                                       } else {
+                                           if (this->callback) {
+                                               this->callback(DialogResult::Accepted);
+                                           }
+                                       }
+                                   }
                                },
                                UIButton::ButtonState::Off, 0, UIButton::DEFAULT_BUTTON_HEIGHT});
         _buttonDefs.push_back({buttonIdCounter++, "No", UIButton::ButtonType::Pushable,
@@ -109,8 +130,15 @@ void MessageDialog::createDialogContent() {
     case ButtonsType::YesNoCancel:
         _buttonDefs.push_back({buttonIdCounter++, "Yes", UIButton::ButtonType::Pushable,
                                [this](const UIButton::ButtonEvent &event) {
-                                   if (event.state == UIButton::EventButtonState::Clicked)
-                                       close(DialogResult::Accepted);
+                                   if (event.state == UIButton::EventButtonState::Clicked) {
+                                       if (_okClosesDialog) {
+                                           close(DialogResult::Accepted);
+                                       } else {
+                                           if (this->callback) {
+                                               this->callback(DialogResult::Accepted);
+                                           }
+                                       }
+                                   }
                                },
                                UIButton::ButtonState::Off, 0, UIButton::DEFAULT_BUTTON_HEIGHT});
         _buttonDefs.push_back({buttonIdCounter++, "No", UIButton::ButtonType::Pushable,
