@@ -49,49 +49,90 @@ class ScreenButtonsManager {
         // (pontosabban UIComponent-ből) örökölt 'tft' referenciája lesz.
         // Az 'self->addChild' pedig az UIContainerComponent public metódusa.
         const int16_t screenHeight = self->getTft().height();
-        const int16_t screenWidth = self->getTft().width();
         const int16_t maxColumnHeight = screenHeight - marginTop - marginBottom;
-
-        int16_t currentButtonWidth = defaultButtonWidthRef;
-
-        if (!buttonDefs.empty() && buttonDefs[0].width > 0) {
-            currentButtonWidth = buttonDefs[0].width;
-        }
-
-        int16_t currentX = screenWidth - marginRight - currentButtonWidth;
-        int16_t currentY = marginTop;
+        const int16_t screenWidth = self->getTft().width();
 
         if (out_createdButtons) {
             out_createdButtons->clear();
         }
 
-        for (const auto &def : buttonDefs) {
-            int16_t btnWidth = (def.width > 0) ? def.width : defaultButtonWidthRef;
-            int16_t btnHeight = (def.height > 0) ? def.height : defaultButtonHeightRef;
+        // --- Előfeldolgozási fázis: Oszlopok struktúrájának és méreteinek meghatározása ---
+        std::vector<std::vector<ButtonDefinition>> colsOfButtons;
+        std::vector<int16_t> colMaxWidhtsList;
+        std::vector<ButtonDefinition> currentBuildingColButtons;
+        int16_t currentY_build = marginTop;
+        int16_t currentBuildingColMaxW = 0;
 
-            if (currentY + btnHeight > maxColumnHeight && currentY != marginTop) {
-                currentX -= (currentButtonWidth + columnGap);
-                currentY = marginTop;
-                if (currentX < 0) {
-                    DEBUG("ScreenButtonsManager::layoutVerticalButtonGroup: Out of horizontal space!\n");
-                    break;
+        for (const auto &def : buttonDefs) {
+            int16_t btnW = (def.width > 0) ? def.width : defaultButtonWidthRef;
+            int16_t btnH = (def.height > 0) ? def.height : defaultButtonHeightRef;
+
+            if (currentY_build == marginTop && btnH > maxColumnHeight) {
+                DEBUG("ScreenButtonsManager::layoutVerticalButtonGroup: Button %d ('%s') too tall for column (%d > %d), skipping.\n", def.id, def.label, btnH, maxColumnHeight);
+                if (!currentBuildingColButtons.empty()) { // Ha az előző oszlopban voltak gombok
+                    colsOfButtons.push_back(currentBuildingColButtons);
+                    colMaxWidhtsList.push_back(currentBuildingColMaxW);
+                    currentBuildingColButtons.clear();
+                    currentBuildingColMaxW = 0;
                 }
-            }
-            if (currentY + btnHeight > maxColumnHeight && currentY == marginTop) {
-                DEBUG("ScreenButtonsManager::layoutVerticalButtonGroup: Button too tall for column!\n");
+                currentY_build = marginTop; // Marad a jelenlegi oszlop tetején a következő gombnak
                 continue;
             }
 
-            Rect bounds(currentX, currentY, btnWidth, btnHeight);
-            auto button = std::make_shared<UIButton>(self->getTft(), def.id, bounds, def.label, def.type, def.initialState, def.callback);
+            if (currentY_build + btnH > maxColumnHeight && currentY_build != marginTop) { // Új oszlopot kell kezdeni
+                colsOfButtons.push_back(currentBuildingColButtons);
+                colMaxWidhtsList.push_back(currentBuildingColMaxW);
+                currentBuildingColButtons.clear();
+                currentY_build = marginTop;
+                currentBuildingColMaxW = 0;
 
-            self->addChild(button);
-
-            if (out_createdButtons) {
-                out_createdButtons->push_back(button);
+                if (btnH > maxColumnHeight) { // Ellenőrizzük, hogy az új oszlopot kezdő gomb nem túl magas-e
+                    DEBUG("ScreenButtonsManager::layoutVerticalButtonGroup: Button %d ('%s') too tall for new column (%d > %d), skipping.\n", def.id, def.label, btnH,
+                          maxColumnHeight);
+                    continue;
+                }
             }
+            currentBuildingColButtons.push_back(def);
+            currentBuildingColMaxW = std::max(currentBuildingColMaxW, btnW);
+            currentY_build += btnH + buttonGap;
+        }
+        if (!currentBuildingColButtons.empty()) {
+            colsOfButtons.push_back(currentBuildingColButtons);
+            colMaxWidhtsList.push_back(currentBuildingColMaxW);
+        }
 
-            currentY += btnHeight + buttonGap;
+        if (colsOfButtons.empty())
+            return;
+
+        uint8_t numCols = colMaxWidhtsList.size();
+        int16_t totalColsEffectiveWidth = 0;
+        for (int16_t w : colMaxWidhtsList) {
+            totalColsEffectiveWidth += w;
+        }
+        int16_t totalColsWidthWithGaps = totalColsEffectiveWidth + (numCols > 1 ? (numCols - 1) * columnGap : 0);
+
+        // --- Elrendezési fázis ---
+        int16_t startX = screenWidth - marginRight - totalColsWidthWithGaps;
+        int16_t currentLayoutX = startX;
+
+        for (size_t colIndex = 0; colIndex < colsOfButtons.size(); ++colIndex) {
+            int16_t currentLayoutY = marginTop;
+            const auto &currentCol = colsOfButtons[colIndex];
+            for (const auto &def : currentCol) {
+                int16_t btnWidth = (def.width > 0) ? def.width : defaultButtonWidthRef;
+                int16_t btnHeight = (def.height > 0) ? def.height : defaultButtonHeightRef;
+
+                Rect bounds(currentLayoutX, currentLayoutY, btnWidth, btnHeight);
+                auto button = std::make_shared<UIButton>(self->getTft(), def.id, bounds, def.label, def.type, def.initialState, def.callback);
+                self->addChild(button);
+                if (out_createdButtons) {
+                    out_createdButtons->push_back(button);
+                }
+                currentLayoutY += btnHeight + buttonGap;
+            }
+            if (colIndex < colsOfButtons.size() - 1) {
+                currentLayoutX += colMaxWidhtsList[colIndex] + columnGap;
+            }
         }
     }
 
@@ -114,44 +155,87 @@ class ScreenButtonsManager {
         const int16_t screenWidth = self->getTft().width();
         const int16_t maxRowWidth = screenWidth - marginLeft - marginRight;
 
-        int16_t currentButtonHeight = defaultButtonHeightRef;
-        if (!buttonDefs.empty() && buttonDefs[0].height > 0) {
-            currentButtonHeight = buttonDefs[0].height;
-        }
-
-        int16_t currentY = screenHeight - marginBottom - currentButtonHeight;
-        int16_t currentX = marginLeft;
-
         if (out_createdButtons) {
             out_createdButtons->clear();
         }
+
+        // --- Előfeldolgozási fázis: Sorok struktúrájának és méreteinek meghatározása ---
+        std::vector<std::vector<ButtonDefinition>> rowsOfButtons;
+        std::vector<int16_t> rowMaxHeightsList;
+        std::vector<ButtonDefinition> currentBuildingRowButtons;
+        int16_t currentX_build = marginLeft;
+        int16_t currentBuildingRowMaxH = 0;
 
         for (const auto &def : buttonDefs) {
             int16_t btnWidth = (def.width > 0) ? def.width : defaultButtonWidthRef;
             int16_t btnHeight = (def.height > 0) ? def.height : defaultButtonHeightRef;
 
-            if (currentX + btnWidth > maxRowWidth && currentX != marginLeft) {
-                currentY -= (currentButtonHeight + rowGap);
-                currentX = marginLeft;
-                if (currentY < 0) {
-                    DEBUG("ScreenButtonsManager::layoutHorizontalButtonGroup: Out of vertical space!\n");
-                    break;
+            if (currentX_build == marginLeft && btnWidth > maxRowWidth) {
+                DEBUG("ScreenButtonsManager::layoutHorizontalButtonGroup: Button %d ('%s') too wide for row (%d > %d), skipping.\n", def.id, def.label, btnWidth, maxRowWidth);
+                if (!currentBuildingRowButtons.empty()) { // Ha az előző sorban voltak gombok
+                    rowsOfButtons.push_back(currentBuildingRowButtons);
+                    rowMaxHeightsList.push_back(currentBuildingRowMaxH);
+                    currentBuildingRowButtons.clear();
+                    currentBuildingRowMaxH = 0;
                 }
-            }
-            if (currentX + btnWidth > maxRowWidth && currentX == marginLeft) {
-                DEBUG("ScreenButtonsManager::layoutHorizontalButtonGroup: Button too wide for row!\n");
+                currentX_build = marginLeft; // Marad a jelenlegi sor elején a következő gombnak
                 continue;
             }
 
-            Rect bounds(currentX, currentY, btnWidth, btnHeight);
-            auto button = std::make_shared<UIButton>(self->getTft(), def.id, bounds, def.label, def.type, def.initialState, def.callback);
-            self->addChild(button);
+            if (currentX_build + btnWidth > maxRowWidth && currentX_build != marginLeft) { // Új sort kell kezdeni
+                rowsOfButtons.push_back(currentBuildingRowButtons);
+                rowMaxHeightsList.push_back(currentBuildingRowMaxH);
+                currentBuildingRowButtons.clear();
+                currentX_build = marginLeft;
+                currentBuildingRowMaxH = 0;
 
-            if (out_createdButtons) {
-                out_createdButtons->push_back(button);
+                if (btnWidth > maxRowWidth) { // Ellenőrizzük, hogy az új sort kezdő gomb nem túl széles-e
+                    DEBUG("ScreenButtonsManager::layoutHorizontalButtonGroup: Button %d ('%s') too wide for new row (%d > %d), skipping.\n", def.id, def.label, btnWidth,
+                          maxRowWidth);
+                    continue;
+                }
             }
+            currentBuildingRowButtons.push_back(def);
+            currentBuildingRowMaxH = std::max(currentBuildingRowMaxH, btnHeight);
+            currentX_build += btnWidth + buttonGap;
+        }
+        if (!currentBuildingRowButtons.empty()) {
+            rowsOfButtons.push_back(currentBuildingRowButtons);
+            rowMaxHeightsList.push_back(currentBuildingRowMaxH);
+        }
 
-            currentX += btnWidth + buttonGap;
+        if (rowsOfButtons.empty())
+            return;
+
+        uint8_t numRows = rowMaxHeightsList.size();
+        int16_t totalRowsEffectiveHeight = 0;
+        for (int16_t h : rowMaxHeightsList) {
+            totalRowsEffectiveHeight += h;
+        }
+        int16_t totalRowsHeightWithGaps = totalRowsEffectiveHeight + (numRows > 1 ? (numRows - 1) * rowGap : 0);
+
+        // --- Elrendezési fázis ---
+        int16_t startY = screenHeight - marginBottom - totalRowsHeightWithGaps;
+        int16_t currentLayoutY = startY;
+
+        for (size_t rowIndex = 0; rowIndex < rowsOfButtons.size(); ++rowIndex) {
+            int16_t currentLayoutX = marginLeft;
+            const auto &currentRow = rowsOfButtons[rowIndex];
+            for (const auto &def : currentRow) {
+                int16_t btnWidth = (def.width > 0) ? def.width : defaultButtonWidthRef;
+                int16_t btnHeight = (def.height > 0) ? def.height : defaultButtonHeightRef;
+
+                Rect bounds(currentLayoutX, currentLayoutY, btnWidth, btnHeight);
+                auto button = std::make_shared<UIButton>(self->getTft(), def.id, bounds, def.label, def.type, def.initialState, def.callback);
+                self->addChild(button);
+                if (out_createdButtons) {
+                    out_createdButtons->push_back(button);
+                }
+                currentLayoutX += btnWidth + buttonGap;
+            }
+            if (rowIndex < rowsOfButtons.size() - 1) {
+                currentLayoutY += rowMaxHeightsList[rowIndex] + rowGap;
+            }
         }
     }
 };
