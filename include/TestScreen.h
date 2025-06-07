@@ -115,7 +115,7 @@ class TestScreen : public UIScreen, public ButtonsGroupManager<TestScreen> {
                                                     }
 
                                                     if (showSpecificDialog) {
-                                                        Rect dialogBounds((tft.width() - 280) / 2, -1, 280, 0); // Centered X, auto Y, width 280, auto-height
+                                                        Rect dialogBounds(-1, -1, 180, 0); // Centered X, auto Y, width 280, auto-height
                                                         auto dialog = std::make_shared<MessageDialog>(this, this->tft, dialogBounds, "Test Dialog", dialogMessage, dialogType);
                                                         dialog->setDialogCallback([this, label = event.label](MessageDialog::DialogResult result) {
                                                             const char *resultStr = "Unknown";

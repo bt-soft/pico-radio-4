@@ -12,39 +12,53 @@
  * @details A dialógus automatikusan méreteződik, ha a bounds.height 0.
  *          A gombok típusa meghatározza, hogy milyen gombok jelennek meg a dialógusban.
  */
-MessageDialog::MessageDialog(UIScreen *parentScreen, TFT_eSPI &tft, const Rect &bounds, const char *title, const char *message, ButtonsType buttonsType, const ColorScheme &cs)
-    : UIDialogBase(parentScreen, tft, bounds, title, cs), message(message), buttonsType(buttonsType) {
+MessageDialog::MessageDialog(UIScreen *parentScreen, TFT_eSPI &tft, const Rect &initialInputBounds, const char *title, const char *message, ButtonsType buttonsType,
+                             const ColorScheme &cs)
+    : UIDialogBase(parentScreen, tft, initialInputBounds, title, cs), message(message), buttonsType(buttonsType) {
 
     setDialogCallback(callback);
 
     // Dialógus tartalmának létrehozása és elrendezése
-    createDialogContent();
-    layoutDialogContent();
+    createDialogContent(); // Előkészíti a _buttonDefs-et
 
-    // Ha a dialógus magassága 0 volt (automatikus méretezés kérése),
-    // akkor a layoutDialogContent után frissíteni kellhet a bounds.height értékét.
-    // Ez egy egyszerűsített példa, egy robusztusabb layout manager bonyolultabb lenne.
-    // Most, hogy nincs _messageLabel, a magasság becslése nehezebb előre.
-    // A layoutDialogContent-ben megpróbáljuk megbecsülni a szöveg magasságát.
-    if (bounds.height == 0) {
+    Rect currentBoundsAfterBase = this->bounds; // A bounds, amit az UIDialogBase konstruktora beállított
+    Rect finalDialogBounds = currentBoundsAfterBase;
+    bool boundsHaveChanged = false;
+
+    // Automatikus magasság számítása, ha bounds.height == 0 volt az inputon
+    // A UIDialogBase konstruktora már adhatott neki egy alapértelmezett magasságot.
+    // Itt finomítjuk az üzenet és a gombok alapján.
+    if (initialInputBounds.height == 0) {          // Az eredeti kérés volt auto-magasság
         tft.setTextSize(1);                        // Üzenet szövegmérete
         int16_t textHeight = tft.fontHeight() * 2; // Durva becslés 2 sorra (állítható)
         // TODO: Pontosabb szövegmagasság számítás a layoutDialogContent-ben
-        uint16_t requiredHeight = getHeaderHeight() + PADDING + textHeight + PADDING + UIButton::DEFAULT_BUTTON_HEIGHT + PADDING; // Gombmagasság konstanssal
-        if (this->bounds.height < requiredHeight) {                                                                               // Csak akkor növeljük, ha tényleg kisebb
-            Rect newBounds = this->bounds;
-            newBounds.height = requiredHeight;
-            // Ha középre volt igazítva, újra kell pozícionálni vertikálisan
-            if (bounds.y == -1) {
-                newBounds.y = (tft.height() - newBounds.height) / 2;
-            }
-            setBounds(newBounds);
-            // Újra kell rendezni az elemeket az új méretekhez
-            layoutDialogContent();
+        uint16_t requiredHeight = getHeaderHeight() + PADDING + textHeight + PADDING + UIButton::DEFAULT_BUTTON_HEIGHT + (2 * PADDING); // Megduplázott alsó PADDING
+        if (finalDialogBounds.height < requiredHeight) {
+            finalDialogBounds.height = requiredHeight;
+            boundsHaveChanged = true;
         }
     }
 
-    markForRedraw();
+    // Középre igazítás, ha x vagy y -1 volt az inputon
+    if (initialInputBounds.x == -1) {
+        finalDialogBounds.x = (tft.width() - finalDialogBounds.width) / 2;
+        boundsHaveChanged = true;
+    }
+    if (initialInputBounds.y == -1) {
+        finalDialogBounds.y = (tft.height() - finalDialogBounds.height) / 2;
+        boundsHaveChanged = true;
+    }
+
+    if (boundsHaveChanged) {
+        // UIComponent::setBounds-et hívjuk, hogy a this->bounds frissüljön, és a dialógus újrarajzolásra legyen jelölve.
+        // Ez nem hívja meg automatikusan a layoutDialogContent-et.
+        UIComponent::setBounds(finalDialogBounds);
+    }
+
+    // A dialógus tartalmát (gombokat) mindig elrendezzük a véglegesített határok alapján.
+    layoutDialogContent(); // Ez létrehozza és hozzáadja a gombokat, és markForRedraw-t hív.
+    // Az UIComponent::setBounds már beállította a markForRedraw-t a dialógusra, ha a boundsHaveChanged igaz volt.
+    // Ha nem, akkor a layoutDialogContent() hívja. Dupla hívás nem probléma.
 }
 
 /**
@@ -130,33 +144,13 @@ void MessageDialog::layoutDialogContent() {
         return;
     }
 
-    uint16_t numButtons = _buttonDefs.size();
+    // uint16_t numButtons = _buttonDefs.size(); // Erre már nincs szükség
     uint16_t buttonHeight = UIButton::DEFAULT_BUTTON_HEIGHT; // Gomb magassága
-
-    // Gombok szélességének kiszámítása, hogy kitöltsék a helyet
-    uint16_t contentWidthForButtons = bounds.width - (2 * UIDialogBase::PADDING);
-    if (bounds.width <= (2 * UIDialogBase::PADDING))
-        contentWidthForButtons = 0;
-
-    uint16_t singleButtonWidth = 0;
-    if (numButtons > 0) {
-        if (numButtons == 1) {
-            singleButtonWidth = contentWidthForButtons;
-        } else {
-            uint16_t totalInterButtonPadding = (numButtons - 1) * UIDialogBase::PADDING;
-            if (contentWidthForButtons > totalInterButtonPadding) {
-                singleButtonWidth = (contentWidthForButtons - totalInterButtonPadding) / numButtons;
-            } else {
-                singleButtonWidth = 10; // Minimális szélesség, ha nincs elég hely
-            }
-        }
-    }
-    if (singleButtonWidth < 10 && numButtons > 0)
-        singleButtonWidth = 10; // Minimális szélesség
 
     // Frissítjük a _buttonDefs-ben a szélességeket
     for (auto &def : _buttonDefs) {
-        def.width = singleButtonWidth;
+        // def.width = 0; // A createDialogContent-ben már 0-ra van állítva,
+        // jelezve az auto-méretezést a ButtonsGroupManager számára.
         def.height = buttonHeight; // Biztosítjuk a magasságot is
     }
 
@@ -165,14 +159,15 @@ void MessageDialog::layoutDialogContent() {
     int16_t manager_marginLeft = bounds.x + UIDialogBase::PADDING;
     int16_t manager_marginRight = tft.width() - (bounds.x + bounds.width - UIDialogBase::PADDING);
     // A marginBottom azt jelenti, hogy a gombok alja milyen messze van a képernyő aljától.
-    int16_t manager_marginBottom = tft.height() - (bounds.y + bounds.height - UIDialogBase::PADDING);
+    int16_t manager_marginBottom = tft.height() - (bounds.y + bounds.height - (2 * UIDialogBase::PADDING)); // Megduplázott PADDING itt is
 
     // Gombok elrendezése a ButtonsGroupManager segítségével
     layoutHorizontalButtonGroup(_buttonDefs, &_buttonsList, manager_marginLeft, manager_marginRight, manager_marginBottom,
                                 UIButton::DEFAULT_BUTTON_WIDTH, // defaultButtonWidthRef (ha def.width=0 lenne)
                                 buttonHeight,                   // defaultButtonHeightRef
                                 UIDialogBase::PADDING,          // rowGap (egy sor esetén nem releváns)
-                                UIDialogBase::PADDING           // buttonGap (gombok közötti rés)
+                                UIDialogBase::PADDING,          // buttonGap (gombok közötti rés)
+                                true                            // centerHorizontally = true
     );
 
     markForRedraw();
@@ -196,8 +191,9 @@ void MessageDialog::drawSelf() {
         Rect textArea;
         textArea.x = bounds.x + UIDialogBase::PADDING + 2; // Kis extra margó
         textArea.y = bounds.y + headerH + UIDialogBase::PADDING;
-        textArea.width = bounds.width - (2 * UIDialogBase::PADDING) - 4;
-        textArea.height = bounds.height - headerH - buttonAreaH - (2 * UIDialogBase::PADDING);
+        textArea.width = bounds.width - (2 * (UIDialogBase::PADDING + 2)); // Szélességben is figyelembe vesszük a 2px extra margót
+        textArea.height =
+            bounds.height - headerH - UIButton::DEFAULT_BUTTON_HEIGHT - (4 * UIDialogBase::PADDING); // Header, PADDING_alatta, text, PADDING_alatta, gombok, 2*PADDING_alatta
 
         if (textArea.width > 0 && textArea.height > 0) {
             // Szöveg tördelése és rajzolása (egyszerűsített, egy UILabel komponens jobb lenne)

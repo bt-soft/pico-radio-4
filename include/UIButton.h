@@ -15,6 +15,7 @@ class UIButton : public UIComponent {
     // Alapértelmezett gomb méretek
     static constexpr uint16_t DEFAULT_BUTTON_WIDTH = 72; // 63;
     static constexpr uint16_t DEFAULT_BUTTON_HEIGHT = 35;
+    static constexpr uint16_t HORIZONTAL_TEXT_PADDING = 16; // 8px padding a szöveg mindkét oldalán
 
     // Gomb típusok
     enum class ButtonType {
@@ -49,6 +50,7 @@ class UIButton : public UIComponent {
     ButtonState currentState = ButtonState::Off;
     uint8_t textSize = 2;
     uint8_t cornerRadius = 5;
+    bool _autoSizeToText = false; // Új tagváltozó az automatikus méretezéshez
     bool useMiniFont = false;
     uint32_t longPressThreshold = 1000; // ms
     uint32_t pressStartTime = 0;
@@ -158,6 +160,37 @@ class UIButton : public UIComponent {
         }
     }
 
+    /**
+     * @brief Frissíti a gomb szélességét a felirat, szövegméret és padding alapján.
+     * Csak akkor fut le, ha az _autoSizeToText engedélyezve van.
+     */
+    void updateWidthToFitText() {
+        if (!_autoSizeToText || label == nullptr) { // Üres label esetén is lehet alapértelmezett szélesség
+            if(!_autoSizeToText) return;
+        }
+
+        // TFT szövegbeállítások mentése és visszaállítása a számításhoz
+        uint8_t prevDatum = tft.getTextDatum();
+        uint8_t currentTftTextSize = tft.textsize; // Feltételezzük, hogy a tft.textsize tartalmazza az aktuális méretet
+
+        tft.setTextSize(useMiniFont ? 1 : textSize); // A gomb saját szövegméretét használjuk
+
+        uint16_t textW = (label && strlen(label) > 0) ? tft.textWidth(label) : 0;
+        uint16_t newWidth = textW + HORIZONTAL_TEXT_PADDING; // HORIZONTAL_TEXT_PADDING mindkét oldali paddingot tartalmazza
+
+        // Minimális szélesség alkalmazása (pl. ne legyen keskenyebb a magasságánál, vagy egy abszolút minimumnál)
+        newWidth = std::max(newWidth, static_cast<uint16_t>(bounds.height > 0 ? bounds.height : DEFAULT_BUTTON_HEIGHT));
+        newWidth = std::max(newWidth, static_cast<uint16_t>(DEFAULT_BUTTON_WIDTH / 2));
+
+        if (bounds.width != newWidth) {
+            bounds.width = newWidth;
+            markForRedraw();
+        }
+
+        tft.setTextSize(currentTftTextSize); // Visszaállítás az eredeti TFT szövegméretre
+        tft.setTextDatum(prevDatum);
+    }
+
   public:
     /**
      * @brief Gomb komponens konstruktora
@@ -171,6 +204,29 @@ class UIButton : public UIComponent {
      * @param colors Színpaletta a gombhoz
      * @note A bounds szélessége és magassága 0 esetén az alapértelmezett méreteket használja (DEFAULT_BUTTON_WIDTH és DEFAULT_BUTTON_HEIGHT).
      */
+
+    // Statikus segédfüggvény a szélesség kiszámításához külső használatra (pl. ButtonsGroupManager)
+    static uint16_t calculateWidthForText(TFT_eSPI &tftRef, const char *text, uint8_t btnTextSize, bool btnUseMiniFont, uint16_t currentButtonHeight) {
+        if (text == nullptr) text = ""; // Kezeljük a nullptr-t üres stringként
+
+        uint8_t prevDatum = tftRef.getTextDatum();
+        uint8_t currentTftTextSize = tftRef.textsize;
+
+        tftRef.setTextSize(btnUseMiniFont ? 1 : btnTextSize);
+        uint16_t textW = strlen(text) > 0 ? tftRef.textWidth(text) : 0;
+        uint16_t calculatedWidth = textW + HORIZONTAL_TEXT_PADDING;
+
+        // Minimális szélesség
+        uint16_t minHeight = (currentButtonHeight > 0) ? currentButtonHeight : DEFAULT_BUTTON_HEIGHT;
+        calculatedWidth = std::max(calculatedWidth, minHeight);
+        calculatedWidth = std::max(calculatedWidth, static_cast<uint16_t>(DEFAULT_BUTTON_WIDTH / 2));
+
+        tftRef.setTextSize(currentTftTextSize);
+        tftRef.setTextDatum(prevDatum);
+        return calculatedWidth;
+    }
+
+
     UIButton(TFT_eSPI &tft,
              uint8_t id,                                                             // ID
              const Rect &bounds,                                                     // rect
@@ -178,12 +234,20 @@ class UIButton : public UIComponent {
              ButtonType type = ButtonType::Pushable,                                 // type
              ButtonState state = ButtonState::Off,                                   // initial state
              std::function<void(const ButtonEvent &)> callback = nullptr,            // callback
-             const ColorScheme &colors = UIColorPalette::createDefaultButtonScheme() // colors
+             const ColorScheme &colors = UIColorPalette::createDefaultButtonScheme(), // colors
+             bool autoSizeToText = false                                             // ÚJ: Automatikus méretezés flag
              )
-        : UIComponent(tft, Rect(bounds.x, bounds.y, (bounds.width == 0 ? DEFAULT_BUTTON_WIDTH : bounds.width), (bounds.height == 0 ? DEFAULT_BUTTON_HEIGHT : bounds.height)),
+        : UIComponent(tft,
+                      Rect(bounds.x, bounds.y,
+                           (bounds.width == 0 && !autoSizeToText ? DEFAULT_BUTTON_WIDTH : bounds.width), // Szélesség beállítása
+                           (bounds.height == 0 ? DEFAULT_BUTTON_HEIGHT : bounds.height)),                 // Magasság beállítása
                       colors),
-          buttonId(id), label(label), buttonType(type), eventCallback(callback) {
-        // Kezdeti állapot beállítása, Pushable gomb nem lehet On
+          buttonId(id), label(label), buttonType(type), eventCallback(callback), _autoSizeToText(autoSizeToText) {
+
+        if (_autoSizeToText) {
+            updateWidthToFitText(); // Méret frissítése a szöveghez, ha kérték
+        }
+
         this->currentState = state;
         if (buttonType == ButtonType::Pushable && this->currentState == ButtonState::On) {
             DEBUG("UIButton Constructor: Pushable button %d ('%s') initialized with On state. Setting to Off.\n", buttonId, label);
@@ -207,17 +271,23 @@ class UIButton : public UIComponent {
      * @param colors Színpaletta a gombhoz
      * @note A bounds szélessége és magassága 0 esetén az alapértelmezett méreteket használja (DEFAULT_BUTTON_WIDTH és DEFAULT_BUTTON_HEIGHT).
      */
+    // Második konstruktor overload az autoSizeToText paraméterrel
     UIButton(TFT_eSPI &tft,
              uint8_t id,                                                             // ID
              const Rect &bounds,                                                     // rect
              const char *label,                                                      // label
-             ButtonType type = ButtonType::Pushable,                                 // type
-             std::function<void(const ButtonEvent &)> callback = nullptr,            // callback
-             const ColorScheme &colors = UIColorPalette::createDefaultButtonScheme() // colors
+             ButtonType type,                                                        // Nincs alapértelmezett
+             std::function<void(const ButtonEvent &)> callback,                       // Nincs alapértelmezett
+             const ColorScheme &colors = UIColorPalette::createDefaultButtonScheme(), // colors
+             bool autoSizeToText = false                                             // ÚJ: Automatikus méretezés flag
              )
-        : UIComponent(tft, Rect(bounds.x, bounds.y, (bounds.width == 0 ? DEFAULT_BUTTON_WIDTH : bounds.width), (bounds.height == 0 ? DEFAULT_BUTTON_HEIGHT : bounds.height)),
-                      colors), // Alapértelmezett méretek használata, ha a bounds szélessége vagy magassága 0
-          buttonId(id), label(label), buttonType(type), eventCallback(callback) {}
+        : UIComponent(tft, Rect(bounds.x, bounds.y, (bounds.width == 0 && !autoSizeToText ? DEFAULT_BUTTON_WIDTH : bounds.width), (bounds.height == 0 ? DEFAULT_BUTTON_HEIGHT : bounds.height)), colors),
+          buttonId(id), label(label), buttonType(type), eventCallback(callback), _autoSizeToText(autoSizeToText) {
+        this->currentState = ButtonState::Off; // Alapértelmezett állapot ennél a konstruktornál
+        if (_autoSizeToText) {
+            updateWidthToFitText();
+        }
+    }
 
     /**
      * @brief Sima pushButton
@@ -226,15 +296,20 @@ class UIButton : public UIComponent {
      * @param bounds A gomb határai (Rect)
      *
      */
+    // Harmadik konstruktor overload az autoSizeToText paraméterrel
     UIButton(TFT_eSPI &tft,
              uint8_t id,                                                 // ID
              const Rect &bounds,                                         // rect
              const char *label,                                          // label
-             std::function<void(const ButtonEvent &)> callback = nullptr // callback
+             std::function<void(const ButtonEvent &)> callback = nullptr, // callback
+             bool autoSizeToText = false                                 // ÚJ: Automatikus méretezés flag
              )
-        : UIComponent(tft, Rect(bounds.x, bounds.y, (bounds.width == 0 ? DEFAULT_BUTTON_WIDTH : bounds.width), (bounds.height == 0 ? DEFAULT_BUTTON_HEIGHT : bounds.height)),
-                      UIColorPalette::createDefaultButtonScheme()),
-          buttonId(id), label(label), buttonType(UIButton::ButtonType::Pushable), currentState(UIButton::ButtonState::Off), eventCallback(callback) {}
+        : UIComponent(tft, Rect(bounds.x, bounds.y, (bounds.width == 0 && !autoSizeToText ? DEFAULT_BUTTON_WIDTH : bounds.width), (bounds.height == 0 ? DEFAULT_BUTTON_HEIGHT : bounds.height)), UIColorPalette::createDefaultButtonScheme()),
+          buttonId(id), label(label), buttonType(UIButton::ButtonType::Pushable), currentState(UIButton::ButtonState::Off), eventCallback(callback), _autoSizeToText(autoSizeToText) {
+        if (_autoSizeToText) {
+            updateWidthToFitText();
+        }
+    }
 
     /**
      * @brief Gomb állapotának szöveges megjelenítése
@@ -355,19 +430,46 @@ class UIButton : public UIComponent {
         }
     }
 
+    // Automatikus méretezés be/ki kapcsolása
+    void setAutoSizeToText(bool enable) {
+        if (_autoSizeToText != enable) {
+            _autoSizeToText = enable;
+            if (_autoSizeToText) {
+                updateWidthToFitText(); // Azonnal frissítjük a méretet, ha bekapcsoljuk
+            }
+            // Ha kikapcsoljuk, a gomb megtartja az aktuális méretét,
+            // vagy itt visszaállíthatnánk egy alapértelmezettre, ha az a kívánalom.
+            // Jelenleg megtartja.
+            else {
+                 markForRedraw(); // Lehet, hogy a stílus változik, de a méret nem feltétlenül
+            }
+        }
+    }
+    bool getAutoSizeToText() const { return _autoSizeToText; }
+
     // Szöveg beállítása
     void setLabel(const char *newLabel) {
-        if (!STREQ(label, newLabel)) {
+        bool labelChanged = (label == nullptr && newLabel != nullptr) ||
+                            (label != nullptr && newLabel == nullptr) ||
+                            (label != nullptr && newLabel != nullptr && strcmp(label, newLabel) != 0);
+        if (labelChanged) {
             label = newLabel;
-            markForRedraw();
+            if (_autoSizeToText) {
+                updateWidthToFitText(); // Ez már tartalmazza a markForRedraw-t, ha a szélesség változik
+            } else {
+                markForRedraw(); // Csak újrarajzolás, méret nem változik
+            }
         }
     }
     const char *getText() const { return label; }
 
     // Szöveg méret
     void setTextSize(uint8_t size) {
-        if (textSize != size) {
-            textSize = size;
+        if (textSize == size) return;
+        textSize = size;
+        if (_autoSizeToText) {
+            updateWidthToFitText();
+        } else {
             markForRedraw();
         }
     }

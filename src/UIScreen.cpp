@@ -196,25 +196,28 @@ void UIScreen::loop() {
  * @note Ha dialog nullptr, akkor a metódus nem csinál semmit
  */
 void UIScreen::showDialog(std::shared_ptr<UIDialogBase> dialog) {
-    
-    
     if (dialog) {
-
         // 1. Előző dialógus inaktiválása (de látható marad)
+        //    és a topDialog flagjének false-ra állítása
         if (!dialogStack.empty()) {
-            auto currentDialog = dialogStack.back().lock();
-            if (currentDialog) {
-                currentDialog->setTopDialog(false);
+            auto previousTopDialog = dialogStack.back().lock();
+            if (previousTopDialog) {
+                previousTopDialog->setTopDialog(false);
             }
         }
 
         // 2. Dual stack tárolás - a layered dialog rendszer magja
         dialogStack.push_back(dialog);       // weak_ptr automatikus konverzió
         dialogSharedStack.push_back(dialog); // shared_ptr tárolás (életben tartás)
-        currentDialog = dialog;              // Aktív dialógus referencia
 
         // 3. Dialógus aktiválása és megjelenítése
+        //    Az új dialógus lesz a legfelső.
+        dialog->setTopDialog(true);
         dialog->show();
+
+        // currentDialog frissítése az új aktív dialógusra
+        // (Bár a dialogStack.back() is használható a legfelső elérésére)
+        currentDialog = dialog;
 
         // 4. Képernyő újrarajzolás triggering
         this->markForRedraw();
