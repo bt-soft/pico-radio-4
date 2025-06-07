@@ -176,6 +176,15 @@ class UIComponent {
     // Getters/Setters
     // ================================
 
+    inline TFT_eSPI &getTFT() { return tft; }
+
+    // Bounds getter/setter
+    void setBounds(const Rect &newBounds) {
+        bounds = newBounds;
+        markForRedraw();
+    }
+    inline const Rect &getBounds() const { return bounds; }
+
     // Színséma getter/setter
     void setColorScheme(const ColorScheme &newColors) {
         colors = newColors;
@@ -184,8 +193,8 @@ class UIComponent {
     const ColorScheme &getColorScheme() const { return colors; }
 
     // Tiltott állapot getter/setter
-    bool isDisabled() const { return disabled; }
-    void setDisabled(bool disabled) { this->disabled = disabled; }
+    inline bool isDisabled() const { return disabled; }
+    inline void setDisabled(bool disabled) { this->disabled = disabled; }
 
     // Újrarajzolás getter/setter
     virtual void markForRedraw() { needsRedraw = true; }

@@ -21,11 +21,11 @@ struct ButtonGroupDefinition {
     uint16_t height = 0;                                             // Egyedi magasság (0 = UIButton::DEFAULT_BUTTON_HEIGHT)
 };
 
-template <typename DerivedScreen> // Curiously Recurring Template Pattern (CRTP): A DerivedScreen lesz a konkrét képernyő osztály (pl. TestScreen)
+template <typename DerivedContainer> // Curiously Recurring Template Pattern (CRTP): A DerivedContainer lesz a konkrét UIContainerComponent alapú osztály
 class ButtonsGroupManager {
   protected:
     // A konstruktor és destruktor lehet default, mivel ez az osztály
-    // elsősorban metódusokat biztosít, nem saját állapotot.
+    // elsősorban metódusokat biztosít.
     ButtonsGroupManager() = default;
     virtual ~ButtonsGroupManager() = default;
 
@@ -52,18 +52,18 @@ class ButtonsGroupManager {
                                    int16_t marginRight = 5, int16_t marginTop = 5, int16_t marginBottom = 5, int16_t defaultButtonWidthRef = UIButton::DEFAULT_BUTTON_WIDTH,
                                    int16_t defaultButtonHeightRef = UIButton::DEFAULT_BUTTON_HEIGHT, int16_t columnGap = 3, int16_t buttonGap = 3) {
 
-        DerivedScreen *self = static_cast<DerivedScreen *>(this);
+        DerivedContainer *self = static_cast<DerivedContainer *>(this);
 
         if (buttonDefs.empty()) {
             return;
         }
 
-        // A 'self->tft' a DerivedScreen (pl. TestScreen) UIScreen ősosztályából
+        // A 'self->tft' a DerivedContainer (pl. TestScreen, MessageDialog) UIComponent ősosztályából
         // (pontosabban UIComponent-ből) örökölt 'tft' referenciája lesz.
         // Az 'self->addChild' pedig az UIContainerComponent public metódusa.
-        const int16_t screenHeight = self->getTft().height();
+        const int16_t screenHeight = self->getTFT().height();
         const int16_t maxColumnHeight = screenHeight - marginTop - marginBottom;
-        const int16_t screenWidth = self->getTft().width();
+        const int16_t screenWidth = self->getTFT().width();
 
         if (out_createdButtons) {
             out_createdButtons->clear();
@@ -137,7 +137,7 @@ class ButtonsGroupManager {
                 int16_t btnHeight = (def.height > 0) ? def.height : defaultButtonHeightRef;
 
                 Rect bounds(currentLayoutX, currentLayoutY, btnWidth, btnHeight);
-                auto button = std::make_shared<UIButton>(self->getTft(), def.id, bounds, def.label, def.type, def.initialState, def.callback);
+                auto button = std::make_shared<UIButton>(self->getTFT(), def.id, bounds, def.label, def.type, def.initialState, def.callback);
                 self->addChild(button);
                 if (out_createdButtons) {
                     out_createdButtons->push_back(button);
@@ -173,14 +173,14 @@ class ButtonsGroupManager {
                                      int16_t marginLeft = 5, int16_t marginRight = 5, int16_t marginBottom = 5, int16_t defaultButtonWidthRef = UIButton::DEFAULT_BUTTON_WIDTH,
                                      int16_t defaultButtonHeightRef = UIButton::DEFAULT_BUTTON_HEIGHT, int16_t rowGap = 3, int16_t buttonGap = 3) {
 
-        DerivedScreen *self = static_cast<DerivedScreen *>(this);
+        DerivedContainer *self = static_cast<DerivedContainer *>(this);
 
         if (buttonDefs.empty()) {
             return;
         }
 
-        const int16_t screenHeight = self->getTft().height();
-        const int16_t screenWidth = self->getTft().width();
+        const int16_t screenHeight = self->getTFT().height();
+        const int16_t screenWidth = self->getTFT().width();
         const int16_t maxRowWidth = screenWidth - marginLeft - marginRight;
 
         if (out_createdButtons) {
@@ -256,7 +256,7 @@ class ButtonsGroupManager {
                 int16_t btnHeight = (def.height > 0) ? def.height : defaultButtonHeightRef;
 
                 Rect bounds(currentLayoutX, currentLayoutY, btnWidth, btnHeight);
-                auto button = std::make_shared<UIButton>(self->getTft(), def.id, bounds, def.label, def.type, def.initialState, def.callback);
+                auto button = std::make_shared<UIButton>(self->getTFT(), def.id, bounds, def.label, def.type, def.initialState, def.callback);
                 self->addChild(button);
                 if (out_createdButtons) {
                     out_createdButtons->push_back(button);

@@ -3,6 +3,7 @@
 
 #include "IScreenManager.h"
 #include "UIContainerComponent.h"
+#include "UIDialogBase.h"
 
 class UIScreen : public UIContainerComponent {
 
@@ -12,6 +13,20 @@ class UIScreen : public UIContainerComponent {
 
     /** @brief ScreenManager referencia a képernyő váltásokhoz */
     IScreenManager *manager = nullptr;
+
+    /**
+     * @brief Dialógus stack gyors eléréshez (weak_ptr)
+     * */
+    std::vector<std::weak_ptr<UIDialogBase>> dialogStack;
+    /**
+     * @brief Dialógus stack memória védelemhez (shared_ptr) - Dual stack rendszer
+     * */
+    std::vector<std::shared_ptr<UIDialogBase>> dialogSharedStack;
+
+    /**
+     * @brief Jelenleg aktív dialógus referencia
+     * */
+    std::shared_ptr<UIDialogBase> currentDialog;
 
   public:
     /**
@@ -47,7 +62,7 @@ class UIScreen : public UIContainerComponent {
      * @brief TFT display referencia elkérése
      * @return TFT_eSPI referencia
      */
-    TFT_eSPI& getTft() { return tft; } // tft a UIComponent-ből örökölt protected tag
+    TFT_eSPI &getTft() { return tft; } // tft a UIComponent-ből örökölt protected tag
 
     /**
      * @brief Paraméterek beállítása
@@ -136,6 +151,55 @@ class UIScreen : public UIContainerComponent {
      * komponensek loop-ja fut.
      */
     virtual void loop() override;
+
+    // ================================
+    // Layered Dialog System
+    // ================================
+
+    /**
+     * @brief Dialógus megjelenítése a layered dialog rendszerben
+     * @param dialog Megjelenítendő dialógus (shared_ptr)
+     *
+     * A dialógus hozzáadódik a dual stack rendszerhez:
+     * - _dialogStack: gyors elérés (weak_ptr)
+     * - _dialogSharedStack: memória védelem (shared_ptr)
+     *
+     * A dialógus automatikusan megjelenik és aktívvá válik.
+     * Az előző dialógus (ha van) inaktívvá válik, de látható marad.
+     *
+     * @see docs/LayeredDialogSystem.md#showDialog
+     */
+    virtual void showDialog(std::shared_ptr<UIDialogBase> dialog);
+
+    /**
+     * @brief Dialógus bezárásának kezelése
+     * @param closedDialog A bezárt dialógus pointer
+     *
+     * Automatikusan meghívódik amikor egy dialógus bezáródik.
+     * Kezeli a stack cleanup-ot és az előző dialógus visszaállítását.
+     *
+     * Funkciók:
+     * - Dialógus eltávolítása mindkét stack-ből
+     * - Előző dialógus aktiválása (ha van)
+     * - Képernyő újrarajzolás (ha szükséges)
+     * - Memória cleanup
+     *
+     * @see docs/LayeredDialogSystem.md#onDialogClosed
+     */
+    virtual void onDialogClosed(UIDialogBase *closedDialog);
+
+    /**
+     * @brief Dialógus aktivitás állapot ellenőrzése
+     * @return true ha van aktív dialógus, false egyébként
+     *
+     * Használható új dialógusok megnyitása előtt a duplikáció elkerülésére.
+     *
+     * @example
+     * if (!isDialogActive()) {
+     *     showDialog(newDialog);
+     * }
+     */
+    inline bool isDialogActive() const { return !dialogStack.empty(); }
 };
 
 #endif //__UI_SCREEN_H

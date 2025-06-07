@@ -59,9 +59,8 @@ bool UIScreen::isRedrawNeeded() const {
  * A rétegzési logika:
  * - A stack első eleme (index 0) = legalsó réteg
  * - A stack utolsó eleme (back()) = legfelső réteg
- * - Minden látható dialógus kirajzolódik, lehetővé téve az átláthatóságot
+ * - Minden dialógus kirajzolódik
  *
- * @note Csak látható (_visible == true) komponensek rajzolódnak ki
  */
 void UIScreen::draw() {
 
@@ -70,21 +69,21 @@ void UIScreen::draw() {
     // ===============================
     UIContainerComponent::draw(); // Gombok, szövegek, egyéb UI elemek
 
-    // // ===============================
-    // // 2. Rétegzett dialógusok rajzolása (felső rétegek)
-    // // ===============================
-    // if (!_dialogStack.empty()) {
+    // ===============================
+    // 2. Rétegzett dialógusok rajzolása (felső rétegek)
+    // ===============================
+    if (!dialogStack.empty()) {
 
-    //     // Összes látható dialógus kirajzolása stack sorrendjében (alulról felfelé)
-    //     int dialogCount = 0;
-    //     for (auto &weakDialog : _dialogStack) {
-    //         auto dialog = weakDialog.lock();
-    //         if (dialog && dialog->getVisible()) {
-    //             dialog->draw();
-    //             dialogCount++;
-    //         }
-    //     }
-    // }
+        // Összes látható dialógus kirajzolása stack sorrendjében (alulról felfelé)
+        int dialogCount = 0;
+        for (auto &weakDialog : dialogStack) {
+            auto dialog = weakDialog.lock();
+            if (dialog) {
+                dialog->draw();
+                dialogCount++;
+            }
+        }
+    }
 }
 
 /**
@@ -103,12 +102,14 @@ void UIScreen::draw() {
  * @note A visszatérési érték jelzi, hogy az esemény feldolgozásra került-e
  */
 bool UIScreen::handleTouch(const TouchEvent &event) {
-    // if (isDialogActive()) {
-    //     auto topDialog = _dialogStack.back().lock();
-    //     if (topDialog) {
-    //         return topDialog->handleTouch(event);
-    //     }
-    // }
+
+    if (isDialogActive()) {
+        auto topDialog = dialogStack.back().lock();
+        if (topDialog) {
+            return topDialog->handleTouch(event);
+        }
+    }
+
     return UIContainerComponent::handleTouch(event);
 }
 
@@ -126,12 +127,14 @@ bool UIScreen::handleTouch(const TouchEvent &event) {
  * encoder segítségével lehet OK/Cancel között váltani.
  */
 bool UIScreen::handleRotary(const RotaryEvent &event) {
-    // if (isDialogActive()) {
-    //     auto topDialog = _dialogStack.back().lock();
-    //     if (topDialog) {
-    //         return topDialog->handleRotary(event);
-    //     }
-    // }
+
+    if (isDialogActive()) {
+        auto topDialog = dialogStack.back().lock();
+        if (topDialog) {
+            return topDialog->handleRotary(event);
+        }
+    }
+
     return UIContainerComponent::handleRotary(event);
 }
 
@@ -153,16 +156,197 @@ bool UIScreen::handleRotary(const RotaryEvent &event) {
  * - Szenzorok olvasása
  */
 void UIScreen::loop() {
-    // if (isDialogActive()) {
-    //     auto topDialog = _dialogStack.back().lock();
-    //     if (topDialog) {
-    //         topDialog->loop();
-    //     }
 
-    //     // Ha van aktív dialógus, csak annak loop-ja fut
-    //     return;
-    // }
+    if (isDialogActive()) {
+        auto topDialog = dialogStack.back().lock();
+        if (topDialog) {
+            topDialog->loop();
+        }
+
+        // Ha van aktív dialógus, csak annak loop-ja fut
+        return;
+    }
 
     // Ha nincs aktív dialógus, akkor az alap képernyő komponensek loop-ja fut
     UIContainerComponent::loop();
+}
+
+// ================================
+// Layered Dialog System Implementation
+// ================================
+
+/**
+ * @brief Dialógus megjelenítése a layered dialog rendszerben
+ * @param dialog Megjelenítendő dialógus shared_ptr
+ *
+ * A showDialog metódus implementálja a dual stack dialog rendszer magját:
+ *
+ * 1. Előző dialógus inaktiválása (ha van)
+ * 2. Új dialógus hozzáadása mindkét stack-hez:
+ *    - _dialogStack: weak_ptr (gyors elérés)
+ *    - _dialogSharedStack: shared_ptr (memória védelem)
+ * 3. Dialógus aktiválása és megjelenítése
+ * 4. Képernyő újrarajzolási flag beállítása
+ *
+ * A dual stack rendszer biztosítja, hogy:
+ * - A dialógusok ne kerüljenek korai destrukcióra
+ * - Gyors elérés biztosított legyen a weak_ptr-eken keresztül
+ * - Automatikus cleanup történjen a shared_ptr-ek segítségével
+ *
+ * @note Ha dialog nullptr, akkor a metódus nem csinál semmit
+ */
+void UIScreen::showDialog(std::shared_ptr<UIDialogBase> dialog) {
+    
+    
+    if (dialog) {
+
+        // 1. Előző dialógus inaktiválása (de látható marad)
+        if (!dialogStack.empty()) {
+            auto currentDialog = dialogStack.back().lock();
+            if (currentDialog) {
+                currentDialog->setTopDialog(false);
+            }
+        }
+
+        // 2. Dual stack tárolás - a layered dialog rendszer magja
+        dialogStack.push_back(dialog);       // weak_ptr automatikus konverzió
+        dialogSharedStack.push_back(dialog); // shared_ptr tárolás (életben tartás)
+        currentDialog = dialog;              // Aktív dialógus referencia
+
+        // 3. Dialógus aktiválása és megjelenítése
+        dialog->show();
+
+        // 4. Képernyő újrarajzolás triggering
+        this->markForRedraw();
+    }
+}
+
+/**
+ * @brief Dialógus bezárásának kezelése - Layered navigation magja
+ * @param closedDialog A bezárt dialógus pointer
+ *
+ * Ez a metódus implementálja a layered dialog rendszer navigációs logikáját.
+ * Automatikusan meghívódik amikor egy dialógus bezáródik (OK/Cancel gomb).
+ *
+ * Fő funkciók:
+ * 1. **Dialog Stack Cleanup**: A bezárt dialógus eltávolítása mindkét stack-ből
+ * 2. **Navigation Logic**: Visszatérés az előző dialógushoz vagy a főképernyőhöz
+ * 3. **Memory Management**: Automatikus shared_ptr cleanup
+ * 4. **Visual Refresh**: Teljes képernyő újrarajzolás a tiszta megjelenéshez
+ *
+ * Navigation logika:
+ * - Ha ez volt az utolsó dialógus → visszatérés a főképernyőhöz
+ * - Ha vannak még dialógusok → előző dialógus aktiválása
+ *
+ * @note A metódus robusztus - kezeli a középső dialógusok bezárását is
+ */
+void UIScreen::onDialogClosed(UIDialogBase *closedDialog) {
+
+    // ===============================
+    // 1. Aktuális dialógus referencia cleanup
+    // ===============================
+    if (currentDialog.get() == closedDialog) {
+        currentDialog.reset();
+    }
+
+    // ===============================
+    // 2. Dialog Stack Cleanup - Weak Pointer Stack
+    // ===============================
+    bool dialogRemoved = false;
+
+    // Optimalizáció: Top dialog ellenőrzése először (leggyakoribb eset)
+    if (!dialogStack.empty()) {
+        auto topDialog = dialogStack.back().lock();
+        if (topDialog && topDialog.get() == closedDialog) {
+            dialogStack.pop_back();
+            dialogRemoved = true;
+        }
+    }
+
+    // Fallback: Keresés a stack középső elemei között (ritkább eset)
+    if (!dialogRemoved) {
+        for (auto it = dialogStack.begin(); it != dialogStack.end(); ++it) {
+            auto dialog = it->lock();
+            if (dialog && dialog.get() == closedDialog) {
+                dialogStack.erase(it);
+                dialogRemoved = true;
+                break;
+            }
+        }
+    }
+
+    // ===============================
+    // 3. Shared Pointer Stack Cleanup - Memory Protection
+    // ===============================
+    for (auto it = dialogSharedStack.begin(); it != dialogSharedStack.end(); ++it) {
+        if (it->get() == closedDialog) {
+            dialogSharedStack.erase(it);
+            break;
+        }
+    }
+
+    // ===============================
+    // 4. Navigation Logic - Visszatérés főképernyőhöz vagy előző dialógushoz
+    // ===============================
+
+    if (dialogStack.empty()) {
+        // ===========================================
+        // 4A. UTOLSÓ DIALÓGUS BEZÁRVA - Visszatérés főképernyőhöz
+        // ===========================================
+
+        // Teljes képernyő törlése - tiszta újrakezdés
+        tft.fillScreen(TFT_BLACK);
+
+        // Saját újrarajzolási flag beállítása
+        markForRedraw();
+
+        // Összes gyerek komponens újrarajzolási flag beállítása
+        for (auto &child : children) {
+            if (child) {
+                auto uiComponent = std::static_pointer_cast<UIComponent>(child);
+                uiComponent->markForRedraw();
+            }
+        }
+
+        // Azonnali teljes újrarajzolás
+        draw();
+
+    } else {
+        // ===========================================
+        // 4B. VAN MÉG DIALÓGUS - Visszanavigálás előző dialógushoz
+        // ===========================================
+        auto topDialog = dialogStack.back().lock();
+        if (topDialog) {
+
+            // Teljes képernyő törlése - tiszta rétegzett újrakezdés
+            tft.fillScreen(TFT_BLACK);
+
+            // Előző dialógus reaktiválása
+            topDialog->setTopDialog(true);
+            topDialog->markForRedraw();
+            currentDialog = topDialog;
+
+            // Alapképernyő komponenseinek újrarajzolási flag beállítása
+            markForRedraw();
+            for (auto &child : children) {
+                if (child) {
+                    auto uiComponent = std::static_pointer_cast<UIComponent>(child);
+                    uiComponent->markForRedraw();
+                }
+            }
+
+            // Összes maradék dialógus újrarajzolási flag beállítása
+            for (auto &weakDialog : dialogStack) {
+                auto dialog = weakDialog.lock();
+                if (dialog) {
+                    dialog->markForRedraw();
+                }
+            }
+
+            // Teljes rétegzett újrarajzolás - alap képernyő + összes dialógus
+            draw(); // Ez rajzolja az alap képernyőt + összes dialógust
+        } else {
+            DEBUG("UIScreen::onDialogClosed() - ERROR: Previous dialog pointer is null!\n");
+        }
+    }
 }

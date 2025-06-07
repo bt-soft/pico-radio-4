@@ -66,6 +66,10 @@ class UIButton : public UIComponent {
         uint16_t led;
     };
 
+    /**
+     * @brief Lekéri a gomb aktuális állapotának megfelelő színeket
+     * @return StateColors struktúra, amely tartalmazza a háttér, keret, szöveg és LED színeket
+     */
     StateColors getStateColors() const {
         StateColors resultColors;
         // Az alap UIComponent::colors tagot használjuk (ami egy ColorScheme)
@@ -113,7 +117,12 @@ class UIButton : public UIComponent {
         return resultColors;
     }
 
-    // Szín sötétítése gradiens effekthez - TftButton.h alapján
+    /**
+     * @brief Sötétíti a megadott színt egy adott mértékben
+     * @param color A szín, amelyet sötétíteni szeretnénk (16 bites RGB formátumban)
+     * @param amount A sötétítés mértéke (0-255 között)
+     * @return A sötétített szín (16 bites RGB formátumban)
+     */
     uint16_t darkenColor(uint16_t color, uint8_t amount) const {
         // Kivonjuk a piros, zöld és kék színösszetevőket
         uint8_t r = (color & 0xF800) >> 11;
@@ -132,7 +141,10 @@ class UIButton : public UIComponent {
         return (r << 11) | (g << 5) | b;
     }
 
-    // Gradiens effekt rajzolása pressed állapotban
+    /**
+     * @brief Rajzol egy gradiens effektet a gomb lenyomott állapotában
+     * @param baseColorForEffect A gradiens alap színe, amelyet sötétítünk
+     */
     void drawPressedEffect(uint16_t baseColorForEffect) {
         const uint8_t steps = 6; // TFT_BUTTON_DARKEN_COLORS_STEPS
         uint8_t stepWidth = bounds.width / steps;
@@ -206,6 +218,23 @@ class UIButton : public UIComponent {
         : UIComponent(tft, Rect(bounds.x, bounds.y, (bounds.width == 0 ? DEFAULT_BUTTON_WIDTH : bounds.width), (bounds.height == 0 ? DEFAULT_BUTTON_HEIGHT : bounds.height)),
                       colors), // Alapértelmezett méretek használata, ha a bounds szélessége vagy magassága 0
           buttonId(id), label(label), buttonType(type), eventCallback(callback) {}
+
+    /**
+     * @brief Sima pushButton
+     * @param tft TFT_eSPI referencia
+     * @param id Gomb azonosítója
+     * @param bounds A gomb határai (Rect)
+     *
+     */
+    UIButton(TFT_eSPI &tft,
+             uint8_t id,                                                 // ID
+             const Rect &bounds,                                         // rect
+             const char *label,                                          // label
+             std::function<void(const ButtonEvent &)> callback = nullptr // callback
+             )
+        : UIComponent(tft, Rect(bounds.x, bounds.y, (bounds.width == 0 ? DEFAULT_BUTTON_WIDTH : bounds.width), (bounds.height == 0 ? DEFAULT_BUTTON_HEIGHT : bounds.height)),
+                      UIColorPalette::createDefaultButtonScheme()),
+          buttonId(id), label(label), buttonType(UIButton::ButtonType::Pushable), currentState(UIButton::ButtonState::Off), eventCallback(callback) {}
 
     /**
      * @brief Gomb állapotának szöveges megjelenítése
