@@ -37,6 +37,7 @@ class ScreenSaverScreen : public UIScreen {
     virtual void drawSelf() override {
         tft.setTextDatum(MC_DATUM);
         tft.setTextColor(TFT_WHITE, TFT_BLACK);
+        tft.setFreeFont(); // Alapértelmezett (kisebb) font
         tft.setTextSize(2);
         tft.drawString("Screen Saver Active", tft.width() / 2, tft.height() / 2 - 10);
 
