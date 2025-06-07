@@ -18,6 +18,7 @@
 #define SCREEN_NAME_AM "AMScreen"
 #define SCREEN_NAME_TEST "TestScreen"
 #define SCREEN_NAME_EMPTY "EmptyScreen"
+#define SCREEN_NAME_SCREENSAVER "ScreenSaver"
 
 //--- Debug ---
 #define __DEBUG // Debug mód vezérlése
@@ -49,7 +50,7 @@
 //--- ScreenSaver
 #define SCREEN_SAVER_TIMEOUT_MIN 1
 #define SCREEN_SAVER_TIMEOUT_MAX 60
-#define SCREEN_SAVER_TIMEOUT 10 // 10 perc a képernyővédő időzítése
+#define SCREEN_SAVER_TIMEOUT 1 // 10 perc a képernyővédő időzítése
 
 //--- CW Decoder ---
 #define CW_DECODER_DEFAULT_FREQUENCY 750 // Alapértelmezett CW dekóder frekvencia (Hz)

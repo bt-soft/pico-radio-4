@@ -3,9 +3,18 @@
 
 #include <TFT_eSPI.h>
 #include <functional>
+#include <map>   // Tartalmazva volt, de explicit jobb
+#include <queue> // Tartalmazva volt, de explicit jobb
 
 #include "IScreenManager.h"
 #include "UIScreen.h"
+// Szükséges include-ok a screen factory-khoz és a config-hoz
+#include "Config.h" // Config &cfg miatt és configRef.data eléréséhez
+#include "EmptyScreen.h"
+#include "FMScreen.h"
+#include "ScreenSaverScreen.h" // Az új képernyővédő
+#include "TestScreen.h"
+#include "defines.h" // Képernyőnevekhez
 
 // Deferred action struktúra - biztonságos képernyőváltáshoz
 struct DeferredAction {
@@ -29,14 +38,13 @@ class ScreenManager : public IScreenManager {
     std::map<String, ScreenFactory> screenFactories;
     std::shared_ptr<UIScreen> currentScreen;
     const char *previousScreenName;
+    uint32_t lastActivityTime;
+
+    Config &configRef; // Referencia a globális config objektumra
 
     // Deferred action queue - biztonságos képernyőváltáshoz
     std::queue<DeferredAction> deferredActions;
     bool processingEvents = false;
-
-  private:
-    // Beépített screen factory-k regisztrálása
-    void registerDefaultScreenFactories();
 
     // Aktuális képernyő lekérdezése
     std::shared_ptr<UIScreen> getCurrentScreen() const { return currentScreen; }
@@ -45,10 +53,7 @@ class ScreenManager : public IScreenManager {
     String getPreviousScreenName() const { return previousScreenName; }
 
   public:
-    ScreenManager(TFT_eSPI &tft) : tft(tft) {
-        // Beépített screen factory-k regisztrálása
-        registerDefaultScreenFactories();
-    }
+    ScreenManager(TFT_eSPI &tft, Config &cfg) : tft(tft), configRef(cfg), previousScreenName(nullptr), lastActivityTime(millis()) { registerDefaultScreenFactories(); }
 
     // Képernyő factory regisztrálása
     void registerScreenFactory(const char *screenName, ScreenFactory factory) { screenFactories[screenName] = factory; }
@@ -128,6 +133,11 @@ class ScreenManager : public IScreenManager {
             if (params) {
                 currentScreen->setParameters(params);
             }
+            // Fontos: Az activate() hívása *előtt* állítjuk be a lastActivityTime-ot,
+            // ha nem a képernyővédőre váltunk, hogy az activate() felülírhassa, ha akarja.
+            if (!STREQ(screenName, SCREEN_NAME_SCREENSAVER)) {
+                lastActivityTime = millis();
+            }
             currentScreen->activate();
             DEBUG("ScreenManager: Created and activated screen '%s'\n", screenName);
             return true;
@@ -160,6 +170,9 @@ class ScreenManager : public IScreenManager {
     // Touch esemény kezelése
     bool handleTouch(const TouchEvent &event) {
         if (currentScreen) {
+            if (!STREQ(currentScreen->getName(), SCREEN_NAME_SCREENSAVER)) {
+                lastActivityTime = millis();
+            }
             processingEvents = true;
             bool result = currentScreen->handleTouch(event);
             processingEvents = false;
@@ -171,6 +184,9 @@ class ScreenManager : public IScreenManager {
     // Rotary encoder esemény kezelése
     bool handleRotary(const RotaryEvent &event) {
         if (currentScreen) {
+            if (!STREQ(currentScreen->getName(), SCREEN_NAME_SCREENSAVER)) {
+                lastActivityTime = millis();
+            }
             processingEvents = true;
             bool result = currentScreen->handleRotary(event);
             processingEvents = false;
@@ -181,7 +197,23 @@ class ScreenManager : public IScreenManager {
 
     // Loop hívás
     void loop() {
+        // Először a halasztott műveletek feldolgozása
+        processDeferredActions();
+
         if (currentScreen) {
+            // Képernyővédő időzítő ellenőrzése
+            uint32_t screenSaverTimeoutMs = configRef.data.screenSaverTimeoutMinutes * 60000UL;
+
+            if (screenSaverTimeoutMs > 0 &&                                  // Ha a képernyővédő engedélyezve van (idő > 0)
+                !STREQ(currentScreen->getName(), SCREEN_NAME_SCREENSAVER) && // És nem vagyunk már a képernyővédőn
+                lastActivityTime != 0 &&                                     // És volt már aktivitás
+                (millis() - lastActivityTime > screenSaverTimeoutMs)) {      // És lejárt az idő
+
+                DEBUG("ScreenManager: Screen saver timeout. Switching to %s\n", SCREEN_NAME_SCREENSAVER);
+                switchToScreen(SCREEN_NAME_SCREENSAVER);
+                // lastActivityTime frissül, amikor a felhasználó újra interakcióba lép a képernyővédőn,
+                // és visszaváltáskor az immediateSwitch-ben.
+            }
             currentScreen->loop();
         }
     }
@@ -195,5 +227,8 @@ class ScreenManager : public IScreenManager {
             }
         }
     }
+
+  private:
+    void registerDefaultScreenFactories();
 };
 #endif // __SCREEN_MANAGER_H

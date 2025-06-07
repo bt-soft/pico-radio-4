@@ -39,7 +39,7 @@ extern AmStationStore amStationStore;
 
 //-------------------- Screens
 // Globális képernyőkezelő
-ScreenManager screenManager(tft);
+ScreenManager screenManager(tft, config);
 // #include "AMScreen.h"
 #include "FMScreen.h"
 // #include "TestScreen.h"

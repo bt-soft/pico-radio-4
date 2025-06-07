@@ -1,19 +1,16 @@
 #include "ScreenManager.h"
+#include "EmptyScreen.h"
 #include "FMScreen.h"
+#include "ScreenSaverScreen.h"
 #include "TestScreen.h"
 
 /**
- * @file ScreenManager.cpp
- * @brief Képernyő menedzser implementáció
- * @details Ez az osztály kezeli a képernyők közötti váltást és a képernyő gyárakat.
+ * @brief Képernyőkezelő osztály konstruktor
  */
 void ScreenManager::registerDefaultScreenFactories() {
-    // FMScreen factory
-    registerScreenFactory(SCREEN_NAME_FM, [](TFT_eSPI &tft) -> std::shared_ptr<UIScreen> { return std::make_shared<FMScreen>(tft); });
-
-    // AMScreen factory
-    // registerScreenFactory(SCREEN_NAME_AM, [](TFT_eSPI &tft) -> std::shared_ptr<UIScreen> { return std::make_shared<AMScreen>(tft); });
-
-    // TestScreen factory
-    registerScreenFactory(SCREEN_NAME_TEST, [](TFT_eSPI &tft) -> std::shared_ptr<UIScreen> { return std::make_shared<TestScreen>(tft); });
+    registerScreenFactory(SCREEN_NAME_FM, [](TFT_eSPI &tft_param) { return std::make_shared<FMScreen>(tft_param); });
+    registerScreenFactory(SCREEN_NAME_TEST, [](TFT_eSPI &tft_param) { return std::make_shared<TestScreen>(tft_param); });
+    registerScreenFactory(SCREEN_NAME_EMPTY, [](TFT_eSPI &tft_param) { return std::make_shared<EmptyScreen>(tft_param); });
+    registerScreenFactory(SCREEN_NAME_SCREENSAVER, [](TFT_eSPI &tft_param) { return std::make_shared<ScreenSaverScreen>(tft_param); });
+    // Ide jöhetnek további képernyők regisztrációi
 }

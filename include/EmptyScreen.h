@@ -1,5 +1,5 @@
-#ifndef __TEST_SCREEN_H
-#define __TEST_SCREEN_H
+#ifndef __EMPTY_SCREEN_H
+#define __EMPTY_SCREEN_H
 
 #include "UIButton.h"
 #include "UIScreen.h"
@@ -126,4 +126,4 @@ class EmptyScreen : public UIScreen {
     }
 };
 
-#endif // __TEST_SCREEN_H
+#endif // __EMPTY_SCREEN_H
