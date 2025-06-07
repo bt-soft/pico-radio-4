@@ -44,6 +44,12 @@ class UIScreen : public UIContainerComponent {
     IScreenManager *getManager() const { return manager; }
 
     /**
+     * @brief TFT display referencia elkérése
+     * @return TFT_eSPI referencia
+     */
+    TFT_eSPI& getTft() { return tft; } // tft a UIComponent-ből örökölt protected tag
+
+    /**
      * @brief Paraméterek beállítása
      * @param params Paraméter pointer (képernyő specifikus típus)
      *
