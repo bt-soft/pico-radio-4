@@ -149,11 +149,6 @@ class ValueChangeDialog : public MessageDialog {
     bool isCurrentValueOriginal() const;
 
     /**
-     * @brief Boolean gombok állapotának frissítése
-     */
-    void updateBooleanButtonStates();
-
-    /**
      * @brief Csak az érték szöveg újrarajzolása (Boolean gombokhoz optimalizált)
      */
     void redrawValueTextOnly();

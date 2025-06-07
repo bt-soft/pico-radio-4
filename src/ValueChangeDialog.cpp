@@ -129,8 +129,11 @@ ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, cons
         }
     });
 
-    // Boolean gombok kezdeti állapotának beállítása
-    updateBooleanButtonStates();
+    // Kezdeti gombállapotok beállítása boolean típushoz
+    if (_decreaseButton)
+        _decreaseButton->setEnabled(canDecrement());
+    if (_increaseButton)
+        _increaseButton->setEnabled(canIncrement());
 }
 
 /**
@@ -172,8 +175,7 @@ void ValueChangeDialog::createDialogContent() {
         _decreaseButton = std::make_shared<UIButton>(tft, 3, Rect(0, 0, SMALL_BUTTON_WIDTH + 10, BUTTON_HEIGHT), "FALSE", UIButton::ButtonType::Pushable,
                                                      [this](const UIButton::ButtonEvent &event) {
                                                          if (event.state == UIButton::EventButtonState::Clicked && _boolPtr && *_boolPtr) {
-                                                             *_boolPtr = false;           // FALSE-ra állítás
-                                                             updateBooleanButtonStates(); // Gombok állapotának frissítése
+                                                             *_boolPtr = false;           // FALSE-ra állítás                                                            
                                                              redrawValueTextOnly();       // Csak az érték szöveg frissítése
                                                          }
                                                      });
@@ -183,8 +185,7 @@ void ValueChangeDialog::createDialogContent() {
         _increaseButton = std::make_shared<UIButton>(tft, 4, Rect(0, 0, SMALL_BUTTON_WIDTH + 10, BUTTON_HEIGHT), "TRUE", UIButton::ButtonType::Pushable,
                                                      [this](const UIButton::ButtonEvent &event) {
                                                          if (event.state == UIButton::EventButtonState::Clicked && _boolPtr && !*_boolPtr) {
-                                                             *_boolPtr = true;            // TRUE-ra állítás
-                                                             updateBooleanButtonStates(); // Gombok állapotának frissítése
+                                                             *_boolPtr = true;            // TRUE-ra állítás                                                            
                                                              redrawValueTextOnly();       // Csak az érték szöveg frissítése
                                                          }
                                                      });
@@ -480,15 +481,11 @@ void ValueChangeDialog::redrawValueArea() {
     tft.drawString(valueStr, centerX, valueY);
 
     // Gombok állapotának frissítése típus alapján
-    if (_valueType == ValueType::Boolean) {
-        updateBooleanButtonStates();
-    } else {
-        // Frissítjük a +/- UIButton-ok enabled állapotát
-        if (_decreaseButton)
-            _decreaseButton->setEnabled(canDecrement());
-        if (_increaseButton)
-            _increaseButton->setEnabled(canIncrement());
-    }
+    // Egységesített gomb állapot frissítés minden típusra
+    if (_decreaseButton)
+        _decreaseButton->setEnabled(canDecrement());
+    if (_increaseButton)
+        _increaseButton->setEnabled(canIncrement());
 }
 
 /**
@@ -559,28 +556,6 @@ bool ValueChangeDialog::canDecrement() const {
 }
 
 /**
- * @brief Boolean gombok állapotának frissítése
- * Beállítja a TRUE/FALSE gombok engedélyezett/letiltott állapotát az aktuális érték alapján
- */
-void ValueChangeDialog::updateBooleanButtonStates() {
-    if (_valueType != ValueType::Boolean || !_boolPtr) {
-        return;
-    }
-
-    // FALSE gomb állapota: engedélyezett ha jelenleg TRUE
-    bool falseEnabled = *_boolPtr;
-    if (_decreaseButton) {
-        _decreaseButton->setEnabled(falseEnabled);
-    }
-
-    // TRUE gomb állapota: engedélyezett ha jelenleg FALSE
-    bool trueEnabled = !*_boolPtr;
-    if (_increaseButton) {
-        _increaseButton->setEnabled(trueEnabled);
-    }
-}
-
-/**
  * @brief Csak az érték szöveg újrarajzolása (optimalizált)
  * Újrarajzolja csak az érték szöveget anélkül, hogy a gombokat is frissítené
  */
@@ -604,4 +579,10 @@ void ValueChangeDialog::redrawValueTextOnly() {
     tft.setTextColor(textColor, colors.background);
     tft.setTextSize(VALUE_TEXT_FONT_SIZE);
     tft.drawString(valueStr, centerX, valueY);
+
+    // Gombok állapotának frissítése (egységesítve)
+    if (_decreaseButton)
+        _decreaseButton->setEnabled(canDecrement());
+    if (_increaseButton)
+        _increaseButton->setEnabled(canIncrement());
 }
