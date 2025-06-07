@@ -48,13 +48,23 @@ class UIComponent {
     TFT_eSPI &tft;
     Rect bounds;
     ColorScheme colors;
-    bool disabled = false;   // Komponens tiltott állapot
-    bool pressed = false;    // Komponens lenyomva állapot
-    bool needsRedraw = true; // Dirty flag, kinduláskor minden komponens újrarajzolást igényel
+    bool disabled = false;      // Komponens tiltott állapot
+    bool pressed = false;       // Komponens lenyomva állapot
+    bool needsRedraw = true;    // Dirty flag, kinduláskor minden komponens újrarajzolást igényel
+    uint32_t touchDownTime = 0; // Érintés kezdetének ideje, tagváltozó lett
 
     // Touch debounce
     uint32_t lastClickTime = 0;                             // Utolsó érvényes kattintás ideje
     static constexpr uint32_t DEFAULT_DEBOUNCE_DELAY = 200; // ms - Alapértelmezett debounce idő
+
+    /**
+     * @brief A komponens jelezheti, hogy vizuális lenyomott visszajelzést ad-e
+     * @details Ha true, akkor a komponens vizuális visszajelzést ad a lenyomásra (pl. színváltás).
+     * @note Alapértelmezés szerint true, de a származtatott osztályok felülírhatják, ha nem kívánják ezt a viselkedést.
+     * pl.: az UIScreen osztály nem ad vizuális visszajelzést a lenyomásra, mert a képernyő nem interaktív elem.
+     * Emiatt ő majd felülírja ezt a metódust, hogy false-t adjon vissza.
+     */
+    virtual bool allowsVisualPressedFeedback() const { return true; }
 
   public:
     /**
@@ -108,22 +118,21 @@ class UIComponent {
         }
 
         bool inside = isPointInside(event.x, event.y);
-        bool oldPressed = pressed;
-        static uint32_t touchDownTime = 0;
+        bool previousPressedState = this->pressed; // Korábbi 'pressed' állapot mentése
 
         if (event.pressed && inside && !pressed) {
-            pressed = true;
-            touchDownTime = millis();
+            this->pressed = true;
+            this->touchDownTime = millis(); // Tagváltozó használata
             onTouchDown(event);
             // Ha pressed állapot változott, újrarajzolás szükséges
-            if (oldPressed != pressed) {
+            if (allowsVisualPressedFeedback() && previousPressedState != this->pressed) {
                 markForRedraw();
             }
             return true;
 
         } else if (!event.pressed && pressed) {
-            pressed = false;
-            uint32_t touchDuration = millis() - touchDownTime;
+            this->pressed = false;
+            uint32_t touchDuration = millis() - this->touchDownTime; // Tagváltozó használata
 
             // Kiterjesztett tolerancia a release eseményhez - ha az original touch területen belül volt a lenyomás
             constexpr int16_t RELEASE_TOLERANCE = 8; // 8 pixel tolerancia a felengedéshez
@@ -147,7 +156,7 @@ class UIComponent {
             }
 
             // Ha pressed állapot változott, újrarajzolás szükséges
-            if (oldPressed != pressed) {
+            if (allowsVisualPressedFeedback() && previousPressedState != this->pressed) {
                 markForRedraw();
             }
             return true;

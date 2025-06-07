@@ -28,6 +28,13 @@ class UIScreen : public UIContainerComponent {
      * */
     std::shared_ptr<UIDialogBase> currentDialog;
 
+  protected:
+    /**
+     * @brief a képernyő üres részére klikk kiváltotta újrarajzolás elkerülése
+     * @return false, mert a képernyők nem adnak vizuális "lenyomott" visszajelzést a hátterükön
+     */
+    virtual bool allowsVisualPressedFeedback() const override { return false; }
+
   public:
     /**
      * @brief Konstruktor képernyő névvel
