@@ -176,14 +176,8 @@ class UIScrollableListComponent : public UIComponent {
             tft.setTextColor(itemTextColor, TFT_COLOR_BACKGROUND);
         }
 
-        String fullItemText = dataSource->getItemAt(absoluteIndex);
-        int tabPosition = fullItemText.indexOf('\t');
-        String labelPart = fullItemText;
-        String valuePart = "";
-        if (tabPosition != -1) {
-            labelPart = fullItemText.substring(0, tabPosition);
-            valuePart = fullItemText.substring(tabPosition + 1);
-        }
+        String labelPart = dataSource->getItemLabelAt(absoluteIndex);
+        String valuePart = dataSource->getItemValueAt(absoluteIndex);
         // Label rész rajzolása (nagyobb, balra igazított)
         tft.setFreeFont(&FreeSansBold9pt7b); // Nagyobb font a labelnek
         tft.setTextSize(1);                  // Natív méret
@@ -256,20 +250,15 @@ class UIScrollableListComponent : public UIComponent {
                 tft.setTextColor(itemTextColor, TFT_COLOR_BACKGROUND);
             }
 
-            String fullItemText = dataSource->getItemAt(currentItemIndex);
-            int tabPosition = fullItemText.indexOf('\t');
-            String labelPart = fullItemText;
-            String valuePart = "";
-
-            if (tabPosition != -1) { labelPart = fullItemText.substring(0, tabPosition); valuePart = fullItemText.substring(tabPosition + 1); }
-
             // Label rész rajzolása
+            String labelPart = dataSource->getItemLabelAt(currentItemIndex);
             tft.setTextDatum(ML_DATUM);
             tft.setFreeFont(&FreeSansBold9pt7b);
             tft.setTextSize(1);
             tft.drawString(labelPart, itemVisualBounds.x + ITEM_TEXT_PADDING_X, itemVisualBounds.y + itemVisualBounds.height / 2);
 
             // Value rész rajzolása
+            String valuePart = dataSource->getItemValueAt(currentItemIndex);
             if (valuePart.length() > 0) {
                 tft.setTextDatum(MR_DATUM);
                 tft.setFreeFont(); // Kisebb font

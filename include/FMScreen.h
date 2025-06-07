@@ -67,6 +67,7 @@ class FMScreen : public UIScreen {
         // Szöveg középre igazítása
         tft.setTextDatum(MC_DATUM);
         tft.setTextColor(TFT_WHITE, TFT_COLOR_BACKGROUND);
+        tft.setFreeFont();
         tft.setTextSize(3);
 
         // Képernyő cím kirajzolása

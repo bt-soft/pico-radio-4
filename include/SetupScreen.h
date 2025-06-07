@@ -77,7 +77,6 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
             {"RTTY Frequencies", String(round(config.data.rttyMarkFrequencyHz)) + "/" + String(round(config.data.rttyShiftHz)) + " Hz", ItemAction::RTTY_FREQUENCIES});
 
         settingItems.push_back({"Factory Reset", "", ItemAction::FACTORY_RESET}); // Nincs érték, vagy "Execute"
-        // Az "Exit Setup" menüpontot eltávolítottuk, helyette dedikált gomb lesz
 
         if (menuList) {
             menuList->markForRedraw(); // Frissítjük a listát, ha már létezik
@@ -85,14 +84,18 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
     }
 
   public:
-    SetupScreen(TFT_eSPI &tft) : UIScreen(tft, "SetupScreen") {
+    /**
+     * @brief Konstruktor.
+     * @param tft TFT_eSPI referencia.
+     */
+    SetupScreen(TFT_eSPI &tft) : UIScreen(tft, SCREEN_NAME_SETUP) {
         populateMenuItems();
 
         const int16_t screenW = tft.width();
         const int16_t screenH = tft.height();
         const int16_t margin = 5;
         const int16_t buttonHeight = UIButton::DEFAULT_BUTTON_HEIGHT;
-        const int16_t listTopMargin = 30; // Hely a képernyő címének
+        const int16_t listTopMargin = 30;                            // Hely a képernyő címének
         const int16_t listBottomPadding = buttonHeight + margin * 2; // Hely az Exit gombnak és alatta/felette lévő résnek
 
         // Lista komponens létrehozása és hozzáadása
@@ -101,21 +104,24 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
         addChild(menuList);
 
         // Exit gomb létrehozása
-        int16_t exitButtonWidth = UIButton::DEFAULT_BUTTON_WIDTH;
-        // Ha az autoSizeToText-et használnánk, akkor:
-        // exitButtonWidth = UIButton::calculateWidthForText(tft, "Exit", false, buttonHeight);
+        constexpr int8_t exitButtonWidth = UIButton::DEFAULT_BUTTON_WIDTH;
         Rect exitButtonBounds(screenW - exitButtonWidth - margin, screenH - buttonHeight - margin, exitButtonWidth, buttonHeight);
-        exitButton = std::make_shared<UIButton>(tft, 0, exitButtonBounds, "Exit", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
-                                                [this](const UIButton::ButtonEvent &event) {
-                                                    if (event.state == UIButton::EventButtonState::Clicked && getManager()) {
-                                                        getManager()->goBack();
-                                                    }
-                                                });
+        exitButton =
+            std::make_shared<UIButton>(tft, 0, exitButtonBounds, "Exit", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, [this](const UIButton::ButtonEvent &event) {
+                if (event.state == UIButton::EventButtonState::Clicked && getManager()) {
+                    getManager()->goBack();
+                }
+            });
         addChild(exitButton);
     }
 
     virtual ~SetupScreen() = default;
 
+    /**
+     * @brief Aktiválja a képernyőt.
+     * Ez a metódus frissíti a menüelemeket és jelzi, hogy a képernyő újrarajzolást igényel.
+     * Meghívódik, amikor a képernyő aktívvá válik.
+     */
     virtual void activate() override {
         DEBUG("SetupScreen activated.\n");
         populateMenuItems(); // Frissítjük a menüelemeket aktiváláskor
@@ -124,6 +130,10 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
         markForRedraw();
     }
 
+    /**
+     * @brief Kirajzolja a képernyőt.
+     * Ez a metódus felelős a képernyő címének kirajzolásáért.
+     */
     virtual void drawSelf() override {
         // Képernyő címének kirajzolása
         tft.setTextDatum(TC_DATUM);
@@ -133,18 +143,38 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
         tft.drawString("Setup Menu", tft.width() / 2, 10);
     }
 
-    // IScrollableListDataSource implementáció
+    /**
+     * @brief Lekéri a menüelemek számát.
+     * @return A menüelemek száma.
+     */
     virtual int getItemCount() const override { return settingItems.size(); }
 
-    virtual String getItemAt(int index) const override {
+    /**
+     * @brief Lekéri az adott indexű menüelem címkéjét.
+     * @param index Az elem indexe.
+     */
+    virtual String getItemLabelAt(int index) const override {
         if (index >= 0 && index < settingItems.size()) {
-            // Egyedi elválasztót használunk, amit a UIScrollableListComponent feldolgozhat
-            // Például: "Label\tValue"
-            return String(settingItems[index].label) + "\t" + settingItems[index].value;
+            return String(settingItems[index].label);
         }
         return "";
     }
 
+    /**
+     * @brief Lekéri az adott indexű menüelem értékét.
+     * @param index Az elem indexe.
+     */
+    virtual String getItemValueAt(int index) const override {
+        if (index >= 0 && index < settingItems.size()) {
+            return settingItems[index].value;
+        }
+        return "";
+    }
+
+    /**
+     * @brief Esemény kezelése, amikor egy menüelemre kattintanak.
+     * @param index Az elem indexe, amelyre kattintottak.
+     */
     virtual void onItemClicked(int index) override {
         if (index < 0 || index >= settingItems.size())
             return;
