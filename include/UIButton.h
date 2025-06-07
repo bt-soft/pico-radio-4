@@ -44,15 +44,15 @@ class UIButton : public UIComponent {
     enum class ButtonState { Off, On, Disabled, CurrentActive };
 
   private:
+    static constexpr uint8_t CORNER_RADIUS = 5;
+    static constexpr uint32_t LONG_PRESS_THRESHOLD = 1000; // ms
+
     uint8_t buttonId;
     const char *label;
     ButtonType buttonType = ButtonType::Pushable;
     ButtonState currentState = ButtonState::Off;
-    uint8_t textSize = 2;
-    uint8_t cornerRadius = 5;
-    bool _autoSizeToText = false; // Új tagváltozó az automatikus méretezéshez
+    bool autoSizeToText = false; // Új tagváltozó az automatikus méretezéshez
     bool useMiniFont = false;
-    uint32_t longPressThreshold = 1000; // ms
     uint32_t pressStartTime = 0;
     bool longPressThresholdMet = false; // Jelzi, ha a hosszú lenyomás küszöbét elértük
     bool longPressEventFired = false;   // Jelzi, ha a hosszú lenyomás esemény már aktiválódott
@@ -156,24 +156,30 @@ class UIButton : public UIComponent {
 
         for (uint8_t i = 0; i < steps; i++) {
             uint16_t fadedColor = darkenColor(baseColor, i * 30); // Erősebb sötétítés
-            tft.fillRoundRect(bounds.x + i * stepWidth / 2, bounds.y + i * stepHeight / 2, bounds.width - i * stepWidth, bounds.height - i * stepHeight, cornerRadius, fadedColor);
+            tft.fillRoundRect(bounds.x + i * stepWidth / 2, bounds.y + i * stepHeight / 2, bounds.width - i * stepWidth, bounds.height - i * stepHeight, CORNER_RADIUS, fadedColor);
         }
     }
 
     /**
      * @brief Frissíti a gomb szélességét a felirat, szövegméret és padding alapján.
-     * Csak akkor fut le, ha az _autoSizeToText engedélyezve van.
+     * Csak akkor fut le, ha az autoSizeToText engedélyezve van.
      */
     void updateWidthToFitText() {
-        if (!_autoSizeToText || label == nullptr) { // Üres label esetén is lehet alapértelmezett szélesség
-            if(!_autoSizeToText) return;
+        if (!autoSizeToText || label == nullptr) { // Üres label esetén is lehet alapértelmezett szélesség
+            if (!autoSizeToText)
+                return;
         }
 
         // TFT szövegbeállítások mentése és visszaállítása a számításhoz
         uint8_t prevDatum = tft.getTextDatum();
         uint8_t currentTftTextSize = tft.textsize; // Feltételezzük, hogy a tft.textsize tartalmazza az aktuális méretet
 
-        tft.setTextSize(useMiniFont ? 1 : textSize); // A gomb saját szövegméretét használjuk
+        // Betűtípus beállítása a felirathoz
+        if (useMiniFont) {
+            tft.setFreeFont(); // Alapértelmezett (kisebb) font
+        } else {
+            tft.setFreeFont(&FreeSansBold9pt7b);
+        }
 
         uint16_t textW = (label && strlen(label) > 0) ? tft.textWidth(label) : 0;
         uint16_t newWidth = textW + HORIZONTAL_TEXT_PADDING; // HORIZONTAL_TEXT_PADDING mindkét oldali paddingot tartalmazza
@@ -193,26 +199,30 @@ class UIButton : public UIComponent {
 
   public:
     /**
-     * @brief Gomb komponens konstruktora
-     * @param tft TFT_eSPI referencia
-     * @param id Gomb azonosítója
-     * @param bounds A gomb határai (Rect)
-     * @param label A gomb felirata
-     * @param type A gomb típusa (Pushable vagy Toggleable)
-     * @param state A gomb kezdeti állapota (Off, On, Disabled, CurrentActive)
-     * @param callback Eseménykezelő függvény, amely a gomb eseményeit kezeli
-     * @param colors Színpaletta a gombhoz
-     * @note A bounds szélessége és magassága 0 esetén az alapértelmezett méreteket használja (DEFAULT_BUTTON_WIDTH és DEFAULT_BUTTON_HEIGHT).
+     * @brief Számolja ki a gomb szélességét a szöveg, betűméret és aktuális gombmagasság alapján.
+     * @param tftRef TFT_eSPI referencia
+     * @param text A gomb felirata
+     * @param btnTextSize A gomb szövegmérete (1 vagy 2)
+     * @param btnUseMiniFont Ha true, akkor a kisebb betűtípust használja
+     * @param currentButtonHeight Az aktuális gombmagasság, amelyet figyelembe veszünk a minimális szélesség meghatározásakor
+     * @return A gomb szélessége, amely figyelembe veszi a szöveg hosszát és a minimális méreteket
+     * @note A gomb szélessége legalább a minimális gombmagasság vagy a DEFAULT_BUTTON_WIDTH / 2, ha a szöveg nem elég széles.
      */
-
-    // Statikus segédfüggvény a szélesség kiszámításához külső használatra (pl. ButtonsGroupManager)
     static uint16_t calculateWidthForText(TFT_eSPI &tftRef, const char *text, uint8_t btnTextSize, bool btnUseMiniFont, uint16_t currentButtonHeight) {
-        if (text == nullptr) text = ""; // Kezeljük a nullptr-t üres stringként
+        if (text == nullptr)
+            text = ""; // Kezeljük a nullptr-t üres stringként
 
         uint8_t prevDatum = tftRef.getTextDatum();
         uint8_t currentTftTextSize = tftRef.textsize;
 
-        tftRef.setTextSize(btnUseMiniFont ? 1 : btnTextSize);
+        tftRef.setTextSize(1);
+        // Betűtípus beállítása a felirathoz
+        if (btnUseMiniFont) {
+            tftRef.setFreeFont(); // Alapértelmezett (kisebb) font
+        } else {
+            tftRef.setFreeFont(&FreeSansBold9pt7b);
+        }
+
         uint16_t textW = strlen(text) > 0 ? tftRef.textWidth(text) : 0;
         uint16_t calculatedWidth = textW + HORIZONTAL_TEXT_PADDING;
 
@@ -223,28 +233,42 @@ class UIButton : public UIComponent {
 
         tftRef.setTextSize(currentTftTextSize);
         tftRef.setTextDatum(prevDatum);
+
         return calculatedWidth;
     }
 
-
+    /**
+     * @brief Gomb komponens konstruktora
+     * @param tft TFT_eSPI referencia
+     * @param id Gomb azonosítója
+     * @param bounds A gomb határai (Rect)
+     * @param label A gomb felirata
+     * @param type A gomb típusa (Pushable vagy Toggleable)
+     * @param state A gomb kezdeti állapota (Off, On, Disabled)
+     * @param callback Eseménykezelő függvény, amely a gomb eseményeit kezeli
+     * @param colors Színpaletta a gombhoz
+     * @param autoSizeToText Ha true, akkor a gomb szélessége automatikusan igazodik a szöveghez
+     * @note A bounds szélessége és magassága 0 esetén az alapértelmezett méreteket használja (DEFAULT_BUTTON_WIDTH és DEFAULT_BUTTON_HEIGHT).
+     * @details A gomb alapértelmezett színpalettát használ, ha nem adunk meg másikat.
+     */
     UIButton(TFT_eSPI &tft,
-             uint8_t id,                                                             // ID
-             const Rect &bounds,                                                     // rect
-             const char *label,                                                      // label
-             ButtonType type = ButtonType::Pushable,                                 // type
-             ButtonState state = ButtonState::Off,                                   // initial state
-             std::function<void(const ButtonEvent &)> callback = nullptr,            // callback
+             uint8_t id,                                                              // ID
+             const Rect &bounds,                                                      // rect
+             const char *label,                                                       // label
+             ButtonType type = ButtonType::Pushable,                                  // type
+             ButtonState state = ButtonState::Off,                                    // initial state
+             std::function<void(const ButtonEvent &)> callback = nullptr,             // callback
              const ColorScheme &colors = UIColorPalette::createDefaultButtonScheme(), // colors
-             bool autoSizeToText = false                                             // ÚJ: Automatikus méretezés flag
+             bool autoSizeToText = false                                              // ÚJ: Automatikus méretezés flag
              )
         : UIComponent(tft,
                       Rect(bounds.x, bounds.y,
                            (bounds.width == 0 && !autoSizeToText ? DEFAULT_BUTTON_WIDTH : bounds.width), // Szélesség beállítása
-                           (bounds.height == 0 ? DEFAULT_BUTTON_HEIGHT : bounds.height)),                 // Magasság beállítása
+                           (bounds.height == 0 ? DEFAULT_BUTTON_HEIGHT : bounds.height)),                // Magasság beállítása
                       colors),
-          buttonId(id), label(label), buttonType(type), eventCallback(callback), _autoSizeToText(autoSizeToText) {
+          buttonId(id), label(label), buttonType(type), eventCallback(callback), autoSizeToText(autoSizeToText) {
 
-        if (_autoSizeToText) {
+        if (autoSizeToText) {
             updateWidthToFitText(); // Méret frissítése a szöveghez, ha kérték
         }
 
@@ -273,18 +297,21 @@ class UIButton : public UIComponent {
      */
     // Második konstruktor overload az autoSizeToText paraméterrel
     UIButton(TFT_eSPI &tft,
-             uint8_t id,                                                             // ID
-             const Rect &bounds,                                                     // rect
-             const char *label,                                                      // label
-             ButtonType type,                                                        // Nincs alapértelmezett
+             uint8_t id,                                                              // ID
+             const Rect &bounds,                                                      // rect
+             const char *label,                                                       // label
+             ButtonType type,                                                         // Nincs alapértelmezett
              std::function<void(const ButtonEvent &)> callback,                       // Nincs alapértelmezett
              const ColorScheme &colors = UIColorPalette::createDefaultButtonScheme(), // colors
-             bool autoSizeToText = false                                             // ÚJ: Automatikus méretezés flag
+             bool autoSizeToText = false                                              // ÚJ: Automatikus méretezés flag
              )
-        : UIComponent(tft, Rect(bounds.x, bounds.y, (bounds.width == 0 && !autoSizeToText ? DEFAULT_BUTTON_WIDTH : bounds.width), (bounds.height == 0 ? DEFAULT_BUTTON_HEIGHT : bounds.height)), colors),
-          buttonId(id), label(label), buttonType(type), eventCallback(callback), _autoSizeToText(autoSizeToText) {
+        : UIComponent(
+              tft,
+              Rect(bounds.x, bounds.y, (bounds.width == 0 && !autoSizeToText ? DEFAULT_BUTTON_WIDTH : bounds.width), (bounds.height == 0 ? DEFAULT_BUTTON_HEIGHT : bounds.height)),
+              colors),
+          buttonId(id), label(label), buttonType(type), eventCallback(callback), autoSizeToText(autoSizeToText) {
         this->currentState = ButtonState::Off; // Alapértelmezett állapot ennél a konstruktornál
-        if (_autoSizeToText) {
+        if (autoSizeToText) {
             updateWidthToFitText();
         }
     }
@@ -298,15 +325,19 @@ class UIButton : public UIComponent {
      */
     // Harmadik konstruktor overload az autoSizeToText paraméterrel
     UIButton(TFT_eSPI &tft,
-             uint8_t id,                                                 // ID
-             const Rect &bounds,                                         // rect
-             const char *label,                                          // label
+             uint8_t id,                                                  // ID
+             const Rect &bounds,                                          // rect
+             const char *label,                                           // label
              std::function<void(const ButtonEvent &)> callback = nullptr, // callback
-             bool autoSizeToText = false                                 // ÚJ: Automatikus méretezés flag
+             bool autoSizeToText = false                                  // ÚJ: Automatikus méretezés flag
              )
-        : UIComponent(tft, Rect(bounds.x, bounds.y, (bounds.width == 0 && !autoSizeToText ? DEFAULT_BUTTON_WIDTH : bounds.width), (bounds.height == 0 ? DEFAULT_BUTTON_HEIGHT : bounds.height)), UIColorPalette::createDefaultButtonScheme()),
-          buttonId(id), label(label), buttonType(UIButton::ButtonType::Pushable), currentState(UIButton::ButtonState::Off), eventCallback(callback), _autoSizeToText(autoSizeToText) {
-        if (_autoSizeToText) {
+        : UIComponent(
+              tft,
+              Rect(bounds.x, bounds.y, (bounds.width == 0 && !autoSizeToText ? DEFAULT_BUTTON_WIDTH : bounds.width), (bounds.height == 0 ? DEFAULT_BUTTON_HEIGHT : bounds.height)),
+              UIColorPalette::createDefaultButtonScheme()),
+          buttonId(id), label(label), buttonType(UIButton::ButtonType::Pushable), currentState(UIButton::ButtonState::Off), eventCallback(callback),
+          autoSizeToText(autoSizeToText) {
+        if (autoSizeToText) {
             updateWidthToFitText();
         }
     }
@@ -432,29 +463,30 @@ class UIButton : public UIComponent {
 
     // Automatikus méretezés be/ki kapcsolása
     void setAutoSizeToText(bool enable) {
-        if (_autoSizeToText != enable) {
-            _autoSizeToText = enable;
-            if (_autoSizeToText) {
+        if (autoSizeToText != enable) {
+            autoSizeToText = enable;
+            if (autoSizeToText) {
                 updateWidthToFitText(); // Azonnal frissítjük a méretet, ha bekapcsoljuk
             }
             // Ha kikapcsoljuk, a gomb megtartja az aktuális méretét,
             // vagy itt visszaállíthatnánk egy alapértelmezettre, ha az a kívánalom.
             // Jelenleg megtartja.
             else {
-                 markForRedraw(); // Lehet, hogy a stílus változik, de a méret nem feltétlenül
+                markForRedraw(); // Lehet, hogy a stílus változik, de a méret nem feltétlenül
             }
         }
     }
-    bool getAutoSizeToText() const { return _autoSizeToText; }
+    bool getAutoSizeToText() const { return autoSizeToText; }
 
     // Szöveg beállítása
     void setLabel(const char *newLabel) {
-        bool labelChanged = (label == nullptr && newLabel != nullptr) ||
-                            (label != nullptr && newLabel == nullptr) ||
-                            (label != nullptr && newLabel != nullptr && strcmp(label, newLabel) != 0);
+        bool labelChanged =
+            (label == nullptr && newLabel != nullptr) || (label != nullptr && newLabel == nullptr) || (label != nullptr && newLabel != nullptr && strcmp(label, newLabel) != 0);
+
         if (labelChanged) {
             label = newLabel;
-            if (_autoSizeToText) {
+
+            if (autoSizeToText) {
                 updateWidthToFitText(); // Ez már tartalmazza a markForRedraw-t, ha a szélesség változik
             } else {
                 markForRedraw(); // Csak újrarajzolás, méret nem változik
@@ -463,27 +495,6 @@ class UIButton : public UIComponent {
     }
     const char *getText() const { return label; }
 
-    // Szöveg méret
-    void setTextSize(uint8_t size) {
-        if (textSize == size) return;
-        textSize = size;
-        if (_autoSizeToText) {
-            updateWidthToFitText();
-        } else {
-            markForRedraw();
-        }
-    }
-    uint8_t getTextSize() const { return textSize; }
-
-    // Sarok lekerekítés
-    void setCornerRadius(uint8_t radius) {
-        if (cornerRadius != radius) {
-            cornerRadius = radius;
-            markForRedraw();
-        }
-    }
-    uint8_t getCornerRadius() const { return cornerRadius; }
-
     // Mini font használata
     void setUseMiniFont(bool mini) {
         if (useMiniFont != mini) {
@@ -491,11 +502,7 @@ class UIButton : public UIComponent {
             markForRedraw();
         }
     }
-    bool getUseMiniFont() const { return useMiniFont; }
-
-    // Hosszú nyomás küszöb
-    void setLongPressThreshold(uint32_t threshold) { longPressThreshold = threshold; }
-    uint32_t getLongPressThreshold() const { return longPressThreshold; }
+    bool isUseMiniFont() const { return useMiniFont; }
 
     // Event callback beállítása
     void setEventCallback(std::function<void(const ButtonEvent &)> callback) { eventCallback = callback; }
@@ -522,15 +529,21 @@ class UIButton : public UIComponent {
         if (this->pressed) {                                 // Ha lenyomva van, rajzoljuk a pressed effektet
             drawPressedEffect(currentDrawColors.background); // Gradiens effekt rajzolása lenyomott állapotban
         } else {
-            tft.fillRoundRect(bounds.x, bounds.y, bounds.width, bounds.height, cornerRadius, currentDrawColors.background);
+            tft.fillRoundRect(bounds.x, bounds.y, bounds.width, bounds.height, CORNER_RADIUS, currentDrawColors.background);
         }
 
         // Keret rajzolása
-        tft.drawRoundRect(bounds.x, bounds.y, bounds.width, bounds.height, cornerRadius, currentDrawColors.border);
+        tft.drawRoundRect(bounds.x, bounds.y, bounds.width, bounds.height, CORNER_RADIUS, currentDrawColors.border);
 
         // Szöveg rajzolása
         if (label != nullptr) {
-            tft.setTextSize(useMiniFont ? 1 : textSize);
+            tft.setTextSize(1);
+            if (useMiniFont) {
+                tft.setFreeFont(); // Alapértelmezett (kisebb) font
+            } else {
+                tft.setFreeFont(&FreeSansBold9pt7b);
+            }
+
             tft.setTextColor(currentDrawColors.text);
             tft.setTextDatum(MC_DATUM); // Middle Center
 
@@ -608,6 +621,7 @@ class UIButton : public UIComponent {
      * @param event A touch esemény, amely tartalmazza a koordinátákat és a lenyomás állapotát
      */
     virtual void onClick(const TouchEvent &event) override {
+
         UIComponent::onClick(event); // Alap implementáció
 
         if (currentState == ButtonState::Disabled)
@@ -673,7 +687,7 @@ class UIButton : public UIComponent {
             return;
 
         if (!longPressThresholdMet && pressStartTime > 0) {
-            if (millis() - pressStartTime >= longPressThreshold) {
+            if (millis() - pressStartTime >= LONG_PRESS_THRESHOLD) {
                 longPressThresholdMet = true;
                 // Opcionális: markForRedraw(); ha vizuális visszajelzést szeretnénk arról, hogy a hosszú lenyomás "élesítve" van.
                 // Hosszú nyomásnak lehet saját vizuális állapota, vagy csak eseményt vált ki

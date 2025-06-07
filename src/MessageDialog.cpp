@@ -29,7 +29,7 @@ MessageDialog::MessageDialog(UIScreen *parentScreen, TFT_eSPI &tft, const Rect &
     // A UIDialogBase konstruktora már adhatott neki egy alapértelmezett magasságot.
     // Itt finomítjuk az üzenet és a gombok alapján.
     if (initialInputBounds.height == 0) {          // Az eredeti kérés volt auto-magasság
-        tft.setTextSize(1);                        // Üzenet szövegmérete
+        tft.setTextSize(2);                        // Üzenet szövegmérete a magasság kalkulációhoz
         int16_t textHeight = tft.fontHeight() * 2; // Durva becslés 2 sorra (állítható)
         // TODO: Pontosabb szövegmagasság számítás a layoutDialogContent-ben
         uint16_t requiredHeight = getHeaderHeight() + PADDING + textHeight + PADDING + UIButton::DEFAULT_BUTTON_HEIGHT + (2 * PADDING); // Megduplázott alsó PADDING
@@ -206,16 +206,15 @@ void MessageDialog::layoutDialogContent() {
  * @details A dialógus háttere és kerete rajzolódik, majd az üzenet szövege jelenik meg a középső területen.
  */
 void MessageDialog::drawSelf() {
+
     UIDialogBase::drawSelf(); // Alap dialógus keret és fejléc rajzolása
 
     if (message) {
-        tft.setTextSize(1);                                     // Vagy UI_DEFAULT_TEXT_SIZE
+        tft.setTextSize(2);                                     // Nagyobb betűméret az üzenetnek
         tft.setTextColor(colors.foreground, colors.background); // Dialógus színeit használva
 
         uint16_t headerH = getHeaderHeight();
         // Hozzávetőleges magasság a gomb területének
-        uint16_t buttonAreaH = UIButton::DEFAULT_BUTTON_HEIGHT + UIDialogBase::PADDING;
-
         Rect textArea;
         textArea.x = bounds.x + UIDialogBase::PADDING + 2; // Kis extra margó
         textArea.y = bounds.y + headerH + UIDialogBase::PADDING;
@@ -224,13 +223,7 @@ void MessageDialog::drawSelf() {
             bounds.height - headerH - UIButton::DEFAULT_BUTTON_HEIGHT - (4 * UIDialogBase::PADDING); // Header, PADDING_alatta, text, PADDING_alatta, gombok, 2*PADDING_alatta
 
         if (textArea.width > 0 && textArea.height > 0) {
-            // Szöveg tördelése és rajzolása (egyszerűsített, egy UILabel komponens jobb lenne)
             tft.setTextDatum(TC_DATUM); // Top-Center
-            // TODO: Implement proper text wrapping if message is long
-            // For now, drawString might clip or overflow.
-            // A simple approach for multi-line if message has '\n':
-            // Or use a UILabel component if available.
-            // Centering the text in the available text area:
             int16_t textDrawY = textArea.y + textArea.height / 2;
             if (tft.fontHeight() > textArea.height) {          // Ha a szöveg magasabb, mint a terület
                 textDrawY = textArea.y + tft.fontHeight() / 2; // Próbáljuk középre igazítani a szöveg tetejét
