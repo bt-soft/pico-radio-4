@@ -7,7 +7,7 @@
  */
 
 #include "ValueChangeDialog.h"
-#include "UIColorPalette.h" // Központi színpaletta
+#include "UIColorPalette.h"
 #include "UIScreen.h"
 #include "defines.h"
 
@@ -27,14 +27,25 @@
  */
 ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, const char *title, const char *message, int *valuePtr, int minValue, int maxValue, int stepValue,
                                      ValueChangeCallback callback, const Rect &bounds, const ColorScheme &cs)
-    : UIDialogBase(parentScreen, tft, bounds, title, cs), _message(message), _valueType(ValueType::Integer), _intPtr(valuePtr), _minInt(minValue), _maxInt(maxValue),
-      _stepInt(stepValue), _valueCallback(callback) { // Eredeti érték mentése
+    : MessageDialog(parentScreen, tft, bounds, title, message, MessageDialog::ButtonsType::OkCancel, cs, true /*okClosesDialog*/), _valueType(ValueType::Integer),
+      _intPtr(valuePtr), _minInt(minValue), _maxInt(maxValue), _stepInt(stepValue), _valueCallback(callback) { // Eredeti érték mentése
     if (_intPtr) {
         _originalIntValue = *_intPtr;
     }
 
     createDialogContent();
     layoutDialogContent();
+
+    // Callback beállítása az OK/Cancel események kezelésére
+    setDialogCallback([this](MessageDialog::DialogResult result) {
+        if (result == MessageDialog::DialogResult::Accepted) {
+            notifyValueChange();
+        } else if (result == MessageDialog::DialogResult::Rejected) {
+            restoreOriginalValue();
+        }
+        // A MessageDialog maga kezeli a close() hívást az _okClosesDialog alapján
+    });
+
     // Kezdeti gombállapotok beállítása integer típushoz
     if (_decreaseButton)
         _decreaseButton->setEnabled(canDecrement());
@@ -58,8 +69,8 @@ ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, cons
  */
 ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, const char *title, const char *message, float *valuePtr, float minValue, float maxValue,
                                      float stepValue, ValueChangeCallback callback, const Rect &bounds, const ColorScheme &cs)
-    : UIDialogBase(parentScreen, tft, bounds, title, cs), _message(message), _valueType(ValueType::Float), _floatPtr(valuePtr), _minFloat(minValue), _maxFloat(maxValue),
-      _stepFloat(stepValue), _valueCallback(callback) {
+    : MessageDialog(parentScreen, tft, bounds, title, message, MessageDialog::ButtonsType::OkCancel, cs, true /*okClosesDialog*/), _valueType(ValueType::Float),
+      _floatPtr(valuePtr), _minFloat(minValue), _maxFloat(maxValue), _stepFloat(stepValue), _valueCallback(callback) {
 
     // Eredeti érték mentése
     if (_floatPtr) {
@@ -68,6 +79,16 @@ ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, cons
 
     createDialogContent();
     layoutDialogContent();
+
+    // Callback beállítása az OK/Cancel események kezelésére
+    setDialogCallback([this](MessageDialog::DialogResult result) {
+        if (result == MessageDialog::DialogResult::Accepted) {
+            notifyValueChange();
+        } else if (result == MessageDialog::DialogResult::Rejected) {
+            restoreOriginalValue();
+        }
+    });
+
     // Kezdeti gombállapotok beállítása float típushoz
     if (_decreaseButton)
         _decreaseButton->setEnabled(canDecrement());
@@ -88,7 +109,8 @@ ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, cons
  */
 ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, const char *title, const char *message, bool *valuePtr, ValueChangeCallback callback,
                                      const Rect &bounds, const ColorScheme &cs)
-    : UIDialogBase(parentScreen, tft, bounds, title, cs), _message(message), _valueType(ValueType::Boolean), _boolPtr(valuePtr), _valueCallback(callback) {
+    : MessageDialog(parentScreen, tft, bounds, title, message, MessageDialog::ButtonsType::OkCancel, cs, true /*okClosesDialog*/), _valueType(ValueType::Boolean),
+      _boolPtr(valuePtr), _valueCallback(callback) {
 
     // Eredeti érték mentése
     if (_boolPtr) {
@@ -98,42 +120,28 @@ ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, cons
     createDialogContent();
     layoutDialogContent();
 
+    // Callback beállítása az OK/Cancel események kezelésére
+    setDialogCallback([this](MessageDialog::DialogResult result) {
+        if (result == MessageDialog::DialogResult::Accepted) {
+            notifyValueChange();
+        } else if (result == MessageDialog::DialogResult::Rejected) {
+            restoreOriginalValue();
+        }
+    });
+
     // Boolean gombok kezdeti állapotának beállítása
     updateBooleanButtonStates();
 }
 
 /**
- * @brief Dialógus tartalmának létrehozása (gombok és UI elemek)
- * Létrehozza az OK, Cancel gombokat és az érték módosító gombokat a típustól függően
+ * @brief Érték módosító gombok létrehozása
+ * Létrehozza a +/- gombokat integer és float típusokhoz, illetve TRUE/FALSE gombokat boolean típushoz.
+ * A gombok eseménykezelői frissítik az értéket és újrarajzolják az érték területet.
+ * A boolean típus esetén a gombok TRUE/FALSE értékeket állítanak be, és frissítik az állapotukat.
  */
 void ValueChangeDialog::createDialogContent() {
-
-    // A tartalom területének kiszámítása (fejléc és padding figyelembevételével)
-    const Rect contentBounds = bounds;
-
-    // OK gomb létrehozása központi színpalettával
-    _okButton = std::make_shared<UIButton>(tft, 1, Rect(0, 0, BUTTON_WIDTH, BUTTON_HEIGHT), // Pozíció később beállítva
-                                           "OK", UIButton::ButtonType::Pushable, [this](const UIButton::ButtonEvent &event) {
-                                               if (event.state == UIButton::EventButtonState::Clicked) {
-                                                   // OK esetén az érték már módosítva van a pointeren keresztül
-                                                   notifyValueChange();
-                                                   close(DialogResult::Accepted);
-                                               }
-                                           });
-    // _okButton->setColorScheme(UIColorPalette::createOkButtonScheme()); // Alapértelmezett színsémát használ
-    addChild(_okButton);
-
-    // Cancel gomb létrehozása központi színpalettával
-    _cancelButton = std::make_shared<UIButton>(tft, 2, Rect(0, 0, BUTTON_WIDTH, BUTTON_HEIGHT), // Pozíció később beállítva
-                                               "Cancel", UIButton::ButtonType::Pushable, [this](const UIButton::ButtonEvent &event) {
-                                                   if (event.state == UIButton::EventButtonState::Clicked) {
-                                                       // Cancel esetén visszaállítjuk az eredeti értéket
-                                                       restoreOriginalValue();
-                                                       close(DialogResult::Rejected);
-                                                   }
-                                               });
-    // _cancelButton->setColorScheme(UIColorPalette::createCancelButtonScheme()); // Alapértelmezett színsémát használ
-    addChild(_cancelButton);
+    // Az OK és Cancel gombokat a MessageDialog ősosztály hozza létre.
+    // Itt csak az érték-specifikus gombokat kell létrehozni.
 
     // Érték módosító gombok (csak integer és float esetén)
     if (_valueType != ValueType::Boolean) {
@@ -186,21 +194,17 @@ void ValueChangeDialog::createDialogContent() {
 }
 
 /**
- * @brief UI elemek pozicionálása a dialógusban
- * Elhelyezi a gombokat és kiszámolja a pozíciójukat
+ * @brief Dialógus tartalom elrendezése
+ * Elrendezi a gombokat és az érték megjelenítését a dialógusban
+ * A gombok a dialógus alján, az érték pedig a dialógus közepén jelenik meg.
+ * A gombok elrendezése a MessageDialog ősosztály által kezelt ButtonsGroupManager segítségével történik.
  */
 void ValueChangeDialog::layoutDialogContent() {
     const Rect contentBounds = bounds;
     const int16_t centerX = contentBounds.x + contentBounds.width / 2;
-    const int16_t bottomY = contentBounds.y + contentBounds.height - PADDING; // OK és Cancel gombok elhelyezése (alul, középen)
-    const int16_t buttonY = bottomY - BUTTON_HEIGHT;
-    const int16_t buttonSpacing = BUTTON_SPACING;
-    const int16_t totalButtonWidth = 2 * BUTTON_WIDTH + buttonSpacing;
-    const int16_t startX = centerX - totalButtonWidth / 2;
 
-    // Érték módosító gombok elhelyezése (középen, fejléc magasság + padding + üzenet magasság után)
-    _okButton->setBounds(Rect(startX, buttonY, BUTTON_WIDTH, BUTTON_HEIGHT));
-    _cancelButton->setBounds(Rect(startX + BUTTON_WIDTH + buttonSpacing, buttonY, BUTTON_WIDTH, BUTTON_HEIGHT));
+    // Az OK és Cancel gombokat a MessageDialog ősosztály rendezi el a ButtonsGroupManager segítségével, a dialógus aljára.
+    // Itt csak az érték-specifikus gombokat kell elrendezni.
 
     const int16_t headerHeight = getHeaderHeight();
     const int16_t valueAreaY = contentBounds.y + headerHeight + PADDING + VERTICAL_OFFSET_FOR_VALUE_AREA;
@@ -232,20 +236,26 @@ void ValueChangeDialog::layoutDialogContent() {
  * Kirajzolja a dialógus keretét, üzenetet és az aktuális értéket
  */
 void ValueChangeDialog::drawSelf() {
-
-    // Szülő dialógus keret rajzolása
+    // 1. Az UIDialogBase kirajzolja a keretet és a fejlécet.
     UIDialogBase::drawSelf();
 
     const Rect contentBounds = bounds;
     const int16_t centerX = contentBounds.x + contentBounds.width / 2;
-
-    // Üzenet szöveg megjelenítése - fejléc alatt, megfelelő távolságra
     const int16_t headerHeight = getHeaderHeight();
-    const int16_t messageY = contentBounds.y + headerHeight + PADDING + 10;
-    tft.setTextDatum(MC_DATUM);
-    tft.setTextColor(colors.foreground, colors.background);
-    tft.setTextSize(1);
-    tft.drawString(_message, centerX, messageY);
+
+    // 2. Az üzenet szövegének kirajzolása (a MessageDialog-tól örökölt 'message' tagváltozó alapján)
+    // Az üzenetet a fejléc alá, középre igazítva rajzoljuk.
+    if (this->message) {                                                        // Ellenőrizzük, hogy van-e üzenet
+        const int16_t messageY = contentBounds.y + headerHeight + PADDING + 10; // Üzenet teteje 10 pixellel a fejléc+padding alatt
+        tft.setFreeFont(&FreeSansBold9pt7b);
+        tft.setTextSize(1);
+        tft.setTextColor(colors.foreground, colors.background); // A dialógus általános színeit használjuk
+        tft.setTextDatum(TC_DATUM);                             // Top-Center igazítás
+        // Szélesség korlátozása a szövegnek, hogy ne lógjon ki
+        // uint16_t messageMaxWidth = contentBounds.width - (2 * (PADDING + 5)); // 5px extra margó mindkét oldalon
+        // TODO: Szükség esetén szövegtördelés implementálása, ha a szöveg túl hosszú
+        tft.drawString(this->message, centerX, messageY); // A font már be van állítva a setFreeFont hívással
+    }
 
     // Aktuális érték megjelenítése - gombok szintjében
     const int16_t valueAreaY = contentBounds.y + headerHeight + PADDING + VERTICAL_OFFSET_FOR_VALUE_AREA; // Ugyanaz mint layoutban
@@ -258,17 +268,12 @@ void ValueChangeDialog::drawSelf() {
         textColor = TFT_CYAN; // Teal színű az eredeti érték
     }
 
+    tft.setFreeFont(&FreeSansBold9pt7b); // Biztosítjuk a helyes betűtípust az értékhez
     tft.setTextDatum(MC_DATUM);
-    tft.setTextColor(textColor, colors.background);
+    tft.setTextColor(textColor, colors.background); // A dialógus hátterét használjuk
     tft.setTextSize(VALUE_TEXT_FONT_SIZE);
     tft.drawString(valueStr, centerX, valueY);
 }
-
-/**
- * @brief Egyedi +/- gombok kirajzolása (nem boolean típus esetén)
- * Kirajzolja a + és - gombokat az aktuális állapotuknak megfelelően
- */
-void ValueChangeDialog::drawCustomButtons() {}
 
 /**
  * @brief Forgójeladó események kezelése
@@ -277,6 +282,7 @@ void ValueChangeDialog::drawCustomButtons() {}
  * @return true ha az eseményt kezelte, false egyébként
  */
 bool ValueChangeDialog::handleRotary(const RotaryEvent &event) {
+    // Érték változtatás kezelése görgetéssel
     if (event.direction == RotaryEvent::Direction::Up) {
         if (canIncrement()) {
             incrementValue();
@@ -289,16 +295,12 @@ bool ValueChangeDialog::handleRotary(const RotaryEvent &event) {
             redrawValueArea(); // Csak az érték területet rajzoljuk újra
         }
         return true;
-    } else if (event.buttonState == RotaryEvent::ButtonState::Clicked) {
-        // Ha a forgatógombot megnyomták, azt "OK"-ként kezeljük ebben a dialógusban
-        notifyValueChange();           // Értesítés a változásról
-        close(DialogResult::Accepted); // Dialógus bezárása elfogadottként
-        return true;                   // Az eseményt kezeltük
     }
 
-    // Egyéb, itt nem kezelt forgatógomb események továbbítása az ősosztálynak
-    // (pl. ha a gyerek komponenseknek kellene kezelniük, vagy más buttonState események)
-    return UIDialogBase::handleRotary(event);
+    // Ha a forgatógombot megnyomták (Clicked), azt a MessageDialog (UIDialogBase) kezeli
+    // "OK"-ként, ami meghívja a setDialogCallback-ben beállított logikánkat.
+    // Ezért itt csak a görgetést kezeljük, a többit az ősosztályra bízzuk.
+    return MessageDialog::handleRotary(event);
 }
 
 /**
@@ -464,7 +466,9 @@ void ValueChangeDialog::redrawValueArea() {
     tft.fillRect(clearX, clearY, clearWidth, clearHeight, colors.background);
 
     // Érték szöveg - nagyobb fonttal, színkóddal
-    String valueStr = getCurrentValueAsString(); // Színválasztás: teal ha eredeti érték, különben fehér
+    String valueStr = getCurrentValueAsString();
+
+    // Színválasztás: teal ha eredeti érték, különben fehér
     uint16_t textColor = UIColorPalette::SCREEN_TEXT;
     tft.setFreeFont(&FreeSansBold9pt7b); // Biztosítjuk a helyes betűtípust
     if (isCurrentValueOriginal()) {

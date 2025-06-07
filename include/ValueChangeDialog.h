@@ -21,21 +21,20 @@
 #ifndef __VALUE_CHANGE_DIALOG_H
 #define __VALUE_CHANGE_DIALOG_H
 
-#include "UIDialogBase.h"
+#include "MessageDialog.h"
 #include <functional>
 #include <variant>
 
 /**
  * @class ValueChangeDialog
  * @brief Univerzális érték módosító dialógus
- *
  * Ez a dialógus képes különböző típusú értékek (int, float, bool) módosítására
  * egy egységes interfészen keresztül. Az értékek közvetlenül a megadott
  * pointeren vagy referencián keresztül frissülnek.
  */
-class ValueChangeDialog : public UIDialogBase {
+class ValueChangeDialog : public MessageDialog {
 
-    public:
+  public:
     /**
      * @brief Támogatott érték típusok
      */
@@ -52,8 +51,7 @@ class ValueChangeDialog : public UIDialogBase {
     using ValueChangeCallback = std::function<void(const std::variant<int, float, bool> &)>;
 
   protected:
-    // Dialógus adatok
-    String _message;      ///< Érték magyarázó szöveg
+    // A _message tagváltozót a MessageDialog ősosztály már tartalmazza és kezeli.
     ValueType _valueType; ///< Az érték típusa
 
     // Érték pointerek (csak az egyik használatos a típus alapján)
@@ -74,8 +72,7 @@ class ValueChangeDialog : public UIDialogBase {
     ValueChangeCallback _valueCallback = nullptr;
 
     // UI komponensek
-    std::shared_ptr<UIButton> _okButton;
-    std::shared_ptr<UIButton> _cancelButton;
+    // Az _okButton és _cancelButton a MessageDialog által biztosított.
     std::shared_ptr<UIButton> _decreaseButton; ///< Érték csökkentő gomb
     std::shared_ptr<UIButton> _increaseButton; ///< Érték növelő gomb
 
@@ -86,12 +83,8 @@ class ValueChangeDialog : public UIDialogBase {
     static constexpr uint16_t BUTTON_SPACING = 8;
     static constexpr uint16_t VALUE_DISPLAY_HEIGHT = 40;
     static constexpr uint16_t FOOTER_AREA_HEIGHT = BUTTON_HEIGHT + 2 * PADDING;
-    static constexpr uint16_t VERTICAL_OFFSET_FOR_VALUE_AREA = 35;
+    static constexpr uint16_t VERTICAL_OFFSET_FOR_VALUE_AREA = 50;
     static constexpr uint8_t VALUE_TEXT_FONT_SIZE = 2; ///< Az érték kijelzésének betűmérete (setTextSize)
-
-    // Gombállapotok optimalizáláshoz
-    mutable bool _lastCanDecrement = true;
-    mutable bool _lastCanIncrement = true;
 
     /**
      * @brief Dialógus tartalom létrehozása
@@ -154,11 +147,6 @@ class ValueChangeDialog : public UIDialogBase {
      * @return true ha az aktuális érték = eredeti érték
      */
     bool isCurrentValueOriginal() const;
-
-    /**
-     * @brief Egyszerű gombok rajzolása (vizuális optimalizálás)
-     */
-    void drawCustomButtons();
 
     /**
      * @brief Boolean gombok állapotának frissítése
