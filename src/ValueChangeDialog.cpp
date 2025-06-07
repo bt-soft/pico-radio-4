@@ -32,7 +32,6 @@ ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, cons
     if (_intPtr) {
         _originalIntValue = *_intPtr;
     }
-
     createDialogContent();
     layoutDialogContent();
 
@@ -45,12 +44,6 @@ ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, cons
         }
         // A MessageDialog maga kezeli a close() hívást az _okClosesDialog alapján
     });
-
-    // Kezdeti gombállapotok beállítása integer típushoz
-    if (_decreaseButton)
-        _decreaseButton->setEnabled(canDecrement());
-    if (_increaseButton)
-        _increaseButton->setEnabled(canIncrement());
 }
 
 /**
@@ -70,9 +63,7 @@ ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, cons
 ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, const char *title, const char *message, float *valuePtr, float minValue, float maxValue,
                                      float stepValue, ValueChangeCallback callback, const Rect &bounds, const ColorScheme &cs)
     : MessageDialog(parentScreen, tft, bounds, title, message, MessageDialog::ButtonsType::OkCancel, cs, true /*okClosesDialog*/), _valueType(ValueType::Float),
-      _floatPtr(valuePtr), _minFloat(minValue), _maxFloat(maxValue), _stepFloat(stepValue), _valueCallback(callback) {
-
-    // Eredeti érték mentése
+      _floatPtr(valuePtr), _minFloat(minValue), _maxFloat(maxValue), _stepFloat(stepValue), _valueCallback(callback) { // Eredeti érték mentése
     if (_floatPtr) {
         _originalFloatValue = *_floatPtr;
     }
@@ -88,12 +79,6 @@ ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, cons
             restoreOriginalValue();
         }
     });
-
-    // Kezdeti gombállapotok beállítása float típushoz
-    if (_decreaseButton)
-        _decreaseButton->setEnabled(canDecrement());
-    if (_increaseButton)
-        _increaseButton->setEnabled(canIncrement());
 }
 
 /**
@@ -110,9 +95,7 @@ ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, cons
 ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, const char *title, const char *message, bool *valuePtr, ValueChangeCallback callback,
                                      const Rect &bounds, const ColorScheme &cs)
     : MessageDialog(parentScreen, tft, bounds, title, message, MessageDialog::ButtonsType::OkCancel, cs, true /*okClosesDialog*/), _valueType(ValueType::Boolean),
-      _boolPtr(valuePtr), _valueCallback(callback) {
-
-    // Eredeti érték mentése
+      _boolPtr(valuePtr), _valueCallback(callback) { // Eredeti érték mentése
     if (_boolPtr) {
         _originalBoolValue = *_boolPtr;
     }
@@ -128,12 +111,6 @@ ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, cons
             restoreOriginalValue();
         }
     });
-
-    // Kezdeti gombállapotok beállítása boolean típushoz
-    if (_decreaseButton)
-        _decreaseButton->setEnabled(canDecrement());
-    if (_increaseButton)
-        _increaseButton->setEnabled(canIncrement());
 }
 
 /**
@@ -144,14 +121,12 @@ ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, cons
  */
 void ValueChangeDialog::createDialogContent() {
     // Az OK és Cancel gombokat a MessageDialog ősosztály hozza létre.
-    // Itt csak az érték-specifikus gombokat kell létrehozni.
-
-    // Érték módosító gombok (csak integer és float esetén)
+    // Itt csak az érték-specifikus gombokat kell létrehozni.    // Érték módosító gombok (csak integer és float esetén)
     if (_valueType != ValueType::Boolean) {
         // Csökkentő gomb (-)
         _decreaseButton =
             std::make_shared<UIButton>(tft, 3, Rect(0, 0, SMALL_BUTTON_WIDTH, BUTTON_HEIGHT), "-", UIButton::ButtonType::Pushable, [this](const UIButton::ButtonEvent &event) {
-                if (event.state == UIButton::EventButtonState::Clicked && canDecrement()) {
+                if (event.state == UIButton::EventButtonState::Clicked) {
                     decrementValue();
                     redrawValueArea(); // Csak az érték területet rajzoljuk újra
                 }
@@ -162,21 +137,20 @@ void ValueChangeDialog::createDialogContent() {
         // Növelő gomb (+)
         _increaseButton =
             std::make_shared<UIButton>(tft, 4, Rect(0, 0, SMALL_BUTTON_WIDTH, BUTTON_HEIGHT), "+", UIButton::ButtonType::Pushable, [this](const UIButton::ButtonEvent &event) {
-                if (event.state == UIButton::EventButtonState::Clicked && canIncrement()) {
+                if (event.state == UIButton::EventButtonState::Clicked) {
                     incrementValue();
                     redrawValueArea(); // Csak az érték területet rajzoljuk újra
                 }
             });
         _increaseButton->setUseMiniFont(true);
         addChild(_increaseButton);
-
     } else {
         // Boolean esetén FALSE/TRUE gombok létrehozása
         _decreaseButton = std::make_shared<UIButton>(tft, 3, Rect(0, 0, SMALL_BUTTON_WIDTH + 10, BUTTON_HEIGHT), "FALSE", UIButton::ButtonType::Pushable,
                                                      [this](const UIButton::ButtonEvent &event) {
-                                                         if (event.state == UIButton::EventButtonState::Clicked && _boolPtr && *_boolPtr) {
-                                                             *_boolPtr = false;           // FALSE-ra állítás                                                            
-                                                             redrawValueTextOnly();       // Csak az érték szöveg frissítése
+                                                         if (event.state == UIButton::EventButtonState::Clicked) {
+                                                             decrementValue();      // FALSE-ra állítás a decrementValue() függvényen keresztül
+                                                             redrawValueTextOnly(); // Csak az érték szöveg frissítése
                                                          }
                                                      });
         _decreaseButton->setUseMiniFont(true);
@@ -184,13 +158,19 @@ void ValueChangeDialog::createDialogContent() {
 
         _increaseButton = std::make_shared<UIButton>(tft, 4, Rect(0, 0, SMALL_BUTTON_WIDTH + 10, BUTTON_HEIGHT), "TRUE", UIButton::ButtonType::Pushable,
                                                      [this](const UIButton::ButtonEvent &event) {
-                                                         if (event.state == UIButton::EventButtonState::Clicked && _boolPtr && !*_boolPtr) {
-                                                             *_boolPtr = true;            // TRUE-ra állítás                                                            
-                                                             redrawValueTextOnly();       // Csak az érték szöveg frissítése
+                                                         if (event.state == UIButton::EventButtonState::Clicked) {
+                                                             incrementValue();      // TRUE-ra állítás a incrementValue() függvényen keresztül
+                                                             redrawValueTextOnly(); // Csak az érték szöveg frissítése
                                                          }
                                                      });
         _increaseButton->setUseMiniFont(true);
         addChild(_increaseButton);
+    } // Gombállapotok beállítása közvetlenül a létrehozás után
+    if (_decreaseButton) {
+        _decreaseButton->setEnabled(canDecrement());
+    }
+    if (_increaseButton) {
+        _increaseButton->setEnabled(canIncrement());
     }
 }
 
@@ -478,14 +458,18 @@ void ValueChangeDialog::redrawValueArea() {
     tft.setTextDatum(MC_DATUM);
     tft.setTextColor(textColor, colors.background);
     tft.setTextSize(VALUE_TEXT_FONT_SIZE);
-    tft.drawString(valueStr, centerX, valueY);
-
-    // Gombok állapotának frissítése típus alapján
+    tft.drawString(valueStr, centerX, valueY); // Gombok állapotának frissítése típus alapján
     // Egységesített gomb állapot frissítés minden típusra
-    if (_decreaseButton)
+    if (_decreaseButton) {
         _decreaseButton->setEnabled(canDecrement());
-    if (_increaseButton)
+        // Explicit újrarajzolás kikényszerítése
+        _decreaseButton->draw();
+    }
+    if (_increaseButton) {
         _increaseButton->setEnabled(canIncrement());
+        // Explicit újrarajzolás kikényszerítése
+        _increaseButton->draw();
+    }
 }
 
 /**
@@ -513,18 +497,19 @@ bool ValueChangeDialog::canIncrement() const {
     switch (_valueType) {
     case ValueType::Integer:
         if (_intPtr) {
-            bool result = (*_intPtr + _stepInt) <= _maxInt;
-            return result;
+            return (*_intPtr + _stepInt) <= _maxInt;
         }
         return false;
     case ValueType::Float:
         if (_floatPtr) {
-            bool result = (*_floatPtr + _stepFloat) <= _maxFloat;
-            return result;
+            return (*_floatPtr + _stepFloat) <= _maxFloat;
         }
         return false;
     case ValueType::Boolean:
-        return _boolPtr && !(*_boolPtr); // Csak akkor növelhető (TRUE-ra), ha jelenleg FALSE
+        if (_boolPtr) {
+            return !(*_boolPtr);
+        }
+        return false;
     default:
         return false;
     }
@@ -538,18 +523,19 @@ bool ValueChangeDialog::canDecrement() const {
     switch (_valueType) {
     case ValueType::Integer:
         if (_intPtr) {
-            bool result = (*_intPtr - _stepInt) >= _minInt;
-            return result;
+            return (*_intPtr - _stepInt) >= _minInt;
         }
         return false;
     case ValueType::Float:
         if (_floatPtr) {
-            bool result = (*_floatPtr - _stepFloat) >= _minFloat;
-            return result;
+            return (*_floatPtr - _stepFloat) >= _minFloat;
         }
         return false;
     case ValueType::Boolean:
-        return _boolPtr && (*_boolPtr); // Csak akkor csökkenthető (FALSE-ra), ha jelenleg TRUE
+        if (_boolPtr) {
+            return (*_boolPtr);
+        }
+        return false;
     default:
         return false;
     }
@@ -578,11 +564,15 @@ void ValueChangeDialog::redrawValueTextOnly() {
     tft.setTextDatum(MC_DATUM);
     tft.setTextColor(textColor, colors.background);
     tft.setTextSize(VALUE_TEXT_FONT_SIZE);
-    tft.drawString(valueStr, centerX, valueY);
-
-    // Gombok állapotának frissítése (egységesítve)
-    if (_decreaseButton)
+    tft.drawString(valueStr, centerX, valueY); // Gombok állapotának frissítése (egységesítve)
+    if (_decreaseButton) {
         _decreaseButton->setEnabled(canDecrement());
-    if (_increaseButton)
+        // EXPLICIT REDRAW FORCE: Force immediate visual update
+        _decreaseButton->draw();
+    }
+    if (_increaseButton) {
         _increaseButton->setEnabled(canIncrement());
+        // EXPLICIT REDRAW FORCE: Force immediate visual update
+        _increaseButton->draw();
+    }
 }
