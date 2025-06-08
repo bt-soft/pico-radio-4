@@ -236,7 +236,20 @@ void UIDialogBase::createCloseButton() {
 void UIDialogBase::deferClose(DialogResult result) {
     deferredClose.pending = true;
     deferredClose.result = result;
+    deferredClose.chainCloseDialog = nullptr; // No chain close
     DEBUG("UIDialogBase::deferClose() - Scheduled deferred close with result %d\n", static_cast<int>(result));
+}
+
+/**
+ * @brief Schedules a deferred close with chain closing of another dialog
+ * @param result The dialog result to use when closing
+ * @param chainDialog Additional dialog to close after this one
+ */
+void UIDialogBase::deferChainClose(DialogResult result, std::shared_ptr<UIDialogBase> chainDialog) {
+    deferredClose.pending = true;
+    deferredClose.result = result;
+    deferredClose.chainCloseDialog = chainDialog;
+    DEBUG("UIDialogBase::deferChainClose() - Scheduled deferred chain close with result %d\n", static_cast<int>(result));
 }
 
 /**
@@ -247,7 +260,16 @@ void UIDialogBase::processDeferredClose() {
     if (deferredClose.pending) {
         deferredClose.pending = false;
         DialogResult result = deferredClose.result;
+        auto chainDialog = deferredClose.chainCloseDialog;
+        deferredClose.chainCloseDialog = nullptr; // Clear chain reference
+
         DEBUG("UIDialogBase::processDeferredClose() - Processing deferred close with result %d\n", static_cast<int>(result));
         close(result);
+
+        // If there's a chain dialog, close it too immediately
+        if (chainDialog) {
+            DEBUG("UIDialogBase::processDeferredClose() - Closing chain dialog\n");
+            chainDialog->close(result);
+        }
     }
 }

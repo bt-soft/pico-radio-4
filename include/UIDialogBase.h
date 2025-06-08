@@ -28,12 +28,11 @@ class UIDialogBase : public UIContainerComponent {
     DialogCallback callback = nullptr;               // Callback, amelyet a dialógus eseményeihez használunk, DialogResult-ot ad vissza
     bool veilDrawn = false;                          // Fátyol rajzolásának állapota
     bool autoClose = true;                           // Automatikus bezárás a gombok megnyomásakor
-    std::shared_ptr<UIButton> closeButton = nullptr; // Bezáró gomb
-
-    // Deferred close mechanism to prevent nested callback chains
+    std::shared_ptr<UIButton> closeButton = nullptr; // Bezáró gomb    // Deferred close mechanism to prevent nested callback chains
     struct DeferredClose {
         bool pending = false;
         DialogResult result = DialogResult::Dismissed;
+        std::shared_ptr<UIDialogBase> chainCloseDialog = nullptr; // Additional dialog to close in chain
     };
     DeferredClose deferredClose;
 
@@ -61,10 +60,9 @@ class UIDialogBase : public UIContainerComponent {
     UIDialogBase(UIScreen *parentScreen, TFT_eSPI &tft, const Rect &bounds, const char *title, const ColorScheme &cs = ColorScheme::defaultScheme());
     virtual ~UIDialogBase() override = default;
     virtual void show();
-    virtual void close(DialogResult result = DialogResult::Dismissed);
-
-    // Deferred close mechanism
+    virtual void close(DialogResult result = DialogResult::Dismissed); // Deferred close mechanism
     void deferClose(DialogResult result = DialogResult::Dismissed);
+    void deferChainClose(DialogResult result, std::shared_ptr<UIDialogBase> chainDialog);
     void processDeferredClose();
 
     // Header magasság lekérése (tartalom pozicionálásához)

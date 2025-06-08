@@ -348,12 +348,16 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
                     defaultSelection = 2; // Manu G
                 }
                 const char *options[] = {"Disabled", "Auto G", "Manu G"};
-                auto fftDialog = std::make_shared<MultiButtonDialog>(
-                    this, this->tft,                                                                                                  // parentScreen, tft
-                    title,                                                                                                            // title
-                    "Select FFT gain mode:",                                                                                          // message
-                    options, ARRAY_ITEM_COUNT(options),                                                                               // buttons
-                    [this, index, isAM, &currentConfig, title](int buttonIndex, const char *buttonLabel, MultiButtonDialog *dialog) { // ButtonClickCallback
+
+                // Create fftDialog shared_ptr that will be captured in lambda
+                std::shared_ptr<MultiButtonDialog> fftDialog;
+
+                fftDialog = std::make_shared<MultiButtonDialog>(
+                    this, this->tft,                                                                                                             // parentScreen, tft
+                    title,                                                                                                                       // title
+                    "Select FFT gain mode:",                                                                                                     // message
+                    options, ARRAY_ITEM_COUNT(options),                                                                                          // buttons
+                    [this, index, isAM, &currentConfig, title, fftDialog](int buttonIndex, const char *buttonLabel, MultiButtonDialog *dialog) { // ButtonClickCallback
                         DEBUG("SetupScreen: FFT Config %s button %d ('%s') clicked\n", isAM ? "AM" : "FM", buttonIndex, buttonLabel);
                         switch (buttonIndex) {
                             case 0: // Disabled
@@ -399,7 +403,7 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
                                             // Optional: Apply live changes if needed
                                         }
                                     },
-                                    [this, index, dialog, &currentConfig, tempGainValuePtr](UIDialogBase *sender, MessageDialog::DialogResult result) { // DialogCallback
+                                    [this, index, &currentConfig, tempGainValuePtr, fftDialog](UIDialogBase *sender, MessageDialog::DialogResult result) { // DialogCallback
                                         if (result == MessageDialog::DialogResult::Accepted) {
                                             // Use the tempGainValue which was modified by the ValueChangeDialog
                                             currentConfig = *tempGainValuePtr;
@@ -418,9 +422,11 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
                                             if (menuList) {
                                                 menuList->refreshItemDisplay(index);
                                             }
-                                            // Use deferred close to avoid nested callback chain freeze
-                                            DEBUG("SetupScreen: Manual gain set to %.1f, scheduling deferred close of parent dialog\n", *tempGainValuePtr);
-                                            dialog->deferClose(UIDialogBase::DialogResult::Accepted);
+                                            // Use deferred chain close to close both dialogs at once and avoid intermediate redraw
+                                            DEBUG("SetupScreen: Manual gain set to %.1f, scheduling deferred chain close of both dialogs\n", *tempGainValuePtr);
+                                            // Get the shared_ptr to the fftDialog by casting to UIDialogBase
+                                            auto fftDialogPtr = std::static_pointer_cast<UIDialogBase>(fftDialog);
+                                            sender->deferChainClose(UIDialogBase::DialogResult::Accepted, fftDialogPtr);
                                         }
                                         // If cancelled, just close the ValueChangeDialog (happens automatically)
                                         // and keep the MultiButtonDialog open
@@ -438,7 +444,6 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
                 this->showDialog(fftDialog);
             } break;
 
-            // ... többi eset ...
             case ItemAction::NONE:
             default:
                 // Nincs teendő, vagy hibaüzenet
@@ -447,8 +452,7 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
         // Alapértelmezés szerint false-t adunk vissza, mert vagy
         // - egyedi sort frissítettünk, vagy
         // - dialógust nyitottunk, ami később kezeli a frissítést.
-        // Ha egy eset explicit teljes újra-rajzolást igényelne a UIScrollableListComponent-től,
-        // akkor az a case adna vissza true-t.
+        // Ha egy eset explicit teljes újra-rajzolást igényelne a UIScrollableListComponent-től,        // akkor az a case adna vissza true-t.
         return false;
     } // End of onItemClicked
 };
