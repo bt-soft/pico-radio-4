@@ -206,15 +206,17 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
                             DEBUG("SetupScreen: Live brightness preview: %u (config updated)\n", config.data.tftBackgroundBrightness);
                         }
                     }, // "Élő" ValueChangeCallback vége
-                    // Most jön az új, opcionális DialogCallback paraméter
+                    //  DialogCallback paraméter
                     [this, index](UIDialogBase *sender, MessageDialog::DialogResult dialogResult) {
                         // A dialog bezárásakor hívódik meg ez a callback.
-                        // A dialogResult lehet Accepted vagy Rejected. A sender a brightnessDialog maga.
-                        // Nem figyeljük a dialogResult-ot, minden esetben frissítjük a lista UI elemét a végleges (elfogadott vagy visszaállított) értékkel
-                        if (index >= 0 && index < settingItems.size()) {
-                            settingItems[index].value = String(config.data.tftBackgroundBrightness);
-                            if (menuList) {
-                                menuList->refreshItemDisplay(index);
+                        // A sender a brightnessDialog maga
+                        // A dialogResult lehet Accepted vagy Rejected.
+                        if (dialogResult == MessageDialog::DialogResult::Accepted) {
+                            if (index >= 0 && index < settingItems.size()) {
+                                settingItems[index].value = String(config.data.tftBackgroundBrightness);
+                                if (menuList) {
+                                    menuList->refreshItemDisplay(index);
+                                }
                             }
                         }
                     },                   // DialogCallback vége
@@ -237,8 +239,8 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
                         // Ha nem csak bezárta a dialogot...
                         if (result == MessageDialog::DialogResult::Accepted) {
                             int clickedIndex = actualBasisDialog->getClickedUserButtonIndex();
-                            const char *clickedLabel = actualBasisDialog->getClickedUserButtonLabel();
-                            DEBUG("SetupScreen: Squelch basis selected: '%s' (index: %d)\n", clickedLabel, clickedIndex);
+                            // const char *clickedLabel = actualBasisDialog->getClickedUserButtonLabel();
+                            // DEBUG("SetupScreen: Squelch basis selected: '%s' (index: %d)\n", clickedLabel, clickedIndex);
 
                             // Beállítjuk az új értéket
                             bool newSquelchUsesRSSI = (clickedIndex == 0); // 0 for RSSI, 1 for SNR
@@ -259,32 +261,33 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
             } break;
 
             case ItemAction::SAVER_TIMEOUT: {
-                Rect dlgBounds(-1, -1, 280, 0);
-                static int tempSaverTimeout;
-                tempSaverTimeout = config.data.screenSaverTimeoutMinutes;
-
-                auto saverDialog = std::make_shared<ValueChangeDialog>(    //
-                    this, this->tft,                                       //
-                    "Screen Saver",                                        // title
-                    "Timeout (minutes):",                                  // message
-                    &tempSaverTimeout,                                     // valuePtr
-                    SCREEN_SAVER_TIMEOUT_MIN, SCREEN_SAVER_TIMEOUT_MAX, 1, // min, max, step
-                    nullptr,                                               // Nincs "élő" ValueChangeCallback
-                    [this, index](UIDialogBase *sender, MessageDialog::DialogResult result) {
-                        if (result == MessageDialog::DialogResult::Accepted) {
-                            config.data.screenSaverTimeoutMinutes = static_cast<uint8_t>(tempSaverTimeout);
-                            DEBUG("SetupScreen: Screen saver timeout set to: %u min\n", config.data.screenSaverTimeoutMinutes);
+                auto saverDialog = std::make_shared<ValueChangeDialog>(                 //
+                    this, this->tft,                                                    //
+                    "Screen Saver",                                                     // title
+                    "Timeout (minutes):",                                               // message
+                    &config.data.screenSaverTimeoutMinutes,                             // valuePtr
+                    SCREEN_SAVER_TIMEOUT_MIN, SCREEN_SAVER_TIMEOUT_MAX, 1,              // min, max, step
+                    [this, index](const std::variant<int, float, bool> &liveNewValue) { // "Élő" ValueChangeCallback
+                        if (std::holds_alternative<int>(liveNewValue)) {
+                            int currentDialogVal = std::get<int>(liveNewValue);
+                            config.data.screenSaverTimeoutMinutes = static_cast<uint8_t>(currentDialogVal);
                             config.checkSave();
-                            // Frissítjük csak az érintett menüelemet
+                        }
+                    },
+                    [this, index](UIDialogBase *sender, MessageDialog::DialogResult dialogResult) { // DialogCallback
+                        // A dialog bezárásakor hívódik meg ez a callback.
+                        // A sender a brightnessDialog maga
+                        // A dialogResult lehet Accepted vagy Rejected.
+                        if (dialogResult == MessageDialog::DialogResult::Accepted) {
                             if (index >= 0 && index < settingItems.size()) {
-                                settingItems[index].value = String(config.data.screenSaverTimeoutMinutes) + " min";
+                                settingItems[index].value = String(config.data.screenSaverTimeoutMinutes);
                                 if (menuList) {
                                     menuList->refreshItemDisplay(index);
                                 }
                             }
                         }
                     }, // DialogCallback vége
-                    dlgBounds);
+                    Rect(-1, -1, 280, 0));
 
                 this->showDialog(saverDialog);
             } break;
