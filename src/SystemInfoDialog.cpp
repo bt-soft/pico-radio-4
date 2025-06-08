@@ -267,7 +267,18 @@ void SystemInfoDialog::drawSelf() {
         lineStart = lineEnd + 1;
     }
 
-    // FONTOS: Navigációs gombok újrarajzolása, mert a UIDialogBase::drawSelf() felülírja őket
+    // FONTOS: Összes gomb újrarajzolása, mert a UIDialogBase::drawSelf() felülírja őket
+
+    // MessageDialog OK gombjai újrarajzolása
+    const auto &buttonsList = getButtonsList();
+    for (const auto &button : buttonsList) {
+        if (button) {
+            button->draw();
+            DEBUG("SystemInfoDialog::drawSelf() - Redrawn MessageDialog button after content\n");
+        }
+    }
+
+    // Navigációs gombok újrarajzolása
     if (prevButton) {
         prevButton->draw();
         DEBUG("SystemInfoDialog::drawSelf() - Redrawn Previous button after content\n");
