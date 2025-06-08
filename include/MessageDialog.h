@@ -18,11 +18,11 @@ class MessageDialog : public UIDialogBase, public ButtonsGroupManager<MessageDia
     std::vector<ButtonGroupDefinition> _buttonDefs;      // Gombdefiníciók tárolására
 
     // For UserDefined buttons
-    const char* const* _userOptions = nullptr;
+    const char *const *_userOptions = nullptr;
     uint8_t _numUserOptions = 0;
-    int _clickedUserButtonIndex = -1; // A _userOptions tömbben a kattintott gomb indexe
-    const char* _clickedUserButtonLabel = nullptr; // A kattintott gomb felirata
-    DialogCallback _userDialogCallback = nullptr; // Felhasználó által megadott DialogCallback
+    int _clickedUserButtonIndex = -1;              // A _userOptions tömbben a kattintott gomb indexe
+    const char *_clickedUserButtonLabel = nullptr; // A kattintott gomb felirata
+    DialogCallback _userDialogCallback = nullptr;  // Felhasználó által megadott DialogCallback
 
     // A createDialogContent most csak a _buttonDefs-et készíti elő
     virtual void createDialogContent() override;
@@ -32,11 +32,24 @@ class MessageDialog : public UIDialogBase, public ButtonsGroupManager<MessageDia
     virtual void drawSelf() override;
 
   public:
+    /**
+     * @brief MessageDialog konstruktor alapértelmezett gombokkal (OK, OK/Cancel, Yes/No, Yes/No/Cancel).
+     *
+     * @param parentScreen A szülő UIScreen.
+     * @param tft TFT_eSPI referencia.
+     * @param bounds A dialógus határai (pozíció és méret). Opcionális, alapértelmezett: automatikus méret és középre igazítás.
+     * @param title A dialógus címe.
+     * @param message Az üzenet szövege.
+     * @param buttonsType A gombok típusa (alapértelmezett: Ok).
+     * @param cs Színséma. Opcionális, alapértelmezett: ColorScheme::defaultScheme().
+     * @param okClosesDialog Meghatározza, hogy az "OK" típusú gombok bezárják-e a dialógust. Opcionális, alapértelmezett: true.
+     */
     MessageDialog(UIScreen *parentScreen, TFT_eSPI &tft, const Rect &bounds, const char *title, const char *message, ButtonsType buttonsType = ButtonsType::Ok,
                   const ColorScheme &cs = ColorScheme::defaultScheme(), bool okClosesDialog = true);
 
     /**
      * @brief MessageDialog konstruktor felhasználó által definiált gombokkal.
+     *
      * @param parentScreen A szülő UIScreen.
      * @param tft TFT_eSPI referencia.
      * @param title A dialógus címe.
@@ -46,16 +59,16 @@ class MessageDialog : public UIDialogBase, public ButtonsGroupManager<MessageDia
      * @param userDialogCb Dialógus lezárásakor hívandó callback (OK/Cancel után). Opcionális.
      * @param bounds A dialógus határai (pozíció és méret). Opcionális, alapértelmezett: automatikus méret és középre igazítás.
      * @param cs Színséma. Opcionális, alapértelmezett: ColorScheme::defaultScheme().
-     * @param okClosesDialog Meghatározza, hogy az "OK" típusú gombok bezárják-e a dialógust. UserDefined esetén kevésbé releváns, mert minden gombválasztás bezárja. Opcionális, alapértelmezett: true.
+     * @param okClosesDialog Meghatározza, hogy az "OK" típusú gombok bezárják-e a dialógust. UserDefined esetén kevésbé releváns, mert minden gombválasztás bezárja. Opcionális,
+     * alapértelmezett: true.
      */
-    MessageDialog(UIScreen *parentScreen, TFT_eSPI &tft, const char *title, const char *message,
-                  const char* const* options, uint8_t numOptions,
+    MessageDialog(UIScreen *parentScreen, TFT_eSPI &tft, const char *title, const char *message, const char *const *options, uint8_t numOptions,
                   DialogCallback userDialogCb = nullptr, const Rect &bounds = {-1, -1, 0, 0}, const ColorScheme &cs = ColorScheme::defaultScheme(), bool okClosesDialog = true);
 
     virtual ~MessageDialog() override = default;
 
     int getClickedUserButtonIndex() const { return _clickedUserButtonIndex; }
-    const char* getClickedUserButtonLabel() const { return _clickedUserButtonLabel; }
+    const char *getClickedUserButtonLabel() const { return _clickedUserButtonLabel; }
 };
 
 #endif // __MESSAGE_DIALOG_H
