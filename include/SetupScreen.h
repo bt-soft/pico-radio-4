@@ -234,7 +234,7 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
                     [this, index](UIDialogBase *sender, MessageDialog::DialogResult result) { //
                         // Visszaalakítjuk MessageDialog-ra a sender-t
                         auto actualBasisDialog = static_cast<MessageDialog *>(sender);
-                        DEBUG("SetupScreen: Squelch basis dialog result: %d\n", static_cast<int>(result));
+                        // Ha nem csak bezárta a dialogot...
                         if (result == MessageDialog::DialogResult::Accepted) {
                             int clickedIndex = actualBasisDialog->getClickedUserButtonIndex();
                             const char *clickedLabel = actualBasisDialog->getClickedUserButtonLabel();

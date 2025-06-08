@@ -200,12 +200,10 @@ class UIScrollableListComponent : public UIComponent {
         tft.setTextDatum(prevDatum);
         tft.setTextSize(prevSize);
         // tft.setFreeFont(prevFont); // Ha egyedi fontot használnánk
-    }
-
-    /**
-     * @brief Beállítja a látható elemek számát.
-     * @param absoluteIndex A frissítendő elem abszolút indexe.
-     */
+    } /**
+       * @brief Beállítja a látható elemek számát.
+       * @param absoluteIndex A frissítendő elem abszolút indexe.
+       */
     void refreshItemDisplay(int absoluteIndex) {
         if (!dataSource)
             return;
@@ -216,6 +214,12 @@ class UIScrollableListComponent : public UIComponent {
         drawScrollBar(); // A görgetősávot is frissítjük, hátha az elem tartalma megváltozott
                          // (bár ebben az esetben valószínűleg nem változik a magassága)
     }
+
+    // Touch margin növelése a lista elemeknél jobb felhasználói élményért
+    virtual int16_t getTouchMargin() const override { return 4; }
+
+    // A lista komponens nem igényel vizuális lenyomott visszajelzést, mert saját maga kezeli az újrarajzolást
+    virtual bool allowsVisualPressedFeedback() const override { return false; }
 
     /**
      * @brief Beállítja a látható elemek számát.
