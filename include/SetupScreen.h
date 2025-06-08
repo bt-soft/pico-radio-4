@@ -386,6 +386,9 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
                                 break;
                             case 2: // Manu G - open nested ValueChangeDialog
                             {
+                                // Close the MultiButtonDialog immediately to avoid conflicts
+                                dialog->close(UIDialogBase::DialogResult::Accepted);
+
                                 // Shared pointer-rel kezeljük a tempGainValue-t, hogy biztosan életben maradjon
                                 auto tempGainValuePtr = std::make_shared<float>((currentConfig > 0.0f) ? currentConfig : 1.0f); // Default to 1.0 if not already manual
 
@@ -404,33 +407,18 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
                                             // Optional: Apply live changes if needed
                                         }
                                     },
-                                    [this, index, &currentConfig, tempGainValuePtr, fftDialog](UIDialogBase *sender, MessageDialog::DialogResult result) { // DialogCallback
+                                    [this, index, &currentConfig, tempGainValuePtr](UIDialogBase *sender, MessageDialog::DialogResult result) { // DialogCallback
                                         if (result == MessageDialog::DialogResult::Accepted) {
                                             // Use the tempGainValue which was modified by the ValueChangeDialog
                                             currentConfig = *tempGainValuePtr;
                                             config.checkSave();
 
-                                            // Update list item using the decoding lambda (consistent with populateMenuItems)
-                                            auto decodeMiniFftConfigLambda = [](float value) -> String {
-                                                if (value == -1.0f)
-                                                    return "Disabled";
-                                                else if (value == 0.0f)
-                                                    return "Auto Gain";
-                                                else
-                                                    return "Manual: " + String(value, 1) + "x";
-                                            };
-                                            settingItems[index].value = decodeMiniFftConfigLambda(currentConfig);
-                                            if (menuList) {
-                                                menuList->refreshItemDisplay(index);
-                                            }
-                                            // Use deferred chain close to close both dialogs at once and avoid intermediate redraw
-                                            DEBUG("SetupScreen: Manual gain set to %.1f, scheduling deferred chain close of both dialogs\n", *tempGainValuePtr);
-                                            // Get the shared_ptr to the fftDialog by casting to UIDialogBase
-                                            auto fftDialogPtr = std::static_pointer_cast<UIDialogBase>(fftDialog);
-                                            sender->deferChainClose(UIDialogBase::DialogResult::Accepted, fftDialogPtr);
+                                            DEBUG("SetupScreen: Manual gain set to %.1f\n", *tempGainValuePtr);
+
+                                            // Update UI in a simpler way - just mark for refresh
+                                            populateMenuItems();
                                         }
-                                        // If cancelled, just close the ValueChangeDialog (happens automatically)
-                                        // and keep the MultiButtonDialog open
+                                        // ValueChangeDialog will close automatically on Accept/Cancel
                                     },
                                     Rect(-1, -1, 300, 0) // bounds - centered, auto height
                                 );
@@ -441,8 +429,12 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
                     false,                 // autoClose -  false, mert a gombok kezelése manuális
                     defaultSelection,      // defaultButtonIndex - aktuális beállítás kiemelve
                     false,                 // disableDefaultButton - maradjon aktív a default gomb
-                    Rect(-1, -1, 340, 120) // bounds 
+                    Rect(-1, -1, 340, 120) // bounds
                 );
+
+                // Note: Dialog callback is handled by individual button callbacks
+                // No need for additional setDialogCallback as it conflicts with ValueChangeDialog's callback
+
                 this->showDialog(fftDialog);
             } break;
 
