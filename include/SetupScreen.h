@@ -256,6 +256,7 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
                     },                     // ButtonClickCallback vége
                     true,                  // autoClose
                     currentSelection,      // defaultButtonIndex - current setting highlighted
+                    true,                  // disableDefaultButton - keep default behavior (disabled)
                     Rect(-1, -1, 250, 120) // bounds
                 );
                 this->showDialog(basisDialog);
@@ -437,9 +438,10 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
                             } break;
                         }
                     },
-                    false,                 // autoClose - handle manually for proper nested dialog support
-                    defaultSelection,      // defaultButtonIndex - current setting highlighted
-                    Rect(-1, -1, 280, 140) // bounds
+                    false,                 // autoClose -  false, mert a gombok kezelése manuális
+                    defaultSelection,      // defaultButtonIndex - aktuális beállítás kiemelve
+                    false,                 // disableDefaultButton - maradjon aktív a default gomb
+                    Rect(-1, -1, 340, 120) // bounds 
                 );
                 this->showDialog(fftDialog);
             } break;

@@ -10,15 +10,16 @@
  * @param options Gombok feliratainak tömbje.
  * @param numOptions A gombok száma.
  * @param buttonClickCb Gomb kattintás callback.
- * @param autoClose Automatikusan bezárja-e a dialógust gomb kattintáskor.
- * @param defaultButtonIndex Az alapértelmezett (kiemelt) gomb indexe (-1 = nincs).
+ * @param autoClose Automatikusan bezárja-e a dialógust gomb kattintáskor. * @param defaultButtonIndex Az alapértelmezett (kiemelt) gomb indexe (-1 = nincs).
+ * @param disableDefaultButton Ha true, az alapértelmezett gomb le van tiltva; ha false, csak vizuálisan kiemelve.
  * @param ctorInputBounds A dialógus határai.
  * @param cs Színséma.
  */
 MultiButtonDialog::MultiButtonDialog(UIScreen *parentScreen, TFT_eSPI &tft, const char *title, const char *message, const char *const *options, uint8_t numOptions,
-                                     ButtonClickCallback buttonClickCb, bool autoClose, int defaultButtonIndex, const Rect &ctorInputBounds, const ColorScheme &cs)
+                                     ButtonClickCallback buttonClickCb, bool autoClose, int defaultButtonIndex, bool disableDefaultButton, const Rect &ctorInputBounds,
+                                     const ColorScheme &cs)
     : UIDialogBase(parentScreen, tft, ctorInputBounds, title, cs), message(message), _userOptions(options), _numUserOptions(numOptions), _buttonClickCallback(buttonClickCb),
-      _autoCloseOnButtonClick(autoClose), _defaultButtonIndex(defaultButtonIndex) {
+      _autoCloseOnButtonClick(autoClose), _defaultButtonIndex(defaultButtonIndex), _disableDefaultButton(disableDefaultButton) {
 
     // Dialógus tartalmának létrehozása
     createDialogContent();
@@ -81,12 +82,11 @@ void MultiButtonDialog::createDialogContent() {
             if (isDefaultButton) {
                 buttonState = UIButton::ButtonState::CurrentActive;
             }
-
             _buttonDefs.push_back({static_cast<uint8_t>(buttonIdCounter + i), _userOptions[i], UIButton::ButtonType::Pushable,
                                    [this, index = i, label = _userOptions[i], isDefaultButton](const UIButton::ButtonEvent &event) {
                                        if (event.state == UIButton::EventButtonState::Clicked) {
-                                           // Ha ez az alapértelmezett gomb, ne csináljunk semmit
-                                           if (isDefaultButton) {
+                                           // Ha ez az alapértelmezett gomb és le van tiltva, ne csináljunk semmit
+                                           if (isDefaultButton && _disableDefaultButton) {
                                                return;
                                            }
 
@@ -131,9 +131,7 @@ void MultiButtonDialog::layoutDialogContent() {
     // Gombdefiníciók frissítése
     for (auto &def : _buttonDefs) {
         def.height = buttonHeight;
-    }
-
-    // Margók kiszámítása (képernyő-relatív)
+    } // Margók kiszámítása (képernyő-relatív)
     int16_t manager_marginLeft = bounds.x + UIDialogBase::PADDING;
     int16_t manager_marginRight = tft.width() - (bounds.x + bounds.width - UIDialogBase::PADDING);
     int16_t manager_marginBottom = tft.height() - (bounds.y + bounds.height - (2 * UIDialogBase::PADDING));
@@ -197,6 +195,20 @@ void MultiButtonDialog::setDefaultButtonIndex(int defaultIndex) {
         _defaultButtonIndex = defaultIndex;
 
         // Újra létrehozzuk a dialógus tartalmát az új default button logikával
+        createDialogContent();
+        layoutDialogContent();
+    }
+}
+
+/**
+ * @brief Beállítja, hogy az alapértelmezett gomb le legyen-e tiltva vagy csak vizuálisan kiemelve.
+ * @param disable Ha true, az alapértelmezett gomb le van tiltva; ha false, csak vizuálisan kiemelve
+ */
+void MultiButtonDialog::setDisableDefaultButton(bool disable) {
+    if (_disableDefaultButton != disable) {
+        _disableDefaultButton = disable;
+
+        // Újra létrehozzuk a dialógus tartalmát az új disable logikával
         createDialogContent();
         layoutDialogContent();
     }
