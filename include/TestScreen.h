@@ -108,9 +108,11 @@ class TestScreen : public UIScreen, public ButtonsGroupManager<TestScreen> {
                          if (STREQ(event.label, "Msg Ok")) {
                              dialogType = MessageDialog::ButtonsType::Ok;
                              dialogMessage = "This is an OK dialog.";
+
                          } else if (STREQ(event.label, "MsgOkCancel")) {
                              dialogType = MessageDialog::ButtonsType::OkCancel;
                              dialogMessage = "This is an OK/Cancel dialog.";
+
                          } else if (STREQ(event.label, "NestedDlg")) {
                              // Nested Dialog Chain
                              DEBUG("Starting nested dialog chain...\n");
