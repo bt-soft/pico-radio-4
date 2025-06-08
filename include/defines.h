@@ -22,7 +22,8 @@
 #define SCREEN_NAME_SETUP "SetupScreen"
 
 //--- Debug ---
-#define __DEBUG // Debug mód vezérlése
+// Debug mode is now controlled via build flags in platformio.ini
+// #define __DEBUG // Debug mód vezérlése
 
 #ifdef __DEBUG
 // #define SHOW_MEMORY_INFO

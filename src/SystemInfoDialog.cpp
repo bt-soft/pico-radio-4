@@ -4,16 +4,12 @@ SystemInfoDialog::SystemInfoDialog(UIScreen *parentScreen, TFT_eSPI &tft, const 
     : MessageDialog(parentScreen, tft, bounds, "System Information", "", ButtonsType::Ok, cs), currentPage(0) {
     // Üres message stringet adunk át, mert saját drawSelf-fel rajzoljuk a tartalmat
     // Lapozós navigáció gombokkal történik
-    // A navigációs gombokat a layoutDialogContent()-ben hozzuk létre
-
-    // WICHTIG: Explicit call to layoutDialogContent() needed because the virtual call
+    // A navigációs gombokat a layoutDialogContent()-ben hozzuk létre    // WICHTIG: Explicit call to layoutDialogContent() needed because the virtual call
     // in MessageDialog constructor called MessageDialog::layoutDialogContent(), not our override
-    DEBUG("SystemInfoDialog constructor - calling layoutDialogContent() explicitly\n");
     layoutDialogContent();
 }
 
 String SystemInfoDialog::getCurrentPageContent() {
-    DEBUG("SystemInfoDialog::getCurrentPageContent() - Getting content for page %d\n", currentPage);
     switch (currentPage) {
         case 0:
             return formatProgramInfo();
@@ -86,14 +82,7 @@ String SystemInfoDialog::formatSi4735Info() {
 
 void SystemInfoDialog::layoutDialogContent() {
     // Először hívjuk meg a szülő osztály layout metódusát, amely létrehozza az OK gombot
-    MessageDialog::layoutDialogContent();
-
-    // Most, hogy az OK gomb létezik, kiszámíthatjuk a navigációs gombok helyes pozícióját
-    const auto &buttonsList = getButtonsList();
-
-    // Debug: Dialógus bounds információ
-    DEBUG("SystemInfoDialog::layoutDialogContent() - Dialog bounds: x=%d, y=%d, w=%d, h=%d\n", bounds.x, bounds.y, bounds.width, bounds.height);
-    DEBUG("SystemInfoDialog::layoutDialogContent() - OK buttons count: %zu\n", buttonsList.size());
+    MessageDialog::layoutDialogContent(); // Most, hogy az OK gomb létezik, kiszámíthatjuk a navigációs gombok helyes pozícióját
 
     // Töröljük a régi navigációs gombokat, ha léteznek
     if (prevButton) {
@@ -109,102 +98,72 @@ void SystemInfoDialog::layoutDialogContent() {
     const int16_t buttonWidth = 80;
     const int16_t buttonHeight = UIButton::DEFAULT_BUTTON_HEIGHT;
     const int16_t buttonY = bounds.y + bounds.height - buttonHeight - 10;
-    const int16_t spacing = 10;
-    DEBUG("SystemInfoDialog::layoutDialogContent() - Navigation buttons: buttonY=%d, buttonHeight=%d\n", buttonY, buttonHeight);
-
-    // Previous button pozíció kiszámítása
-    int16_t prevButtonX = bounds.x + spacing;
-    DEBUG("SystemInfoDialog::layoutDialogContent() - Prev button position: prevButtonX=%d\n", prevButtonX);
-
-    // Navigációs gombok színsémája - ButtonColorScheme létrehozása
+    const int16_t spacing = 10;               // Previous button pozíció kiszámítása
+    int16_t prevButtonX = bounds.x + spacing; // Navigációs gombok színsémája - ButtonColorScheme létrehozása
     ButtonColorScheme navButtonScheme = UIColorPalette::createDefaultButtonScheme();
     navButtonScheme.background = UIColorPalette::BUTTON_DEFAULT_BACKGROUND;
     navButtonScheme.foreground = UIColorPalette::BUTTON_DEFAULT_TEXT;
-    navButtonScheme.border = UIColorPalette::BUTTON_DEFAULT_BORDER; // Previous gomb (bal oldal)
+    navButtonScheme.border = UIColorPalette::BUTTON_DEFAULT_BORDER;
+
+    // Previous gomb (bal oldal)
     prevButton = std::make_shared<UIButton>(
         tft, 200, // ID = 200
         Rect(prevButtonX, buttonY, buttonWidth, buttonHeight), "< Prev", UIButton::ButtonType::Pushable,
         [this](const UIButton::ButtonEvent &event) {
-            DEBUG("SystemInfoDialog - Prev button event: state=%d, currentPage=%d\n", (int)event.state, currentPage);
             if (event.state == UIButton::EventButtonState::Clicked && currentPage > 0) {
-                DEBUG("SystemInfoDialog - Prev button clicked: going from page %d to %d\n", currentPage, currentPage - 1);
                 currentPage--;
                 updateNavigationButtons();
                 markForRedraw();
                 drawSelf(); // Explicit redraw to update page content
-                DEBUG("SystemInfoDialog - Prev button: explicit drawSelf() called, page now %d\n", currentPage);
             }
         },
-        navButtonScheme); // Next gomb pozicionálása a dialógus jobb szélétől
-    int16_t nextButtonX = bounds.x + bounds.width - spacing - buttonWidth;
+        navButtonScheme);
 
-    DEBUG("SystemInfoDialog::layoutDialogContent() - Next button position: nextButtonX=%d (dialog right edge)\n", nextButtonX);
-    DEBUG("SystemInfoDialog::layoutDialogContent() - Button placement check: dialog_right=%d, button_right=%d\n", bounds.x + bounds.width, nextButtonX + buttonWidth);
+    // Next gomb pozicionálása a dialógus jobb szélétől
+    int16_t nextButtonX = bounds.x + bounds.width - spacing - buttonWidth;
     nextButton = std::make_shared<UIButton>(
         tft, 201, // ID = 201
         Rect(nextButtonX, buttonY, buttonWidth, buttonHeight), "Next >", UIButton::ButtonType::Pushable,
         [this](const UIButton::ButtonEvent &event) {
-            DEBUG("SystemInfoDialog - Next button event: state=%d, currentPage=%d, maxPages=%d\n", (int)event.state, currentPage, TOTAL_PAGES - 1);
-            DEBUG("SystemInfoDialog - Next button bounds: x=%d, y=%d, w=%d, h=%d\n", nextButton->getBounds().x, nextButton->getBounds().y, nextButton->getBounds().width,
-                  nextButton->getBounds().height);
-            DEBUG("SystemInfoDialog - Next button disabled: %s\n", nextButton->isDisabled() ? "true" : "false");
             if (event.state == UIButton::EventButtonState::Clicked) {
-                DEBUG("SystemInfoDialog - Next button clicked! Checking conditions...\n");
                 if (currentPage < TOTAL_PAGES - 1) {
-                    DEBUG("SystemInfoDialog - Next button: valid click, going from page %d to %d\n", currentPage, currentPage + 1);
                     currentPage++;
                     updateNavigationButtons();
                     markForRedraw();
                     drawSelf(); // Explicit redraw to update page content
-                    DEBUG("SystemInfoDialog - Next button: explicit drawSelf() called, page now %d\n", currentPage);
-                } else {
-                    DEBUG("SystemInfoDialog - Next button: click ignored, already at last page %d\n", currentPage);
                 }
-            } else {
-                DEBUG("SystemInfoDialog - Next button: non-click event, state=%d\n", (int)event.state);
             }
         },
-        navButtonScheme); // Gombok hozzáadása a komponens gyűjteményhez
-    DEBUG("SystemInfoDialog::layoutDialogContent() - Adding navigation buttons to dialog\n");
+        navButtonScheme);
+
+    // Gombok hozzáadása a komponens gyűjteményhez
     addChild(prevButton);
     addChild(nextButton);
 
     // Biztosítjuk, hogy a gombok újrarajzolásra kerüljenek
     if (prevButton) {
         prevButton->markForRedraw();
-        DEBUG("SystemInfoDialog::layoutDialogContent() - Prev button marked for redraw, bounds: x=%d, y=%d, w=%d, h=%d\n", prevButton->getBounds().x, prevButton->getBounds().y,
-              prevButton->getBounds().width, prevButton->getBounds().height);
     }
     if (nextButton) {
         nextButton->markForRedraw();
-        DEBUG("SystemInfoDialog::layoutDialogContent() - Next button marked for redraw, bounds: x=%d, y=%d, w=%d, h=%d\n", nextButton->getBounds().x, nextButton->getBounds().y,
-              nextButton->getBounds().width, nextButton->getBounds().height);
-        DEBUG("SystemInfoDialog::layoutDialogContent() - Next button initially disabled: %s\n", nextButton->isDisabled() ? "true" : "false");
     }
 
     updateNavigationButtons();
 }
 
 void SystemInfoDialog::updateNavigationButtons() {
-    DEBUG("SystemInfoDialog::updateNavigationButtons() - currentPage=%d, TOTAL_PAGES=%d\n", currentPage, TOTAL_PAGES);
-
     // Gombok aktiválása/deaktiválása az aktuális oldal alapján
     if (prevButton) {
         bool prevEnabled = (currentPage > 0);
         prevButton->setEnabled(prevEnabled);
-        DEBUG("SystemInfoDialog::updateNavigationButtons() - Prev button enabled: %s\n", prevEnabled ? "true" : "false");
     }
     if (nextButton) {
         bool nextEnabled = (currentPage < TOTAL_PAGES - 1);
         nextButton->setEnabled(nextEnabled);
-        DEBUG("SystemInfoDialog::updateNavigationButtons() - Next button enabled: %s (page %d < max %d)\n", nextEnabled ? "true" : "false", currentPage, TOTAL_PAGES - 1);
-        DEBUG("SystemInfoDialog::updateNavigationButtons() - Next button bounds after update: x=%d, y=%d, w=%d, h=%d\n", nextButton->getBounds().x, nextButton->getBounds().y,
-              nextButton->getBounds().width, nextButton->getBounds().height);
     }
 }
 
 void SystemInfoDialog::drawSelf() {
-    DEBUG("SystemInfoDialog::drawSelf() - Drawing page %d/%d\n", currentPage + 1, TOTAL_PAGES);
     // Előbb rajzoljuk az alapértelmezett dialógus hátteret és fejlécet (de nem a message-t)
     UIDialogBase::drawSelf();
 
@@ -265,26 +224,26 @@ void SystemInfoDialog::drawSelf() {
         tft.drawString(line.c_str(), textStartX, currentY);
         currentY += lineHeight;
         lineStart = lineEnd + 1;
-    }
+    } // FONTOS: Összes gomb újrarajzolása, mert a UIDialogBase::drawSelf() felülírja őket
 
-    // FONTOS: Összes gomb újrarajzolása, mert a UIDialogBase::drawSelf() felülírja őket
+    // UIDialogBase X gomb (closeButton) újrarajzolása
+    if (closeButton) {
+        closeButton->draw();
+    }
 
     // MessageDialog OK gombjai újrarajzolása
     const auto &buttonsList = getButtonsList();
     for (const auto &button : buttonsList) {
         if (button) {
             button->draw();
-            DEBUG("SystemInfoDialog::drawSelf() - Redrawn MessageDialog button after content\n");
         }
     }
 
     // Navigációs gombok újrarajzolása
     if (prevButton) {
         prevButton->draw();
-        DEBUG("SystemInfoDialog::drawSelf() - Redrawn Previous button after content\n");
     }
     if (nextButton) {
         nextButton->draw();
-        DEBUG("SystemInfoDialog::drawSelf() - Redrawn Next button after content\n");
     }
 }
