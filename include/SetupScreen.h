@@ -226,30 +226,30 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
 
             case ItemAction::SQUELCH_BASIS: {
                 const char *options[] = {"RSSI", "SNR"};
-                auto basisDialog = std::make_shared<MessageDialog>( //
-                    this, this->tft,                                // parentScreen
-                    "Squelch Basis",                                // title
-                    "Select basis:",                                // message
-                    options, ARRAY_ITEM_COUNT(options),             // gombok feliratai és a számossága
-                    [this, index](UIDialogBase *sender, MessageDialog::DialogResult result) {
+                auto basisDialog = std::make_shared<MessageDialog>(                           //
+                    this, this->tft,                                                          // parentScreen
+                    "Squelch Basis",                                                          // title
+                    "Select basis:",                                                          // message
+                    options, ARRAY_ITEM_COUNT(options),                                       // gombok feliratai és a számossága
+                    [this, index](UIDialogBase *sender, MessageDialog::DialogResult result) { //
                         // Visszaalakítjuk MessageDialog-ra a sender-t
                         auto actualBasisDialog = static_cast<MessageDialog *>(sender);
-
+                        DEBUG("SetupScreen: Squelch basis dialog result: %d\n", static_cast<int>(result));
                         if (result == MessageDialog::DialogResult::Accepted) {
                             int clickedIndex = actualBasisDialog->getClickedUserButtonIndex();
+                            const char *clickedLabel = actualBasisDialog->getClickedUserButtonLabel();
+                            DEBUG("SetupScreen: Squelch basis selected: '%s' (index: %d)\n", clickedLabel, clickedIndex);
 
-                            // const char* clickedLabel = basisDialog->getClickedUserButtonLabel();
+                            // Beállítjuk az új értéket
                             bool newSquelchUsesRSSI = (clickedIndex == 0); // 0 for RSSI, 1 for SNR
                             if (config.data.squelchUsesRSSI != newSquelchUsesRSSI) {
                                 config.data.squelchUsesRSSI = newSquelchUsesRSSI;
-                                DEBUG("SetupScreen: Squelch basis changed to %s\n", config.data.squelchUsesRSSI ? "RSSI" : "SNR");
                                 config.checkSave();
                             }
                             // Frissítjük a lista UI elemét
-                            if (index >= 0 && index < settingItems.size()) {
-                                settingItems[index].value = String(config.data.squelchUsesRSSI ? "RSSI" : "SNR");
-                                if (menuList)
-                                    menuList->refreshItemDisplay(index);
+                            settingItems[index].value = String(config.data.squelchUsesRSSI ? "RSSI" : "SNR");
+                            if (menuList) {
+                                menuList->refreshItemDisplay(index);
                             }
                         }
                     },                   // DialogCallback vége
