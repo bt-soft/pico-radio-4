@@ -176,6 +176,7 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
      * @param index Az elem indexe, amelyre kattintottak.
      */
     virtual bool onItemClicked(int index) override {
+
         if (index < 0 || index >= settingItems.size())
             return false; // Ha az index érvénytelen, adjunk vissza false-t
 
@@ -205,19 +206,20 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
                             DEBUG("SetupScreen: Live brightness preview: %u (config updated)\n", config.data.tftBackgroundBrightness);
                         }
                     },
+                    [this, index](MessageDialog::DialogResult dialogResult) {
+                        // A dialog bezárásakor hívódik meg ez a callback.
+                        // A dialogResult lehet Accepted vagy Rejected
+                        // Nem figyeljük a dialogResult-ot, minden esetben frissítjük a lista UI elemét a végleges (elfogadott vagy visszaállított) értékkel
+                        if (index >= 0 && index < settingItems.size()) {
+                            settingItems[index].value = String(config.data.tftBackgroundBrightness);
+                            if (menuList) {
+                                menuList->refreshItemDisplay(index);
+                            }
+                        }
+                    },
                     Rect(-1, -1, 280, 0) // Auto-magasság
                 );
 
-                // Beállítjuk a DialogCallback-et, hogy a lista frissüljön
-                brightnessDialog->setDialogCallback([this, index](MessageDialog::DialogResult dialogResult) {
-                    // Nem figyeljük a dialogResult-ot, minden esetben frissítjük a lista UI elemét a végleges (elfogadott vagy visszaállított) értékkel
-                    if (index >= 0 && index < settingItems.size()) {
-                        settingItems[index].value = String(config.data.tftBackgroundBrightness);
-                        if (menuList) {
-                            menuList->refreshItemDisplay(index);
-                        }
-                    }
-                });
                 this->showDialog(brightnessDialog);
             } break;
 
@@ -244,26 +246,30 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
                 static int tempSaverTimeout;
                 tempSaverTimeout = config.data.screenSaverTimeoutMinutes;
 
-                auto saverDialog = std::make_shared<ValueChangeDialog>(this, this->tft, "Screen Saver", "Timeout (minutes):", &tempSaverTimeout, SCREEN_SAVER_TIMEOUT_MIN,
-                                                                       SCREEN_SAVER_TIMEOUT_MAX, 1,
-                                                                       nullptr, // Nincs szükség live callback-re itt
-                                                                       dlgBounds);
-
-                saverDialog->setDialogCallback([this, index](MessageDialog::DialogResult result) {
-                    if (result == MessageDialog::DialogResult::Accepted) {
-                        config.data.screenSaverTimeoutMinutes = static_cast<uint8_t>(tempSaverTimeout);
-                        DEBUG("SetupScreen: Screen saver timeout set to: %u min\n", config.data.screenSaverTimeoutMinutes);
-                        config.checkSave();
-                        // Frissítjük csak az érintett menüelemet
-                        if (index >= 0 && index < settingItems.size()) {
-                            settingItems[index].value = String(config.data.screenSaverTimeoutMinutes) + " min";
-                            if (menuList) {
-                                menuList->refreshItemDisplay(index);
+                auto saverDialog = std::make_shared<ValueChangeDialog>(    //
+                    this, this->tft,                                       //
+                    "Screen Saver",                                        // title
+                    "Timeout (minutes):",                                  // message
+                    &tempSaverTimeout,                                     // valuePtr
+                    SCREEN_SAVER_TIMEOUT_MIN, SCREEN_SAVER_TIMEOUT_MAX, 1, // min, max, step
+                    nullptr,                                               // Nincs szükség live callback-re itt
+                    [this, index](MessageDialog::DialogResult result) {
+                        if (result == MessageDialog::DialogResult::Accepted) {
+                            config.data.screenSaverTimeoutMinutes = static_cast<uint8_t>(tempSaverTimeout);
+                            DEBUG("SetupScreen: Screen saver timeout set to: %u min\n", config.data.screenSaverTimeoutMinutes);
+                            config.checkSave();
+                            // Frissítjük csak az érintett menüelemet
+                            if (index >= 0 && index < settingItems.size()) {
+                                settingItems[index].value = String(config.data.screenSaverTimeoutMinutes) + " min";
+                                if (menuList) {
+                                    menuList->refreshItemDisplay(index);
+                                }
                             }
                         }
-                    }
-                    // populateMenuItems(); // Eltávolítva
-                });
+                        // populateMenuItems(); // Eltávolítva
+                    },
+                    dlgBounds);
+
                 this->showDialog(saverDialog);
             } break;
 

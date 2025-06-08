@@ -171,7 +171,8 @@ class TestScreen : public UIScreen, public ButtonsGroupManager<TestScreen> {
                                      if (std::holds_alternative<bool>(newValue)) {
                                          DEBUG("TestScreen: Boolean value changed to: %s\n", std::get<bool>(newValue) ? "true" : "false");
                                      }
-                                 },
+                                 }, // ValueChangeCallback
+                                 nullptr, // Explicitly passing nullptr for userDialogCb
                                  dlgBounds);
                              this->showDialog(boolDialog);
                              return;
@@ -184,7 +185,8 @@ class TestScreen : public UIScreen, public ButtonsGroupManager<TestScreen> {
                                      if (std::holds_alternative<int>(newValue)) {
                                          DEBUG("TestScreen: Integer value changed to: %d\n", std::get<int>(newValue));
                                      }
-                                 },
+                                 }, // ValueChangeCallback
+                                 nullptr, // Explicitly passing nullptr for userDialogCb
                                  dlgBounds);
                              this->showDialog(intDialog);
                              return;
@@ -198,8 +200,9 @@ class TestScreen : public UIScreen, public ButtonsGroupManager<TestScreen> {
                                          char floatStr[10];
                                          dtostrf(std::get<float>(newValue), 4, 2, floatStr); // Formázzuk a floatot stringgé
                                          DEBUG("TestScreen: Float value changed to: %s\n", floatStr);
-                                     }
-                                 },
+                                     } // ValueChangeCallback
+                                 }, // ValueChangeCallback
+                                 nullptr, // Explicitly passing nullptr for userDialogCb
                                  dlgBounds);
                              this->showDialog(floatDialog);
                              return; // Kilépés a showSpecificDialog logikából

@@ -50,7 +50,7 @@ class ValueChangeDialog : public MessageDialog {
      * @param newValue Az új érték (variant típusként)
      */
     using ValueChangeCallback = std::function<void(const std::variant<int, float, bool> &)>;
-    // using ValueChangeCallback = std::function<void(const std::variant<int, float, bool, uint8_t> &)>; // Ha a variantot is bővíteni akarjuk
+
   protected:
     // A _message tagváltozót a MessageDialog ősosztály már tartalmazza és kezeli.
     ValueType _valueType; ///< Az érték típusa
@@ -74,6 +74,7 @@ class ValueChangeDialog : public MessageDialog {
 
     // Callback
     ValueChangeCallback _valueCallback = nullptr;
+    DialogCallback _userDialogCallback = nullptr; // Új: Felhasználó által megadott DialogCallback
 
     // UI komponensek
     // Az _okButton és _cancelButton a MessageDialog által biztosított.
@@ -181,11 +182,13 @@ class ValueChangeDialog : public MessageDialog {
      * @param maxValue Maximum érték
      * @param stepValue Lépésköz
      * @param callback Értékváltozás callback
+     * @param userDialogCb Dialógus lezárásakor hívandó callback (OK/Cancel után)
      * @param bounds Dialógus mérete és pozíciója
      * @param cs Színséma
      */
     ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, const char *title, const char *message, int *valuePtr, int minValue, int maxValue, int stepValue = 1,
-                      ValueChangeCallback callback = nullptr, const Rect &bounds = {-1, -1, 0, 0}, const ColorScheme &cs = ColorScheme::defaultScheme());
+                      ValueChangeCallback callback = nullptr, DialogCallback userDialogCb = nullptr, const Rect &bounds = {-1, -1, 0, 0},
+                      const ColorScheme &cs = ColorScheme::defaultScheme());
 
     /**
      * @brief Konstruktor float értékhez
@@ -198,11 +201,13 @@ class ValueChangeDialog : public MessageDialog {
      * @param maxValue Maximum érték
      * @param stepValue Lépésköz
      * @param callback Értékváltozás callback
+     * @param userDialogCb Dialógus lezárásakor hívandó callback (OK/Cancel után)
      * @param bounds Dialógus mérete és pozíciója
      * @param cs Színséma
      */
     ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, const char *title, const char *message, float *valuePtr, float minValue, float maxValue, float stepValue = 1.0f,
-                      ValueChangeCallback callback = nullptr, const Rect &bounds = {-1, -1, 0, 0}, const ColorScheme &cs = ColorScheme::defaultScheme());
+                      ValueChangeCallback callback = nullptr, DialogCallback userDialogCb = nullptr, const Rect &bounds = {-1, -1, 0, 0},
+                      const ColorScheme &cs = ColorScheme::defaultScheme());
 
     /**
      * @brief Konstruktor boolean értékhez
@@ -212,11 +217,12 @@ class ValueChangeDialog : public MessageDialog {
      * @param message Érték magyarázó szöveg
      * @param valuePtr Módosítandó boolean pointer
      * @param callback Értékváltozás callback
+     * @param userDialogCb Dialógus lezárásakor hívandó callback (OK/Cancel után)
      * @param bounds Dialógus mérete és pozíciója
      * @param cs Színséma
      */
     ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, const char *title, const char *message, bool *valuePtr, ValueChangeCallback callback = nullptr,
-                      const Rect &bounds = {-1, -1, 0, 0}, const ColorScheme &cs = ColorScheme::defaultScheme());
+                      DialogCallback userDialogCb = nullptr, const Rect &bounds = {-1, -1, 0, 0}, const ColorScheme &cs = ColorScheme::defaultScheme());
 
     /**
      * @brief Konstruktor uint8_t értékhez
@@ -229,10 +235,13 @@ class ValueChangeDialog : public MessageDialog {
      * @param maxValue Maximum érték
      * @param stepValue Lépésköz
      * @param callback Értékváltozás callback
+     * @param userDialogCb Dialógus lezárásakor hívandó callback (OK/Cancel után)
      * @param bounds Dialógus mérete és pozíciója
      * @param cs Színséma
      */
-    ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, const char *title, const char *message, uint8_t *valuePtr, uint8_t minValue, uint8_t maxValue, uint8_t stepValue = 1, ValueChangeCallback callback = nullptr, const Rect &bounds = {-1, -1, 0, 0}, const ColorScheme &cs = ColorScheme::defaultScheme());
+    ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, const char *title, const char *message, uint8_t *valuePtr, uint8_t minValue, uint8_t maxValue, uint8_t stepValue = 1,
+                      ValueChangeCallback callback = nullptr, DialogCallback userDialogCb = nullptr, const Rect &bounds = {-1, -1, 0, 0},
+                      const ColorScheme &cs = ColorScheme::defaultScheme());
     /**
      * @brief Destruktor
      */

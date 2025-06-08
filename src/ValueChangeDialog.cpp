@@ -22,14 +22,15 @@
  * @param maxValue Maximális érték
  * @param stepValue Lépésköz
  * @param callback Callback függvény az érték változáskor
+ * @param userDialogCb Dialógus lezárásakor hívandó callback (OK/Cancel után)
  * @param bounds Dialógus pozíciója és mérete
  * @param cs Színséma
  * @note Ez a konstruktor integer típusú értékekhez készült, amely egész számokat kezel.
  */
 ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, const char *title, const char *message, int *valuePtr, int minValue, int maxValue, int stepValue,
-                                     ValueChangeCallback callback, const Rect &bounds, const ColorScheme &cs)
+                                     ValueChangeCallback callback, DialogCallback userDialogCb, const Rect &bounds, const ColorScheme &cs)
     : MessageDialog(parentScreen, tft, bounds, title, message, MessageDialog::ButtonsType::OkCancel, cs, true /*okClosesDialog*/), _valueType(ValueType::Integer),
-      _intPtr(valuePtr), _minInt(minValue), _maxInt(maxValue), _stepInt(stepValue), _valueCallback(callback) { // Eredeti érték mentése
+      _intPtr(valuePtr), _minInt(minValue), _maxInt(maxValue), _stepInt(stepValue), _valueCallback(callback), _userDialogCallback(userDialogCb) { // Eredeti érték mentése
     if (_intPtr) {
         _originalIntValue = *_intPtr;
     }
@@ -41,8 +42,12 @@ ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, cons
         if (result == MessageDialog::DialogResult::Accepted) {
             // Hívjuk meg a _valueCallback-et a végleges, elfogadott értékkel.
             notifyValueChange();
+            if (_userDialogCallback)
+                _userDialogCallback(result);
         } else if (result == MessageDialog::DialogResult::Rejected) {
             restoreOriginalValue(); // Ez most már tartalmazza a notifyValueChange() hívást is.
+            if (_userDialogCallback)
+                _userDialogCallback(result);
         }
         // A MessageDialog maga kezeli a close() hívást az _okClosesDialog alapján
     });
@@ -59,14 +64,15 @@ ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, cons
  * @param maxValue Maximális érték
  * @param stepValue Lépésköz
  * @param callback Callback függvény az érték változáskor
+ * @param userDialogCb Dialógus lezárásakor hívandó callback (OK/Cancel után)
  * @param bounds Dialógus pozíciója és mérete
  * @param cs Színséma
  * @note Ez a konstruktor float típusú értékekhez készült, amely lebegőpontos számokat kezel.
  */
 ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, const char *title, const char *message, float *valuePtr, float minValue, float maxValue,
-                                     float stepValue, ValueChangeCallback callback, const Rect &bounds, const ColorScheme &cs)
+                                     float stepValue, ValueChangeCallback callback, DialogCallback userDialogCb, const Rect &bounds, const ColorScheme &cs)
     : MessageDialog(parentScreen, tft, bounds, title, message, MessageDialog::ButtonsType::OkCancel, cs, true /*okClosesDialog*/), _valueType(ValueType::Float),
-      _floatPtr(valuePtr), _minFloat(minValue), _maxFloat(maxValue), _stepFloat(stepValue), _valueCallback(callback) { // Eredeti érték mentése
+      _floatPtr(valuePtr), _minFloat(minValue), _maxFloat(maxValue), _stepFloat(stepValue), _valueCallback(callback), _userDialogCallback(userDialogCb) { // Eredeti érték mentése
     if (_floatPtr) {
         _originalFloatValue = *_floatPtr;
     }
@@ -79,8 +85,12 @@ ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, cons
         if (result == MessageDialog::DialogResult::Accepted) {
             // Hívjuk meg a _valueCallback-et a végleges, elfogadott értékkel.
             notifyValueChange();
+            if (_userDialogCallback)
+                _userDialogCallback(result);
         } else if (result == MessageDialog::DialogResult::Rejected) {
             restoreOriginalValue(); // Ez most már tartalmazza a notifyValueChange() hívást is.
+            if (_userDialogCallback)
+                _userDialogCallback(result);
         }
     });
 }
@@ -93,14 +103,15 @@ ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, cons
  * @param message Megjelenítendő üzenet
  * @param valuePtr Pointer a boolean értékre
  * @param callback Callback függvény az érték változáskor
+ * @param userDialogCb Dialógus lezárásakor hívandó callback (OK/Cancel után)
  * @param bounds Dialógus pozíciója és mérete
  * @param cs Színséma
  * @note Ez a konstruktor boolean típusú értékekhez készült, amely TRUE/FALSE értékeket kezel.
  */
 ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, const char *title, const char *message, bool *valuePtr, ValueChangeCallback callback,
-                                     const Rect &bounds, const ColorScheme &cs)
+                                     DialogCallback userDialogCb, const Rect &bounds, const ColorScheme &cs)
     : MessageDialog(parentScreen, tft, bounds, title, message, MessageDialog::ButtonsType::OkCancel, cs, true /*okClosesDialog*/), _valueType(ValueType::Boolean),
-      _boolPtr(valuePtr), _valueCallback(callback) { // Eredeti érték mentése
+      _boolPtr(valuePtr), _valueCallback(callback), _userDialogCallback(userDialogCb) { // Eredeti érték mentése
     if (_boolPtr) {
         _originalBoolValue = *_boolPtr;
     }
@@ -113,8 +124,12 @@ ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, cons
         if (result == MessageDialog::DialogResult::Accepted) {
             // Hívjuk meg a _valueCallback-et a végleges, elfogadott értékkel.
             notifyValueChange();
+            if (_userDialogCallback)
+                _userDialogCallback(result);
         } else if (result == MessageDialog::DialogResult::Rejected) {
             restoreOriginalValue(); // Ez most már tartalmazza a notifyValueChange() hívást is.
+            if (_userDialogCallback)
+                _userDialogCallback(result);
         }
     });
 }
@@ -130,14 +145,15 @@ ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, cons
  * @param maxValue Maximális érték
  * @param stepValue Lépésköz
  * @param callback Callback függvény az érték változáskor
+ * @param userDialogCb Dialógus lezárásakor hívandó callback (OK/Cancel után)
  * @param bounds Dialógus pozíciója és mérete
  * @param cs Színséma
  * @note Ez a konstruktor uint8_t típusú értékekhez készült, amely 0-255 közötti értékeket kezel.
  */
 ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, const char *title, const char *message, uint8_t *valuePtr, uint8_t minValue, uint8_t maxValue,
-                                     uint8_t stepValue, ValueChangeCallback callback, const Rect &bounds, const ColorScheme &cs)
+                                     uint8_t stepValue, ValueChangeCallback callback, DialogCallback userDialogCb, const Rect &bounds, const ColorScheme &cs)
     : MessageDialog(parentScreen, tft, bounds, title, message, MessageDialog::ButtonsType::OkCancel, cs, true /*okClosesDialog*/), _valueType(ValueType::UInt8),
-      _uint8Ptr(valuePtr), _minUint8(minValue), _maxUint8(maxValue), _stepUint8(stepValue), _valueCallback(callback) {
+      _uint8Ptr(valuePtr), _minUint8(minValue), _maxUint8(maxValue), _stepUint8(stepValue), _valueCallback(callback), _userDialogCallback(userDialogCb) {
     if (_uint8Ptr) {
         _originalUint8Value = *_uint8Ptr;
     }
@@ -150,8 +166,12 @@ ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, cons
             // Hívjuk meg a _valueCallback-et a végleges, elfogadott értékkel.
             // A _valueCallback int-et vár a variantban, ezért castolunk.
             notifyValueChange();
+            if (_userDialogCallback)
+                _userDialogCallback(result);
         } else if (result == MessageDialog::DialogResult::Rejected) {
             restoreOriginalValue(); // Ez most már tartalmazza a notifyValueChange() hívást is.
+            if (_userDialogCallback)
+                _userDialogCallback(result);
         }
         // A MessageDialog maga kezeli a close() hívást az _okClosesDialog alapján
     });
@@ -543,7 +563,7 @@ void ValueChangeDialog::redrawValueArea() {
     // Értékterület koordinátái
     const int16_t headerHeight = getHeaderHeight();
     const int16_t valueAreaY = contentBounds.y + headerHeight + PADDING + VERTICAL_OFFSET_FOR_VALUE_AREA;
-    const int16_t valueY = valueAreaY + BUTTON_HEIGHT / 2; // Háttér törölése a régi érték helyén (csak az érték szöveg területe)
+    const int16_t valueY = valueAreaY + BUTTON_HEIGHT / 2; // Háttér törlése a régi érték helyén (csak az érték szöveg területe)
     const int16_t clearWidth = 120;                        // Kisebb, csak az érték szöveghez
     const int16_t clearHeight = 30;                        // Kisebb magasság
     const int16_t clearX = centerX - clearWidth / 2;
