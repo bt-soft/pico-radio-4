@@ -125,8 +125,8 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
     virtual void activate() override {
         DEBUG("SetupScreen activated.\n");
         populateMenuItems(); // Frissítjük a menüelemeket aktiváláskor
-        if (menuList)
-            menuList->markForRedraw();
+        // if (menuList) // Ez redundáns, a populateMenuItems már tartalmazza
+        //     menuList->markForRedraw();
         markForRedraw();
     }
 
@@ -175,9 +175,9 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
      * @brief Esemény kezelése, amikor egy menüelemre kattintanak.
      * @param index Az elem indexe, amelyre kattintottak.
      */
-    virtual void onItemClicked(int index) override {
+    virtual bool onItemClicked(int index) override {
         if (index < 0 || index >= settingItems.size())
-            return;
+            return false; // Ha az index érvénytelen, adjunk vissza false-t
 
         const SettingItem &item = settingItems[index];
         DEBUG("SetupScreen: Item %d ('%s':'%s') clicked, action: %d\n", index, item.label, item.value.c_str(), static_cast<int>(item.action));
@@ -216,7 +216,7 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
 
                 // Ez a DialogCallback (MessageDialog-ból örökölve).
                 // Akkor hívódik meg, amikor a dialógus OK vagy Cancel gombját megnyomják.
-                brightnessDialog->setDialogCallback([this, originalBrightness = config.data.tftBackgroundBrightness](MessageDialog::DialogResult result) {
+                brightnessDialog->setDialogCallback([this, index, originalBrightness = config.data.tftBackgroundBrightness](MessageDialog::DialogResult result) {
                     if (result == MessageDialog::DialogResult::Accepted) {
                         // Az érték már a dialogBrightnessValue-ban van, a ValueChangeDialog frissítette.
                         // Biztonsági ellenőrzés és mentés a configba.
@@ -230,12 +230,18 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
                         analogWrite(PIN_TFT_BACKGROUND_LED, config.data.tftBackgroundBrightness); // Végső érték beállítása
                         DEBUG("SetupScreen: Brightness accepted and set to: %u\n", config.data.tftBackgroundBrightness);
                         config.checkSave(); // Konfiguráció mentése, ha szükséges
+                        // Frissítjük csak az érintett menüelemet
+                        if (index >= 0 && index < settingItems.size()) {
+                            settingItems[index].value = String(config.data.tftBackgroundBrightness);
+                            if (menuList)
+                                menuList->refreshItemDisplay(index);
+                        }
                     } else {
                         // Visszavonás vagy elvetés esetén visszaállítjuk az eredeti fényerőt
                         analogWrite(PIN_TFT_BACKGROUND_LED, originalBrightness);
                         DEBUG("SetupScreen: Brightness change cancelled, restored to: %u\n", originalBrightness);
                     }
-                    populateMenuItems(); // Menü frissítése, hogy az új érték megjelenjen
+                    // populateMenuItems(); // Eltávolítva, helyette célzott frissítés
                 });
 
                 this->showDialog(brightnessDialog);
@@ -249,13 +255,19 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
                 auto confirmDialog = std::make_shared<MessageDialog>(this, this->tft, Rect(-1, -1, 300, 0), "Squelch Basis", message.c_str(), MessageDialog::ButtonsType::YesNo,
                                                                      ColorScheme::defaultScheme(), true);
 
-                confirmDialog->setDialogCallback([this](MessageDialog::DialogResult result) {
+                confirmDialog->setDialogCallback([this, index](MessageDialog::DialogResult result) {
                     if (result == MessageDialog::DialogResult::Accepted) { // Yes
                         config.data.squelchUsesRSSI = !config.data.squelchUsesRSSI;
                         DEBUG("SetupScreen: Squelch basis changed to %s\n", config.data.squelchUsesRSSI ? "RSSI" : "SNR");
                         config.checkSave();
+                        // Frissítjük csak az érintett menüelemet
+                        if (index >= 0 && index < settingItems.size()) {
+                            settingItems[index].value = String(config.data.squelchUsesRSSI ? "RSSI" : "SNR");
+                            if (menuList)
+                                menuList->refreshItemDisplay(index);
+                        }
                     }
-                    populateMenuItems();
+                    // populateMenuItems(); // Eltávolítva
                 });
                 this->showDialog(confirmDialog);
             } break;
@@ -270,13 +282,19 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
                                                                        nullptr, // Nincs szükség live callback-re itt
                                                                        dlgBounds);
 
-                saverDialog->setDialogCallback([this](MessageDialog::DialogResult result) {
+                saverDialog->setDialogCallback([this, index](MessageDialog::DialogResult result) {
                     if (result == MessageDialog::DialogResult::Accepted) {
                         config.data.screenSaverTimeoutMinutes = static_cast<uint8_t>(tempSaverTimeout);
                         DEBUG("SetupScreen: Screen saver timeout set to: %u min\n", config.data.screenSaverTimeoutMinutes);
                         config.checkSave();
+                        // Frissítjük csak az érintett menüelemet
+                        if (index >= 0 && index < settingItems.size()) {
+                            settingItems[index].value = String(config.data.screenSaverTimeoutMinutes) + " min";
+                            if (menuList)
+                                menuList->refreshItemDisplay(index);
+                        }
                     }
-                    populateMenuItems();
+                    // populateMenuItems(); // Eltávolítva
                 });
                 this->showDialog(saverDialog);
             } break;
@@ -285,14 +303,23 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
                 config.data.tftDigitLigth = !config.data.tftDigitLigth;
                 DEBUG("SetupScreen: Inactive digit light toggled to %s\n", config.data.tftDigitLigth ? "ON" : "OFF");
                 config.checkSave();
-                populateMenuItems();
+                // Frissítjük csak az érintett menüelemet
+                if (index >= 0 && index < settingItems.size()) {
+                    settingItems[index].value = String(config.data.tftDigitLigth ? "ON" : "OFF");
+                    if (menuList)
+                        menuList->refreshItemDisplay(index);
+                }
             } break;
 
             case ItemAction::BEEPER_ENABLED: {
                 config.data.beeperEnabled = !config.data.beeperEnabled;
                 DEBUG("SetupScreen: Beeper toggled to %s\n", config.data.beeperEnabled ? "ON" : "OFF");
                 config.checkSave();
-                populateMenuItems();
+                if (index >= 0 && index < settingItems.size()) {
+                    settingItems[index].value = String(config.data.beeperEnabled ? "ON" : "OFF");
+                    if (menuList)
+                        menuList->refreshItemDisplay(index);
+                }
             } break;
 
                 // TODO: Implement other actions (FFT_CONFIG_AM, FFT_CONFIG_FM, CW_RECEIVER_OFFSET, RTTY_FREQUENCIES, FACTORY_RESET)
@@ -310,17 +337,18 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
                 auto confirmDialog =
                     std::make_shared<MessageDialog>(this, this->tft, Rect(-1, -1, 300, 0), "Factory Reset", "Are you sure you want to reset all settings to default?",
                                                     MessageDialog::ButtonsType::YesNo, ColorScheme::defaultScheme(), true);
-                confirmDialog->setDialogCallback([this](MessageDialog::DialogResult result) {
-                    if (result == MessageDialog::DialogResult::Accepted) { // Yes
+                confirmDialog->setDialogCallback([this, index](MessageDialog::DialogResult result) { // index itt lehet, hogy nem is kell, de a konzisztencia miatt maradhat
+                    if (result == MessageDialog::DialogResult::Accepted) {                           // Yes
                         DEBUG("SetupScreen: Performing factory reset.\n");
                         config.loadDefaults(); // Betölti az alapértelmezett értékeket
                         config.forceSave();    // Kimenti az EEPROM-ba
+
                         // Itt további teendők lehetnek, pl. más store-ok resetelése
                         // fmStationStore.loadDefaults(); fmStationStore.forceSave();
                         // amStationStore.loadDefaults(); amStationStore.forceSave();
                         // TODO: Szükség esetén újraindítás vagy a felhasználó tájékoztatása
+                        populateMenuItems(); // Itt helyénvaló a teljes frissítés
                     }
-                    populateMenuItems(); // Frissíti a menüt
                 });
                 this->showDialog(confirmDialog);
             } break;
@@ -331,12 +359,13 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
                 // Nincs teendő, vagy hibaüzenet
                 break;
         }
-
-        // A beállítás módosítása után szükséges lehet frissíteni a menüelem szövegét
-        populateMenuItems(); // Újraépíti a menüt a frissített értékekkel
-
+        // Alapértelmezés szerint false-t adunk vissza, mert vagy
+        // - egyedi sort frissítettünk, vagy
+        // - dialógust nyitottunk, ami később kezeli a frissítést.
+        // Ha egy eset explicit teljes újra-rajzolást igényelne a UIScrollableListComponent-től,
+        // akkor az a case adna vissza true-t.
+        return false;
     } // End of onItemClicked
-
-}; // End of class SetupScreen
+};
 
 #endif // __SETUP_SCREEN_H

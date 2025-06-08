@@ -23,8 +23,11 @@ class IScrollableListDataSource {
     /** @brief Visszaadja a megadott indexű elem érték (value) részét. Lehet üres String, ha nincs érték. */
     virtual String getItemValueAt(int index) const = 0;
 
-    /** @brief Akkor hívódik meg, amikor egy elemre kattintanak (kiválasztják). */
-    virtual void onItemClicked(int index) = 0;
+    /**
+     * @brief Akkor hívódik meg, amikor egy elemre kattintanak (kiválasztják).
+     * @return true, ha a lista komponensnek továbbra is teljes újrarajzolást kell végeznie, false egyébként.
+     */
+    virtual bool onItemClicked(int index) = 0;
 };
 
 #endif // __ISCROLLABLE_LIST_DATA_SOURCE_H
