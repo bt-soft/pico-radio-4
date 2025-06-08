@@ -34,10 +34,28 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
         String value;      // Dinamikus érték Stringként
         ItemAction action;
     };
-
     std::shared_ptr<UIScrollableListComponent> menuList;
     std::vector<SettingItem> settingItems; // String helyett SettingItem
     std::shared_ptr<UIButton> exitButton;
+
+    /**
+     * @brief Általános DialogCallback segédfüggvény lista elem frissítéshez.
+     * @param index A frissítendő elem indexe
+     * @param valueGetter Függvény, ami visszaadja az új értéket String-ként
+     * @return DialogCallback, amit dialógusokhoz lehet használni
+     */
+    std::function<void(UIDialogBase *, MessageDialog::DialogResult)> createListUpdateCallback(int index, std::function<String()> valueGetter) {
+        return [this, index, valueGetter](UIDialogBase *sender, MessageDialog::DialogResult dialogResult) {
+            if (dialogResult == MessageDialog::DialogResult::Accepted) {
+                if (index >= 0 && index < settingItems.size()) {
+                    settingItems[index].value = valueGetter();
+                    if (menuList) {
+                        menuList->refreshItemDisplay(index);
+                    }
+                }
+            }
+        };
+    }
 
     /**
      * @brief Menüelemek feltöltése.
@@ -206,21 +224,9 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
                             DEBUG("SetupScreen: Live brightness preview: %u (config updated)\n", config.data.tftBackgroundBrightness);
                         }
                     }, // "Élő" ValueChangeCallback vége
-                    //  DialogCallback paraméter
-                    [this, index](UIDialogBase *sender, MessageDialog::DialogResult dialogResult) {
-                        // A dialog bezárásakor hívódik meg ez a callback.
-                        // A sender a brightnessDialog maga
-                        // A dialogResult lehet Accepted vagy Rejected.
-                        if (dialogResult == MessageDialog::DialogResult::Accepted) {
-                            if (index >= 0 && index < settingItems.size()) {
-                                settingItems[index].value = String(config.data.tftBackgroundBrightness);
-                                if (menuList) {
-                                    menuList->refreshItemDisplay(index);
-                                }
-                            }
-                        }
-                    },                   // DialogCallback vége
-                    Rect(-1, -1, 280, 0) // Auto-magasság
+                    // DialogCallback paraméter - egyszerűsítve a segédfüggvénnyel
+                    createListUpdateCallback(index, []() { return String(config.data.tftBackgroundBrightness); }), //
+                    Rect(-1, -1, 280, 0)                                                                           // Auto-magasság
                 );
 
                 this->showDialog(brightnessDialog);
@@ -231,7 +237,7 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
                 auto basisDialog = std::make_shared<MessageDialog>(                           //
                     this, this->tft,                                                          // parentScreen
                     "Squelch Basis",                                                          // title
-                    "Select basis:",                                                          // message
+                    "Select squelch basis:",                                                  // message
                     options, ARRAY_ITEM_COUNT(options),                                       // gombok feliratai és a számossága
                     [this, index](UIDialogBase *sender, MessageDialog::DialogResult result) { //
                         // Visszaalakítjuk MessageDialog-ra a sender-t
@@ -239,8 +245,9 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
                         // Ha nem csak bezárta a dialogot...
                         if (result == MessageDialog::DialogResult::Accepted) {
                             int clickedIndex = actualBasisDialog->getClickedUserButtonIndex();
-                            // const char *clickedLabel = actualBasisDialog->getClickedUserButtonLabel();
-                            // DEBUG("SetupScreen: Squelch basis selected: '%s' (index: %d)\n", clickedLabel, clickedIndex);
+                            // Ha kellene a klinkkelt gomb felirata is, akkor itt lekérhetjük:
+                            //  const char *clickedLabel = actualBasisDialog->getClickedUserButtonLabel();
+                            //  DEBUG("SetupScreen: Squelch basis selected: '%s' (index: %d)\n", clickedLabel, clickedIndex);
 
                             // Beállítjuk az új értéket
                             bool newSquelchUsesRSSI = (clickedIndex == 0); // 0 for RSSI, 1 for SNR
@@ -254,8 +261,8 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
                                 menuList->refreshItemDisplay(index);
                             }
                         }
-                    },                   // DialogCallback vége
-                    Rect(-1, -1, 280, 0) // bounds
+                    },                     // DialogCallback vége
+                    Rect(-1, -1, 250, 120) // bounds
                 );
                 this->showDialog(basisDialog);
             } break;
@@ -274,19 +281,8 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
                             config.checkSave();
                         }
                     },
-                    [this, index](UIDialogBase *sender, MessageDialog::DialogResult dialogResult) { // DialogCallback
-                        // A dialog bezárásakor hívódik meg ez a callback.
-                        // A sender a brightnessDialog maga
-                        // A dialogResult lehet Accepted vagy Rejected.
-                        if (dialogResult == MessageDialog::DialogResult::Accepted) {
-                            if (index >= 0 && index < settingItems.size()) {
-                                settingItems[index].value = String(config.data.screenSaverTimeoutMinutes);
-                                if (menuList) {
-                                    menuList->refreshItemDisplay(index);
-                                }
-                            }
-                        }
-                    }, // DialogCallback vége
+                    // DialogCallback paraméter - egyszerűsítve a segédfüggvénnyel
+                    createListUpdateCallback(index, []() { return String(config.data.screenSaverTimeoutMinutes) + " min"; }), //
                     Rect(-1, -1, 280, 0));
 
                 this->showDialog(saverDialog);
