@@ -404,7 +404,15 @@ class UIScrollableListComponent : public UIComponent {
             if (touchedItemOffset >= 0 && touchedItemOffset < visibleItemCount) {
                 int newSelectedItemIndex = topItemIndex + touchedItemOffset;
                 if (newSelectedItemIndex < dataSource->getItemCount()) {
-                    selectedItemIndex = newSelectedItemIndex;     // Itt frissítjük a kiválasztást
+                    int oldSelectedIndex = selectedItemIndex;
+                    selectedItemIndex = newSelectedItemIndex; // Itt frissítjük a kiválasztást
+
+                    // Csak akkor rajzoljuk újra a listát, ha megváltozott a kiválasztás
+                    if (oldSelectedIndex != selectedItemIndex) {
+                        redrawListItem(oldSelectedIndex);  // Régi kiválasztott normál stílussal
+                        redrawListItem(selectedItemIndex); // Új kiválasztott kiemelt stílussal
+                    }
+
                     bool fullRedrawNeeded = dataSource->onItemClicked(selectedItemIndex); // És itt hívjuk a callback-et
                     if (fullRedrawNeeded) {
                         markForRedraw(); // Teljes újrarajzolás a kattintás után, ha a dataSource kéri

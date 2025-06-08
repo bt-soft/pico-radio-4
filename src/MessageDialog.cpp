@@ -63,7 +63,7 @@ MessageDialog::MessageDialog(UIScreen *parentScreen, TFT_eSPI &tft, const Rect &
 
     // Belső DialogCallback beállítása, ami meghívja a _userDialogCallback-et, ha van.
     // Ez a UIDialogBase::callback-et állítja be.
-    UIDialogBase::setDialogCallback([this](UIDialogBase* sender, DialogResult result) {
+    UIDialogBase::setDialogCallback([this](UIDialogBase *sender, DialogResult result) {
         if (_userDialogCallback) {
             _userDialogCallback(sender, result);
         }
@@ -88,7 +88,8 @@ MessageDialog::MessageDialog(UIScreen *parentScreen, TFT_eSPI &tft, const char *
                              DialogCallback userDialogCb, const Rect &ctorInputBounds, const ColorScheme &cs, bool okClosesDialog)
     : UIDialogBase(parentScreen, tft, ctorInputBounds, title, cs), // UIDialogBase kezeli a kezdeti x,y,w,h alapértelmezéseket
 
-      message(message), buttonsType(ButtonsType::UserDefined), _okClosesDialog(okClosesDialog), _userOptions(options), _numUserOptions(numOptions) {
+      message(message), buttonsType(ButtonsType::UserDefined), _okClosesDialog(okClosesDialog), _userOptions(options), _numUserOptions(numOptions),
+      _userDialogCallback(userDialogCb) {
 
     // Dialógus tartalmának létrehozása és elrendezése
     createDialogContent(); // Előkészíti a _buttonDefs-et
@@ -125,7 +126,7 @@ MessageDialog::MessageDialog(UIScreen *parentScreen, TFT_eSPI &tft, const char *
 
     // Belső DialogCallback beállítása, ami meghívja a _userDialogCallback-et, ha van.
     // Ez a UIDialogBase::callback-et állítja be.
-    UIDialogBase::setDialogCallback([this](UIDialogBase* sender, DialogResult result) {
+    UIDialogBase::setDialogCallback([this](UIDialogBase *sender, DialogResult result) {
         if (_userDialogCallback) {
             _userDialogCallback(sender, result);
         }
