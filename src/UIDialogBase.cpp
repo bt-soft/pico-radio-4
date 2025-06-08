@@ -228,3 +228,26 @@ void UIDialogBase::createCloseButton() {
 
     addChild(closeButton);
 }
+
+/**
+ * @brief Schedules a deferred close to avoid nested callback chains
+ * @param result The dialog result to use when closing
+ */
+void UIDialogBase::deferClose(DialogResult result) {
+    deferredClose.pending = true;
+    deferredClose.result = result;
+    DEBUG("UIDialogBase::deferClose() - Scheduled deferred close with result %d\n", static_cast<int>(result));
+}
+
+/**
+ * @brief Processes pending deferred close operation
+ * This should be called from the main loop or after callback chains have completed
+ */
+void UIDialogBase::processDeferredClose() {
+    if (deferredClose.pending) {
+        deferredClose.pending = false;
+        DialogResult result = deferredClose.result;
+        DEBUG("UIDialogBase::processDeferredClose() - Processing deferred close with result %d\n", static_cast<int>(result));
+        close(result);
+    }
+}

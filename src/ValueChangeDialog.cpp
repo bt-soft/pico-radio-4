@@ -362,7 +362,21 @@ String ValueChangeDialog::getCurrentValueAsString() const {
         case ValueType::Integer:
             return _intPtr ? String(*_intPtr) : "N/A";
         case ValueType::Float:
-            return _floatPtr ? String(*_floatPtr, 2) : "N/A";
+            if (_floatPtr) {
+                // Intelligens formázás: ha step 0.1, akkor 1 tizedesjegy, ha 0.01, akkor 2, stb.
+                int decimalPlaces = 1; // Default 1 tizedesjegy 0.1 lépéshez
+                if (_stepFloat >= 1.0f) {
+                    decimalPlaces = 0;
+                } else if (_stepFloat >= 0.1f) {
+                    decimalPlaces = 1;
+                } else if (_stepFloat >= 0.01f) {
+                    decimalPlaces = 2;
+                } else {
+                    decimalPlaces = 3;
+                }
+                return String(*_floatPtr, decimalPlaces);
+            }
+            return "N/A";
         case ValueType::Boolean:
             return _boolPtr ? (*_boolPtr ? "True" : "False") : "N/A";
         case ValueType::UInt8:
@@ -629,7 +643,9 @@ bool ValueChangeDialog::canIncrement() const {
             return false;
         case ValueType::Float:
             if (_floatPtr) {
-                return (*_floatPtr + _stepFloat) <= _maxFloat;
+                // Lebegőpontos összehasonlítás toleranciával
+                float newValue = *_floatPtr + _stepFloat;
+                return newValue <= (_maxFloat + 0.001f); // Kis tolerancia a kerekítési hibákhoz
             }
             return false;
         case ValueType::Boolean:
@@ -660,7 +676,9 @@ bool ValueChangeDialog::canDecrement() const {
             return false;
         case ValueType::Float:
             if (_floatPtr) {
-                return (*_floatPtr - _stepFloat) >= _minFloat;
+                // Lebegőpontos összehasonlítás toleranciával
+                float newValue = *_floatPtr - _stepFloat;
+                return newValue >= (_minFloat - 0.001f); // Kis tolerancia a kerekítési hibákhoz
             }
             return false;
         case ValueType::Boolean:

@@ -18,7 +18,7 @@ class UIDialogBase : public UIContainerComponent {
         Dismissed // 'X' gombbal vagy programatikusan bezárva
     };
 
-    using DialogCallback = std::function<void(UIDialogBase*, DialogResult)>;
+    using DialogCallback = std::function<void(UIDialogBase *, DialogResult)>;
 
     static constexpr const uint8_t DIALOG_DEFAULT_CLOSE_BUTTON_ID = 111; // Alapértelmezett bezáró gomb ID
 
@@ -29,6 +29,13 @@ class UIDialogBase : public UIContainerComponent {
     bool veilDrawn = false;                          // Fátyol rajzolásának állapota
     bool autoClose = true;                           // Automatikus bezárás a gombok megnyomásakor
     std::shared_ptr<UIButton> closeButton = nullptr; // Bezáró gomb
+
+    // Deferred close mechanism to prevent nested callback chains
+    struct DeferredClose {
+        bool pending = false;
+        DialogResult result = DialogResult::Dismissed;
+    };
+    DeferredClose deferredClose;
 
     // Dialógus elrendezési konstansok
     static constexpr uint16_t HEADER_HEIGHT = 28;                                  // Fejléc magassága
@@ -53,9 +60,12 @@ class UIDialogBase : public UIContainerComponent {
   public:
     UIDialogBase(UIScreen *parentScreen, TFT_eSPI &tft, const Rect &bounds, const char *title, const ColorScheme &cs = ColorScheme::defaultScheme());
     virtual ~UIDialogBase() override = default;
-
     virtual void show();
     virtual void close(DialogResult result = DialogResult::Dismissed);
+
+    // Deferred close mechanism
+    void deferClose(DialogResult result = DialogResult::Dismissed);
+    void processDeferredClose();
 
     // Header magasság lekérése (tartalom pozicionálásához)
     uint16_t getHeaderHeight() const { return HEADER_HEIGHT; }

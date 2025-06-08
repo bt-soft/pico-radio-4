@@ -5,6 +5,7 @@
 #include "MultiButtonDialog.h"
 #include "UIScreen.h"
 #include "UIScrollableListComponent.h"
+#include "ValueChangeDialog.h"
 #include "config.h"
 #include "defines.h"
 
@@ -23,8 +24,8 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
         SAVER_TIMEOUT,
         INACTIVE_DIGIT_LIGHT,
         BEEPER_ENABLED,
-        FFT_CONFIG_AM,      // Új, összevont
-        FFT_CONFIG_FM,      // Új, összevont
+        FFT_CONFIG_AM,
+        FFT_CONFIG_FM,
         CW_RECEIVER_OFFSET, // CW vételi eltolás
         RTTY_FREQUENCIES,   // RTTY Mark és Shift frekvenciák
         FACTORY_RESET,
@@ -241,8 +242,6 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
                     "Select squelch basis:",                                                             // message
                     options, ARRAY_ITEM_COUNT(options),                                                  // gombok feliratai és számossága
                     [this, index](int buttonIndex, const char *buttonLabel, MultiButtonDialog *dialog) { // ButtonClickCallback
-                        DEBUG("SetupScreen: Squelch basis selected: '%s' (index: %d)\n", buttonLabel, buttonIndex);
-
                         // Beállítjuk az új értéket
                         bool newSquelchUsesRSSI = (buttonIndex == 0); // 0 for RSSI, 1 for SNR
                         if (config.data.squelchUsesRSSI != newSquelchUsesRSSI) {
@@ -285,7 +284,6 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
 
             case ItemAction::INACTIVE_DIGIT_LIGHT: {
                 config.data.tftDigitLigth = !config.data.tftDigitLigth;
-                DEBUG("SetupScreen: Inactive digit light toggled to %s\n", config.data.tftDigitLigth ? "ON" : "OFF");
                 config.checkSave();
                 // Frissítjük csak az érintett menüelemet
                 if (index >= 0 && index < settingItems.size()) {
@@ -335,6 +333,109 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
                     }
                 });
                 this->showDialog(confirmDialog);
+            } break;
+            case ItemAction::FFT_CONFIG_AM:
+            case ItemAction::FFT_CONFIG_FM: {
+                bool isAM = (item.action == ItemAction::FFT_CONFIG_AM);
+                float &currentConfig = isAM ? config.data.miniAudioFftConfigAm : config.data.miniAudioFftConfigFm;
+                const char *title = isAM ? "FFT Config AM" : "FFT Config FM";
+
+                // Determine current setting for default button highlighting
+                int defaultSelection = 0; // Disabled
+                if (currentConfig == 0.0f) {
+                    defaultSelection = 1; // Auto G
+                } else if (currentConfig > 0.0f) {
+                    defaultSelection = 2; // Manu G
+                }
+                const char *options[] = {"Disabled", "Auto G", "Manu G"};
+                auto fftDialog = std::make_shared<MultiButtonDialog>(
+                    this, this->tft,                                                                                                  // parentScreen, tft
+                    title,                                                                                                            // title
+                    "Select FFT gain mode:",                                                                                          // message
+                    options, ARRAY_ITEM_COUNT(options),                                                                               // buttons
+                    [this, index, isAM, &currentConfig, title](int buttonIndex, const char *buttonLabel, MultiButtonDialog *dialog) { // ButtonClickCallback
+                        DEBUG("SetupScreen: FFT Config %s button %d ('%s') clicked\n", isAM ? "AM" : "FM", buttonIndex, buttonLabel);
+                        switch (buttonIndex) {
+                            case 0: // Disabled
+                                currentConfig = -1.0f;
+                                config.checkSave();
+                                // Update list item and close dialog
+                                settingItems[index].value = "Disabled";
+                                if (menuList) {
+                                    menuList->refreshItemDisplay(index);
+                                }
+                                // Manual close for non-nested case
+                                dialog->close(UIDialogBase::DialogResult::Accepted);
+                                break;
+
+                            case 1: // Auto G
+                                currentConfig = 0.0f;
+                                config.checkSave();
+                                // Update list item and close dialog
+                                settingItems[index].value = "Auto Gain";
+                                if (menuList) {
+                                    menuList->refreshItemDisplay(index);
+                                }
+                                // Manual close for non-nested case
+                                dialog->close(UIDialogBase::DialogResult::Accepted);
+                                break;
+                            case 2: // Manu G - open nested ValueChangeDialog
+                            {
+                                // Shared pointer-rel kezeljük a tempGainValue-t, hogy biztosan életben maradjon
+                                auto tempGainValuePtr = std::make_shared<float>((currentConfig > 0.0f) ? currentConfig : 1.0f); // Default to 1.0 if not already manual
+
+                                DEBUG("SetupScreen: Opening manual gain dialog with initial value: %.1f\n", *tempGainValuePtr);
+
+                                auto gainDialog = std::make_shared<ValueChangeDialog>(
+                                    this, this->tft,                                                               // parentScreen, tft
+                                    (String(title) + " - Manual Gain").c_str(),                                    // title
+                                    "Set gain factor (0.1 - 10.0):",                                               // message
+                                    tempGainValuePtr.get(),                                                        // valuePtr - raw pointer a shared_ptr-ből
+                                    0.1f, 10.0f, 0.1f,                                                             // min, max, step
+                                    [this, tempGainValuePtr](const std::variant<int, float, bool> &liveNewValue) { // ValueChangeCallback for live preview
+                                        if (std::holds_alternative<float>(liveNewValue)) {
+                                            float currentDialogVal = std::get<float>(liveNewValue);
+                                            DEBUG("SetupScreen: Live gain preview: %.1f\n", currentDialogVal);
+                                            // Optional: Apply live changes if needed
+                                        }
+                                    },
+                                    [this, index, dialog, &currentConfig, tempGainValuePtr](UIDialogBase *sender, MessageDialog::DialogResult result) { // DialogCallback
+                                        if (result == MessageDialog::DialogResult::Accepted) {
+                                            // Use the tempGainValue which was modified by the ValueChangeDialog
+                                            currentConfig = *tempGainValuePtr;
+                                            config.checkSave();
+
+                                            // Update list item using the decoding lambda (consistent with populateMenuItems)
+                                            auto decodeMiniFftConfigLambda = [](float value) -> String {
+                                                if (value == -1.0f)
+                                                    return "Disabled";
+                                                else if (value == 0.0f)
+                                                    return "Auto Gain";
+                                                else
+                                                    return "Manual: " + String(value, 1) + "x";
+                                            };
+                                            settingItems[index].value = decodeMiniFftConfigLambda(currentConfig);
+                                            if (menuList) {
+                                                menuList->refreshItemDisplay(index);
+                                            }
+                                            // Use deferred close to avoid nested callback chain freeze
+                                            DEBUG("SetupScreen: Manual gain set to %.1f, scheduling deferred close of parent dialog\n", *tempGainValuePtr);
+                                            dialog->deferClose(UIDialogBase::DialogResult::Accepted);
+                                        }
+                                        // If cancelled, just close the ValueChangeDialog (happens automatically)
+                                        // and keep the MultiButtonDialog open
+                                    },
+                                    Rect(-1, -1, 300, 0) // bounds - centered, auto height
+                                );
+                                this->showDialog(gainDialog);
+                            } break;
+                        }
+                    },
+                    false,                 // autoClose - handle manually for proper nested dialog support
+                    defaultSelection,      // defaultButtonIndex - current setting highlighted
+                    Rect(-1, -1, 280, 140) // bounds
+                );
+                this->showDialog(fftDialog);
             } break;
 
             // ... többi eset ...

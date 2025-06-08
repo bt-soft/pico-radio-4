@@ -179,6 +179,8 @@ void UIScreen::loop() {
         auto topDialog = dialogStack.back().lock();
         if (topDialog) {
             topDialog->loop();
+            // Process any deferred closes from the dialog
+            topDialog->processDeferredClose();
         }
 
         // Ha van aktív dialógus, csak annak loop-ja fut
