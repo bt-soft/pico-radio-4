@@ -46,7 +46,7 @@ class UIDialogBase : public UIContainerComponent {
 
     // Belső segéd metódusok
     void createCloseButton();
-    void drawVeilOptimized();
+    void drawVeil();
 
     bool topDialog = false; // Jelzi, hogy ez a dialógus a legfelső (legutolsó) a stackben
 
@@ -63,14 +63,16 @@ class UIDialogBase : public UIContainerComponent {
     void setDialogCallback(DialogCallback cb) { callback = cb; }
 
     void setAutoClose(bool autoClose) { autoClose = autoClose; }
-    bool getAutoClose() const { return autoClose; } // UICompositeComponent metódusok felülírása
+    bool getAutoClose() const { return autoClose; }
+
+    // UICompositeComponent metódusok felülírása
 
     virtual void draw() override;
 
     // Legyen virtual, hogy a leszármazottak is felülírhassák helyesen
     virtual void markForRedraw() override;
 
-    // Új metódus a veilDrawn flag resetelésére
+    // A veilDrawn flag resetelése
     void resetVeilDrawnFlag() { veilDrawn = false; }
 
     /**
