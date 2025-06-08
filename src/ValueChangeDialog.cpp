@@ -24,6 +24,7 @@
  * @param callback Callback függvény az érték változáskor
  * @param bounds Dialógus pozíciója és mérete
  * @param cs Színséma
+ * @note Ez a konstruktor integer típusú értékekhez készült, amely egész számokat kezel.
  */
 ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, const char *title, const char *message, int *valuePtr, int minValue, int maxValue, int stepValue,
                                      ValueChangeCallback callback, const Rect &bounds, const ColorScheme &cs)
@@ -60,6 +61,7 @@ ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, cons
  * @param callback Callback függvény az érték változáskor
  * @param bounds Dialógus pozíciója és mérete
  * @param cs Színséma
+ * @note Ez a konstruktor float típusú értékekhez készült, amely lebegőpontos számokat kezel.
  */
 ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, const char *title, const char *message, float *valuePtr, float minValue, float maxValue,
                                      float stepValue, ValueChangeCallback callback, const Rect &bounds, const ColorScheme &cs)
@@ -93,6 +95,7 @@ ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, cons
  * @param callback Callback függvény az érték változáskor
  * @param bounds Dialógus pozíciója és mérete
  * @param cs Színséma
+ * @note Ez a konstruktor boolean típusú értékekhez készült, amely TRUE/FALSE értékeket kezel.
  */
 ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, const char *title, const char *message, bool *valuePtr, ValueChangeCallback callback,
                                      const Rect &bounds, const ColorScheme &cs)
@@ -117,6 +120,44 @@ ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, cons
 }
 
 /**
+ * @brief Konstruktor uint8_t értékhez
+ * @param parentScreen Szülő képernyő referencia
+ * @param tft TFT display referencia
+ * @param title Dialógus címe
+ * @param message Megjelenítendő üzenet
+ * @param valuePtr Pointer az uint8_t értékre
+ * @param minValue Minimális érték
+ * @param maxValue Maximális érték
+ * @param stepValue Lépésköz
+ * @param callback Callback függvény az érték változáskor
+ * @param bounds Dialógus pozíciója és mérete
+ * @param cs Színséma
+ * @note Ez a konstruktor uint8_t típusú értékekhez készült, amely 0-255 közötti értékeket kezel.
+ */
+ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, const char *title, const char *message, uint8_t *valuePtr, uint8_t minValue, uint8_t maxValue,
+                                     uint8_t stepValue, ValueChangeCallback callback, const Rect &bounds, const ColorScheme &cs)
+    : MessageDialog(parentScreen, tft, bounds, title, message, MessageDialog::ButtonsType::OkCancel, cs, true /*okClosesDialog*/), _valueType(ValueType::UInt8),
+      _uint8Ptr(valuePtr), _minUint8(minValue), _maxUint8(maxValue), _stepUint8(stepValue), _valueCallback(callback) {
+    if (_uint8Ptr) {
+        _originalUint8Value = *_uint8Ptr;
+    }
+    createDialogContent();
+    layoutDialogContent();
+
+    // Callback beállítása az OK/Cancel események kezelésére
+    setDialogCallback([this](MessageDialog::DialogResult result) {
+        if (result == MessageDialog::DialogResult::Accepted) {
+            // Hívjuk meg a _valueCallback-et a végleges, elfogadott értékkel.
+            // A _valueCallback int-et vár a variantban, ezért castolunk.
+            notifyValueChange();
+        } else if (result == MessageDialog::DialogResult::Rejected) {
+            restoreOriginalValue(); // Ez most már tartalmazza a notifyValueChange() hívást is.
+        }
+        // A MessageDialog maga kezeli a close() hívást az _okClosesDialog alapján
+    });
+}
+
+/**
  * @brief Érték módosító gombok létrehozása
  * Létrehozza a +/- gombokat integer és float típusokhoz, illetve TRUE/FALSE gombokat boolean típushoz.
  * A gombok eseménykezelői frissítik az értéket és újrarajzolják az érték területet.
@@ -125,7 +166,7 @@ ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, cons
 void ValueChangeDialog::createDialogContent() {
     // Az OK és Cancel gombokat a MessageDialog ősosztály hozza létre.
     // Itt csak az érték-specifikus gombokat kell létrehozni.    // Érték módosító gombok (csak integer és float esetén)
-    if (_valueType != ValueType::Boolean) {
+    if (_valueType == ValueType::Integer || _valueType == ValueType::Float || _valueType == ValueType::UInt8) {
         // Csökkentő gomb (-)
         _decreaseButton =
             std::make_shared<UIButton>(tft, 3, Rect(0, 0, SMALL_BUTTON_WIDTH, BUTTON_HEIGHT), "-", UIButton::ButtonType::Pushable, [this](const UIButton::ButtonEvent &event) {
@@ -133,7 +174,7 @@ void ValueChangeDialog::createDialogContent() {
                     decrementValue();
                     // A decrementValue már hívja a validateAndClampValue-t és a notifyValueChange-t.
                     // Az érték terület újrarajzolása itt továbbra is szükséges.
-                    redrawValueArea(); 
+                    redrawValueArea();
                 }
             });
         _decreaseButton->setUseMiniFont(true);
@@ -145,7 +186,7 @@ void ValueChangeDialog::createDialogContent() {
                 if (event.state == UIButton::EventButtonState::Clicked) {
                     incrementValue();
                     // Az incrementValue már hívja a validateAndClampValue-t és a notifyValueChange-t.
-                    redrawValueArea(); 
+                    redrawValueArea();
                 }
             });
         _increaseButton->setUseMiniFont(true);
@@ -155,9 +196,9 @@ void ValueChangeDialog::createDialogContent() {
         _decreaseButton = std::make_shared<UIButton>(tft, 3, Rect(0, 0, SMALL_BUTTON_WIDTH + 10, BUTTON_HEIGHT), "FALSE", UIButton::ButtonType::Pushable,
                                                      [this](const UIButton::ButtonEvent &event) {
                                                          if (event.state == UIButton::EventButtonState::Clicked) {
-                                                             decrementValue();      // FALSE-ra állítás a decrementValue() függvényen keresztül
+                                                             decrementValue(); // FALSE-ra állítás a decrementValue() függvényen keresztül
                                                              // A decrementValue már hívja a notifyValueChange-t.
-                                                             redrawValueTextOnly(); 
+                                                             redrawValueTextOnly();
                                                          }
                                                      });
         _decreaseButton->setUseMiniFont(true);
@@ -166,9 +207,9 @@ void ValueChangeDialog::createDialogContent() {
         _increaseButton = std::make_shared<UIButton>(tft, 4, Rect(0, 0, SMALL_BUTTON_WIDTH + 10, BUTTON_HEIGHT), "TRUE", UIButton::ButtonType::Pushable,
                                                      [this](const UIButton::ButtonEvent &event) {
                                                          if (event.state == UIButton::EventButtonState::Clicked) {
-                                                             incrementValue();      // TRUE-ra állítás a incrementValue() függvényen keresztül
+                                                             incrementValue(); // TRUE-ra állítás a incrementValue() függvényen keresztül
                                                              // Az incrementValue már hívja a notifyValueChange-t.
-                                                             redrawValueTextOnly(); 
+                                                             redrawValueTextOnly();
                                                          }
                                                      });
         _increaseButton->setUseMiniFont(true);
@@ -198,7 +239,7 @@ void ValueChangeDialog::layoutDialogContent() {
     const int16_t headerHeight = getHeaderHeight();
     const int16_t valueAreaY = contentBounds.y + headerHeight + PADDING + VERTICAL_OFFSET_FOR_VALUE_AREA;
 
-    if (_valueType != ValueType::Boolean) {
+    if (_valueType == ValueType::Integer || _valueType == ValueType::Float || _valueType == ValueType::UInt8) {
         // +/- gombok az érték körül - UGYANAZON A VONALON
         const int16_t valueBoxWidth = 100;
         const int16_t valueButtonSpacing = 10;
@@ -275,13 +316,13 @@ bool ValueChangeDialog::handleRotary(const RotaryEvent &event) {
     if (event.direction == RotaryEvent::Direction::Up) {
         if (canIncrement()) {
             incrementValue(); // Ez már hívja a validateAndClampValue-t és a notifyValueChange-t
-            redrawValueArea(); 
+            redrawValueArea();
         }
         return true;
     } else if (event.direction == RotaryEvent::Direction::Down) {
         if (canDecrement()) {
             decrementValue(); // Ez már hívja a validateAndClampValue-t és a notifyValueChange-t
-            redrawValueArea(); 
+            redrawValueArea();
         }
         return true;
     }
@@ -298,14 +339,16 @@ bool ValueChangeDialog::handleRotary(const RotaryEvent &event) {
  */
 String ValueChangeDialog::getCurrentValueAsString() const {
     switch (_valueType) {
-    case ValueType::Integer:
-        return _intPtr ? String(*_intPtr) : "N/A";
-    case ValueType::Float:
-        return _floatPtr ? String(*_floatPtr, 2) : "N/A";
-    case ValueType::Boolean:
-        return _boolPtr ? (*_boolPtr ? "True" : "False") : "N/A";
-    default:
-        return "Error";
+        case ValueType::Integer:
+            return _intPtr ? String(*_intPtr) : "N/A";
+        case ValueType::Float:
+            return _floatPtr ? String(*_floatPtr, 2) : "N/A";
+        case ValueType::Boolean:
+            return _boolPtr ? (*_boolPtr ? "True" : "False") : "N/A";
+        case ValueType::UInt8:
+            return _uint8Ptr ? String(*_uint8Ptr) : "N/A";
+        default:
+            return "Error";
     }
 }
 
@@ -316,24 +359,30 @@ String ValueChangeDialog::getCurrentValueAsString() const {
 void ValueChangeDialog::incrementValue() {
     bool valueChanged = false;
     switch (_valueType) {
-    case ValueType::Integer:
-        if (_intPtr && *_intPtr < _maxInt) { // Szigorúan kisebb, hogy a stepInt ne vigye túl
-            *_intPtr += _stepInt;
-            valueChanged = true;
-        }
-        break;
-    case ValueType::Float:
-        if (_floatPtr && *_floatPtr < _maxFloat) {
-            *_floatPtr += _stepFloat;
-            valueChanged = true;
-        }
-        break;
-    case ValueType::Boolean:
-        if (_boolPtr && !(*_boolPtr)) {
-            *_boolPtr = true;
-            valueChanged = true;
-        }
-        break;
+        case ValueType::Integer:
+            if (_intPtr && *_intPtr < _maxInt) { // Szigorúan kisebb, hogy a stepInt ne vigye túl
+                *_intPtr += _stepInt;
+                valueChanged = true;
+            }
+            break;
+        case ValueType::Float:
+            if (_floatPtr && *_floatPtr < _maxFloat) {
+                *_floatPtr += _stepFloat;
+                valueChanged = true;
+            }
+            break;
+        case ValueType::Boolean:
+            if (_boolPtr && !(*_boolPtr)) {
+                *_boolPtr = true;
+                valueChanged = true;
+            }
+            break;
+        case ValueType::UInt8:
+            if (_uint8Ptr && *_uint8Ptr < _maxUint8) {
+                *_uint8Ptr += _stepUint8;
+                valueChanged = true;
+            }
+            break;
     }
     if (valueChanged) {
         validateAndClampValue();
@@ -349,24 +398,30 @@ void ValueChangeDialog::incrementValue() {
 void ValueChangeDialog::decrementValue() {
     bool valueChanged = false;
     switch (_valueType) {
-    case ValueType::Integer:
-        if (_intPtr && *_intPtr > _minInt) { // Szigorúan nagyobb
-            *_intPtr -= _stepInt;
-            valueChanged = true;
-        }
-        break;
-    case ValueType::Float:
-        if (_floatPtr && *_floatPtr > _minFloat) {
-            *_floatPtr -= _stepFloat;
-            valueChanged = true;
-        }
-        break;
-    case ValueType::Boolean:
-        if (_boolPtr && (*_boolPtr)) {
-            *_boolPtr = false;
-            valueChanged = true;
-        }
-        break;
+        case ValueType::Integer:
+            if (_intPtr && *_intPtr > _minInt) { // Szigorúan nagyobb
+                *_intPtr -= _stepInt;
+                valueChanged = true;
+            }
+            break;
+        case ValueType::Float:
+            if (_floatPtr && *_floatPtr > _minFloat) {
+                *_floatPtr -= _stepFloat;
+                valueChanged = true;
+            }
+            break;
+        case ValueType::Boolean:
+            if (_boolPtr && (*_boolPtr)) {
+                *_boolPtr = false;
+                valueChanged = true;
+            }
+            break;
+        case ValueType::UInt8:
+            if (_uint8Ptr && *_uint8Ptr > _minUint8) {
+                *_uint8Ptr -= _stepUint8;
+                valueChanged = true;
+            }
+            break;
     }
     if (valueChanged) {
         validateAndClampValue();
@@ -381,21 +436,26 @@ void ValueChangeDialog::decrementValue() {
  */
 void ValueChangeDialog::restoreOriginalValue() {
     switch (_valueType) {
-    case ValueType::Integer:
-        if (_intPtr) {
-            *_intPtr = _originalIntValue;
-        }
-        break;
-    case ValueType::Float:
-        if (_floatPtr) {
-            *_floatPtr = _originalFloatValue;
-        }
-        break;
-    case ValueType::Boolean:
-        if (_boolPtr) {
-            *_boolPtr = _originalBoolValue;
-        }
-        break;
+        case ValueType::Integer:
+            if (_intPtr) {
+                *_intPtr = _originalIntValue;
+            }
+            break;
+        case ValueType::Float:
+            if (_floatPtr) {
+                *_floatPtr = _originalFloatValue;
+            }
+            break;
+        case ValueType::Boolean:
+            if (_boolPtr) {
+                *_boolPtr = _originalBoolValue;
+            }
+            break;
+        case ValueType::UInt8:
+            if (_uint8Ptr) {
+                *_uint8Ptr = _originalUint8Value;
+            }
+            break;
     }
     // Miután visszaállt az érték, értesítjük a külső callback-et
     notifyValueChange();
@@ -409,25 +469,33 @@ void ValueChangeDialog::restoreOriginalValue() {
  */
 void ValueChangeDialog::validateAndClampValue() {
     switch (_valueType) {
-    case ValueType::Integer:
-        if (_intPtr) {
-            if (*_intPtr < _minInt)
-                *_intPtr = _minInt;
-            if (*_intPtr > _maxInt)
-                *_intPtr = _maxInt;
-        }
-        break;
-    case ValueType::Float:
-        if (_floatPtr) {
-            if (*_floatPtr < _minFloat)
-                *_floatPtr = _minFloat;
-            if (*_floatPtr > _maxFloat)
-                *_floatPtr = _maxFloat;
-        }
-        break;
-    case ValueType::Boolean:
-        // Boolean esetén nincs validáció szükséges
-        break;
+        case ValueType::Integer:
+            if (_intPtr) {
+                if (*_intPtr < _minInt)
+                    *_intPtr = _minInt;
+                if (*_intPtr > _maxInt)
+                    *_intPtr = _maxInt;
+            }
+            break;
+        case ValueType::Float:
+            if (_floatPtr) {
+                if (*_floatPtr < _minFloat)
+                    *_floatPtr = _minFloat;
+                if (*_floatPtr > _maxFloat)
+                    *_floatPtr = _maxFloat;
+            }
+            break;
+        case ValueType::Boolean:
+            // Boolean esetén nincs validáció szükséges
+            break;
+        case ValueType::UInt8:
+            if (_uint8Ptr) {
+                if (*_uint8Ptr < _minUint8)
+                    *_uint8Ptr = _minUint8;
+                if (*_uint8Ptr > _maxUint8)
+                    *_uint8Ptr = _maxUint8;
+            }
+            break;
     }
 }
 
@@ -438,21 +506,28 @@ void ValueChangeDialog::validateAndClampValue() {
 void ValueChangeDialog::notifyValueChange() {
     if (_valueCallback) {
         switch (_valueType) {
-        case ValueType::Integer:
-            if (_intPtr) {
-                _valueCallback(std::variant<int, float, bool>(*_intPtr));
-            }
-            break;
-        case ValueType::Float:
-            if (_floatPtr) {
-                _valueCallback(std::variant<int, float, bool>(*_floatPtr));
-            }
-            break;
-        case ValueType::Boolean:
-            if (_boolPtr) {
-                _valueCallback(std::variant<int, float, bool>(*_boolPtr));
-            }
-            break;
+            case ValueType::Integer:
+                if (_intPtr) {
+                    // A _valueCallback std::variant<int, float, bool>-t vár
+                    _valueCallback(std::variant<int, float, bool>(static_cast<int>(*_intPtr)));
+                }
+                break;
+            case ValueType::Float:
+                if (_floatPtr) {
+                    _valueCallback(std::variant<int, float, bool>(*_floatPtr));
+                }
+                break;
+            case ValueType::Boolean:
+                if (_boolPtr) {
+                    _valueCallback(std::variant<int, float, bool>(*_boolPtr));
+                }
+                break;
+            case ValueType::UInt8:
+                if (_uint8Ptr) {
+                    // A _valueCallback std::variant<int, float, bool>-t vár, ezért int-re castolunk
+                    _valueCallback(std::variant<int, float, bool>(static_cast<int>(*_uint8Ptr)));
+                }
+                break;
         }
     }
 }
@@ -508,14 +583,16 @@ void ValueChangeDialog::redrawValueArea() {
  */
 bool ValueChangeDialog::isCurrentValueOriginal() const {
     switch (_valueType) {
-    case ValueType::Integer:
-        return _intPtr && (*_intPtr == _originalIntValue);
-    case ValueType::Float:
-        return _floatPtr && (abs(*_floatPtr - _originalFloatValue) < 0.001f); // Float összehasonlítás toleranciával
-    case ValueType::Boolean:
-        return _boolPtr && (*_boolPtr == _originalBoolValue);
-    default:
-        return false;
+        case ValueType::Integer:
+            return _intPtr && (*_intPtr == _originalIntValue);
+        case ValueType::Float:
+            return _floatPtr && (abs(*_floatPtr - _originalFloatValue) < 0.001f); // Float összehasonlítás toleranciával
+        case ValueType::Boolean:
+            return _boolPtr && (*_boolPtr == _originalBoolValue);
+        case ValueType::UInt8:
+            return _uint8Ptr && (*_uint8Ptr == _originalUint8Value);
+        default:
+            return false;
     }
 }
 
@@ -525,23 +602,28 @@ bool ValueChangeDialog::isCurrentValueOriginal() const {
  */
 bool ValueChangeDialog::canIncrement() const {
     switch (_valueType) {
-    case ValueType::Integer:
-        if (_intPtr) {
-            return (*_intPtr + _stepInt) <= _maxInt;
-        }
-        return false;
-    case ValueType::Float:
-        if (_floatPtr) {
-            return (*_floatPtr + _stepFloat) <= _maxFloat;
-        }
-        return false;
-    case ValueType::Boolean:
-        if (_boolPtr) {
-            return !(*_boolPtr);
-        }
-        return false;
-    default:
-        return false;
+        case ValueType::Integer:
+            if (_intPtr) {
+                return (*_intPtr + _stepInt) <= _maxInt;
+            }
+            return false;
+        case ValueType::Float:
+            if (_floatPtr) {
+                return (*_floatPtr + _stepFloat) <= _maxFloat;
+            }
+            return false;
+        case ValueType::Boolean:
+            if (_boolPtr) {
+                return !(*_boolPtr);
+            }
+            return false;
+        case ValueType::UInt8:
+            if (_uint8Ptr) {
+                return (*_uint8Ptr + _stepUint8) <= _maxUint8;
+            }
+            return false;
+        default:
+            return false;
     }
 }
 
@@ -551,23 +633,28 @@ bool ValueChangeDialog::canIncrement() const {
  */
 bool ValueChangeDialog::canDecrement() const {
     switch (_valueType) {
-    case ValueType::Integer:
-        if (_intPtr) {
-            return (*_intPtr - _stepInt) >= _minInt;
-        }
-        return false;
-    case ValueType::Float:
-        if (_floatPtr) {
-            return (*_floatPtr - _stepFloat) >= _minFloat;
-        }
-        return false;
-    case ValueType::Boolean:
-        if (_boolPtr) {
-            return (*_boolPtr);
-        }
-        return false;
-    default:
-        return false;
+        case ValueType::Integer:
+            if (_intPtr) {
+                return (*_intPtr - _stepInt) >= _minInt;
+            }
+            return false;
+        case ValueType::Float:
+            if (_floatPtr) {
+                return (*_floatPtr - _stepFloat) >= _minFloat;
+            }
+            return false;
+        case ValueType::Boolean:
+            if (_boolPtr) {
+                return (*_boolPtr);
+            }
+            return false;
+        case ValueType::UInt8:
+            if (_uint8Ptr) {
+                return (*_uint8Ptr - _stepUint8) >= _minUint8;
+            }
+            return false;
+        default:
+            return false;
     }
 }
 

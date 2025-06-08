@@ -146,13 +146,13 @@ class UIComponent {
                 if (millis() - lastClickTime > getDebounceDelay()) {
                     lastClickTime = millis(); // Frissítjük az utolsó kattintás idejét
                     onClick(event);
-                    DEBUG("UIComponent: Valid click detected (debounced): duration=%dms\n", touchDuration);
+                    // DEBUG("UIComponent: Valid click detected (debounced): duration=%dms\n", touchDuration);
                 } else {
-                    DEBUG("UIComponent: Click debounced (too fast): duration=%dms\n", touchDuration);
+                    // DEBUG("UIComponent: Click debounced (too fast): duration=%dms\n", touchDuration);
                 }
             } else { // Nem volt érvényes kattintás (pl. túl rövid, túl hosszú, vagy kicsúszott)
                 onTouchCancel(event);
-                DEBUG("UIComponent: Touch cancelled: inside=%s duration=%dms\n", releaseInside ? "true" : "false", touchDuration);
+                // DEBUG("UIComponent: Touch cancelled: inside=%s duration=%dms\n", releaseInside ? "true" : "false", touchDuration);
             }
 
             // Ha pressed állapot változott, újrarajzolás szükséges
@@ -211,10 +211,18 @@ class UIComponent {
 
   protected:
     // Eseménykezelő metódusok
-    virtual void onTouchDown(const TouchEvent &event) { DEBUG("UIComponent: Touch DOWN at (%d,%d)\n", event.x, event.y); }
-    virtual void onTouchUp(const TouchEvent &event) { DEBUG("UIComponent: Touch UP at (%d,%d)\n", event.x, event.y); }
-    virtual void onTouchCancel(const TouchEvent &event) {}
-    virtual void onClick(const TouchEvent &event) { DEBUG("UIComponent: CLICK at (%d,%d)\n", event.x, event.y); }
+    virtual void onTouchDown(const TouchEvent &event) {
+        // DEBUG("UIComponent: Touch DOWN at (%d,%d)\n", event.x, event.y);
+    }
+    virtual void onTouchUp(const TouchEvent &event) {
+        // DEBUG("UIComponent: Touch UP at (%d,%d)\n", event.x, event.y);
+    }
+    virtual void onTouchCancel(const TouchEvent &event) {
+        // DEBUG("UIComponent: Touch CANCEL at (%d,%d)\n", event.x, event.y);
+    }
+    virtual void onClick(const TouchEvent &event) {
+        // DEBUG("UIComponent: CLICK at (%d,%d)\n", event.x, event.y);
+    }
 };
 
 #endif // __UICOMPONENT_H

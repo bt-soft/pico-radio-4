@@ -41,7 +41,8 @@ class ValueChangeDialog : public MessageDialog {
     enum class ValueType {
         Integer, ///< Egész szám
         Float,   ///< Lebegőpontos szám
-        Boolean  ///< Logikai érték
+        Boolean, ///< Logikai érték
+        UInt8    ///< Előjel nélküli 8 bites egész
     };
 
     /**
@@ -49,7 +50,7 @@ class ValueChangeDialog : public MessageDialog {
      * @param newValue Az új érték (variant típusként)
      */
     using ValueChangeCallback = std::function<void(const std::variant<int, float, bool> &)>;
-
+    // using ValueChangeCallback = std::function<void(const std::variant<int, float, bool, uint8_t> &)>; // Ha a variantot is bővíteni akarjuk
   protected:
     // A _message tagváltozót a MessageDialog ősosztály már tartalmazza és kezeli.
     ValueType _valueType; ///< Az érték típusa
@@ -58,15 +59,18 @@ class ValueChangeDialog : public MessageDialog {
     int *_intPtr = nullptr;
     float *_floatPtr = nullptr;
     bool *_boolPtr = nullptr;
+    uint8_t *_uint8Ptr = nullptr;
 
     // Eredeti értékek a Cancel funkcióhoz
     int _originalIntValue = 0;
     float _originalFloatValue = 0.0f;
     bool _originalBoolValue = false;
+    uint8_t _originalUint8Value = 0;
 
     // Beállítások
     int _minInt = 0, _maxInt = 100, _stepInt = 1;
     float _minFloat = 0.0f, _maxFloat = 100.0f, _stepFloat = 1.0f;
+    uint8_t _minUint8 = 0, _maxUint8 = 255, _stepUint8 = 1;
 
     // Callback
     ValueChangeCallback _valueCallback = nullptr;
@@ -214,6 +218,21 @@ class ValueChangeDialog : public MessageDialog {
     ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, const char *title, const char *message, bool *valuePtr, ValueChangeCallback callback = nullptr,
                       const Rect &bounds = {-1, -1, 0, 0}, const ColorScheme &cs = ColorScheme::defaultScheme());
 
+    /**
+     * @brief Konstruktor uint8_t értékhez
+     * @param parentScreen Szülő képernyő
+     * @param tft TFT meghajtó referencia
+     * @param title Dialógus címe
+     * @param message Érték magyarázó szöveg
+     * @param valuePtr Módosítandó uint8_t pointer
+     * @param minValue Minimum érték
+     * @param maxValue Maximum érték
+     * @param stepValue Lépésköz
+     * @param callback Értékváltozás callback
+     * @param bounds Dialógus mérete és pozíciója
+     * @param cs Színséma
+     */
+    ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, const char *title, const char *message, uint8_t *valuePtr, uint8_t minValue, uint8_t maxValue, uint8_t stepValue = 1, ValueChangeCallback callback = nullptr, const Rect &bounds = {-1, -1, 0, 0}, const ColorScheme &cs = ColorScheme::defaultScheme());
     /**
      * @brief Destruktor
      */

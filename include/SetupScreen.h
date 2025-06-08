@@ -185,67 +185,39 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
         switch (item.action) {
             case ItemAction::BRIGHTNESS: // Fényerő beállító dialógus/logika
             {
-                Rect dlgBounds(-1, -1, 280, 0); // Auto-magasság
-                // Ideiglenes int változó a dialógus számára, hogy elkerüljük a uint8_t* vs int* problémát
-                static int dialogBrightnessValue;                            // static, hogy a pointer érvényes maradjon
-                dialogBrightnessValue = config.data.tftBackgroundBrightness; // Kezdeti érték beállítása
-
-                // // Ez a lambda a ValueChangeDialog konstruktorának ValueChangeCallback-je.
-                // // Akkor hívódik meg, amikor a dialóguson belül az érték megváltozik (pl. rotary forgatásra).
-                // auto onLiveValueChangeCb = [this](const std::variant<int, float, bool> &liveNewValue) {
-                //     if (std::holds_alternative<int>(liveNewValue)) {
-                //         int currentDialogVal = std::get<int>(liveNewValue);
-                //         // Fényerő élőben történő alkalmazása a dialógusban való változtatáskor
-                //         analogWrite(PIN_TFT_BACKGROUND_LED, static_cast<uint8_t>(currentDialogVal));
-                //         DEBUG("SetupScreen: Live brightness preview: %d\n", currentDialogVal);
-                //     }
-                // };
-
-                auto brightnessDialog = std::make_shared<ValueChangeDialog>(     //
-                    this,                                                        // parentScreen
-                    this->tft,                                                   // tft
-                    "Brightness",                                                // title
-                    "Adjust TFT Backlight:",                                     // message (EZ HIÁNYZOTT)
-                    &dialogBrightnessValue,                                      // valuePtr (most már int*)
-                    (int)TFT_BACKGROUND_LED_MIN_BRIGHTNESS,                      // minValue
-                    (int)TFT_BACKGROUND_LED_MAX_BRIGHTNESS,                      // maxValue
-                    10,                                                          // stepValue
-                    [this](const std::variant<int, float, bool> &liveNewValue) { // callback (ValueChangeCallback)
+                // Fényerő beállító dialógus létrehozása
+                auto brightnessDialog = std::make_shared<ValueChangeDialog>(            //
+                    this,                                                               // parentScreen
+                    this->tft,                                                          // tft
+                    "Brightness",                                                       // title
+                    "Adjust TFT Backlight:",                                            // message (EZ HIÁNYZOTT)
+                    &config.data.tftBackgroundBrightness,                               // valuePtr (most már uint8_t*)
+                    (uint8_t)TFT_BACKGROUND_LED_MIN_BRIGHTNESS,                         // minValue
+                    (uint8_t)TFT_BACKGROUND_LED_MAX_BRIGHTNESS,                         // maxValue
+                    (uint8_t)10,                                                        // stepValue
+                    [this, index](const std::variant<int, float, bool> &liveNewValue) { // callback (ValueChangeCallback) - int-ként kapja az értéket
+                        // Ez az "élő" callback minden értékváltozáskor lefut a dialógusban.
                         if (std::holds_alternative<int>(liveNewValue)) {
                             int currentDialogVal = std::get<int>(liveNewValue);
-                            // Fényerő élőben történő alkalmazása a dialógusban való változtatáskor
-                            analogWrite(PIN_TFT_BACKGROUND_LED, static_cast<uint8_t>(currentDialogVal));
-                            DEBUG("SetupScreen: Live brightness preview: %d\n", currentDialogVal);
+                            // Közvetlenül frissítjük a config.data értékét és a hardvert.
+                            config.data.tftBackgroundBrightness = static_cast<uint8_t>(currentDialogVal);
+                            analogWrite(PIN_TFT_BACKGROUND_LED, config.data.tftBackgroundBrightness);
+                            DEBUG("SetupScreen: Live brightness preview: %u (config updated)\n", config.data.tftBackgroundBrightness);
                         }
                     },
-                    dlgBounds // bounds
+                    Rect(-1, -1, 280, 0) // Auto-magasság
                 );
 
-                // // Ez a DialogCallback (MessageDialog-ból örökölve).
-                // // Akkor hívódik meg, amikor a dialógus OK vagy Cancel gombját megnyomják.
-                // brightnessDialog->setDialogCallback([this, index, originalBrightness = config.data.tftBackgroundBrightness](MessageDialog::DialogResult result) {
-                //     if (result == MessageDialog::DialogResult::Accepted) {
-                //         // Az érték már a dialogBrightnessValue-ban van, a ValueChangeDialog frissítette.
-                //         // A ValueChangeDialog már elvégezte a határok közötti érvényesítést (clamping).
-                //         int finalValue = dialogBrightnessValue; // Ez az érték már a helyes tartományban van.
-                //         config.data.tftBackgroundBrightness = static_cast<uint8_t>(finalValue);
-                //         analogWrite(PIN_TFT_BACKGROUND_LED, config.data.tftBackgroundBrightness); // Végső érték beállítása
-                //         DEBUG("SetupScreen: Brightness accepted and set to: %u\n", config.data.tftBackgroundBrightness);
-                //         config.checkSave(); // Konfiguráció mentése, ha szükséges
-                //         // Frissítjük csak az érintett menüelemet
-                //         if (index >= 0 && index < settingItems.size()) {
-                //             settingItems[index].value = String(config.data.tftBackgroundBrightness);
-                //             if (menuList)
-                //                 menuList->refreshItemDisplay(index);
-                //         }
-                //     } else {
-                //         // Visszavonás vagy elvetés esetén visszaállítjuk az eredeti fényerőt
-                //         analogWrite(PIN_TFT_BACKGROUND_LED, originalBrightness);
-                //         DEBUG("SetupScreen: Brightness change cancelled, restored to: %u\n", originalBrightness);
-                //     }
-                //     // populateMenuItems(); // Eltávolítva, helyette célzott frissítés
-                // });
-
+                // Beállítjuk a DialogCallback-et, hogy a lista frissüljön
+                brightnessDialog->setDialogCallback([this, index](MessageDialog::DialogResult dialogResult) {
+                    // Nem figyeljük a dialogResult-ot, minden esetben frissítjük a lista UI elemét a végleges (elfogadott vagy visszaállított) értékkel
+                    if (index >= 0 && index < settingItems.size()) {
+                        settingItems[index].value = String(config.data.tftBackgroundBrightness);
+                        if (menuList) {
+                            menuList->refreshItemDisplay(index);
+                        }
+                    }
+                });
                 this->showDialog(brightnessDialog);
             } break;
 
@@ -257,8 +229,12 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
                 // Frissítjük csak az érintett menüelemet
                 if (index >= 0 && index < settingItems.size()) {
                     settingItems[index].value = String(config.data.squelchUsesRSSI ? "RSSI" : "SNR");
-                    if (menuList) {
-                        menuList->refreshItemDisplay(index);
+                    // Frissítjük csak az érintett menüelemet
+                    if (index >= 0 && index < settingItems.size()) {
+                        settingItems[index].value = String(config.data.squelchUsesRSSI ? "RSSI" : "SNR");
+                        if (menuList) {
+                            menuList->refreshItemDisplay(index);
+                        }
                     }
                 }
             } break;
