@@ -41,10 +41,28 @@ bool UIScreen::isRedrawNeeded() const {
     //     if (topDialog && topDialog->isRedrawNeeded()) {
     //         return true;
     //     }
-    // }
-
-    // Ha egyik sem igényel újrarajzolást, akkor false-t adunk vissza
+    // }    // Ha egyik sem igényel újrarajzolást, akkor false-t adunk vissza
     return false;
+}
+
+/**
+ * @brief Dialógus védelem - megakadályozza a háttér tartalom rajzolását aktív dialógus alatt
+ *
+ * Ez a centralizált védelem minden UIScreen leszármazott számára automatikusan működik.
+ * Ha van aktív dialógus, akkor a képernyő saját tartalma nem rajzolódik ki,
+ * ezzel megakadályozva a háttér tartalom villanását dialógus átmenetek során.
+ *
+ * A leszármazott képernyők a drawContent() metódusban implementálhatják a saját rajzolási logikájukat,
+ * amely automatikusan védve lesz ez által a mechanizmus által.
+ */
+void UIScreen::drawSelf() {
+    // Ne rajzoljuk ki a képernyő tartalmát, ha van aktív dialógus
+    if (isDialogActive()) {
+        return;
+    }
+
+    // Ha nincs aktív dialógus, hívjuk meg a leszármazott implementációt
+    drawContent();
 }
 
 /**

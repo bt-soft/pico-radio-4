@@ -35,6 +35,26 @@ class UIScreen : public UIContainerComponent {
      */
     virtual bool allowsVisualPressedFeedback() const override { return false; }
 
+    /**
+     * @brief Dialógus védelem - megakadályozza a háttér tartalom rajzolását aktív dialógus alatt
+     *
+     * Ez a metódus centralizált védelmet biztosít minden UIScreen leszármazott számára.
+     * Ha van aktív dialógus, akkor a képernyő saját tartalma nem rajzolódik ki,
+     * ezzel megakadályozva a háttér tartalom villanását dialógus átmenetek során.
+     */
+    virtual void drawSelf() override;
+
+    /**
+     * @brief Képernyő specifikus tartalom rajzolása
+     *
+     * A leszármazott képernyők ebben a metódusban implementálhatják a saját rajzolási logikájukat.
+     * Ez a metódus automatikusan védve van a dialógus védelem által - csak akkor hívódik meg,
+     * ha nincs aktív dialógus.
+     *
+     * Alapértelmezés szerint üres implementáció.
+     */
+    virtual void drawContent() {}
+
   public:
     /**
      * @brief Konstruktor képernyő névvel

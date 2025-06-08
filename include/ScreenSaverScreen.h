@@ -34,7 +34,7 @@ class ScreenSaverScreen : public UIScreen {
     /**
      * @brief Kirajzolja a képernyővédő tartalmát
      */
-    virtual void drawSelf() override {
+    virtual void drawContent() override {
         tft.setTextDatum(MC_DATUM);
         tft.setTextColor(TFT_WHITE, TFT_BLACK);
         tft.setFreeFont(); // Alapértelmezett (kisebb) font

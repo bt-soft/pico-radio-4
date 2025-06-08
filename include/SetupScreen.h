@@ -134,7 +134,7 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
      * @brief Kirajzolja a képernyőt.
      * Ez a metódus felelős a képernyő címének kirajzolásáért.
      */
-    virtual void drawSelf() override {
+    virtual void drawContent() override {
         // Képernyő címének kirajzolása
         tft.setTextDatum(TC_DATUM);
         tft.setTextColor(TFT_WHITE, TFT_COLOR_BACKGROUND);

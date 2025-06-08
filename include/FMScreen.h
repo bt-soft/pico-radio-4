@@ -59,12 +59,7 @@ class FMScreen : public UIScreen {
     /**
      * @brief Kirajzolja a képernyő saját tartalmát
      */
-    virtual void drawSelf() override {
-        // Ne rajzoljuk ki a képernyő tartalmát, ha van aktív dialógus
-        if (isDialogActive()) {
-            return;
-        }
-
+    virtual void drawContent() override {
         // Szöveg középre igazítása
         tft.setTextDatum(MC_DATUM);
         tft.setTextColor(TFT_WHITE, TFT_COLOR_BACKGROUND);
