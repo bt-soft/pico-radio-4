@@ -25,7 +25,7 @@ class UIDialogBase : public UIContainerComponent {
   protected:
     UIScreen *parentScreen; // A képernyő, amely megjelenítette ezt a dialógust
     const char *title;
-    DialogCallback callback = nullptr;
+    DialogCallback callback = nullptr;               // Callback, amelyet a dialógus eseményeihez használunk, DialogResult-ot ad vissza
     bool veilDrawn = false;                          // Fátyol rajzolásának állapota
     bool autoClose = true;                           // Automatikus bezárás a gombok megnyomásakor
     std::shared_ptr<UIButton> closeButton = nullptr; // Bezáró gomb

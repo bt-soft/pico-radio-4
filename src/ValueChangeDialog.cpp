@@ -38,9 +38,10 @@ ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, cons
     // Callback beállítása az OK/Cancel események kezelésére
     setDialogCallback([this](MessageDialog::DialogResult result) {
         if (result == MessageDialog::DialogResult::Accepted) {
+            // Hívjuk meg a _valueCallback-et a végleges, elfogadott értékkel.
             notifyValueChange();
         } else if (result == MessageDialog::DialogResult::Rejected) {
-            restoreOriginalValue();
+            restoreOriginalValue(); // Ez most már tartalmazza a notifyValueChange() hívást is.
         }
         // A MessageDialog maga kezeli a close() hívást az _okClosesDialog alapján
     });
@@ -74,9 +75,10 @@ ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, cons
     // Callback beállítása az OK/Cancel események kezelésére
     setDialogCallback([this](MessageDialog::DialogResult result) {
         if (result == MessageDialog::DialogResult::Accepted) {
+            // Hívjuk meg a _valueCallback-et a végleges, elfogadott értékkel.
             notifyValueChange();
         } else if (result == MessageDialog::DialogResult::Rejected) {
-            restoreOriginalValue();
+            restoreOriginalValue(); // Ez most már tartalmazza a notifyValueChange() hívást is.
         }
     });
 }
@@ -106,9 +108,10 @@ ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, cons
     // Callback beállítása az OK/Cancel események kezelésére
     setDialogCallback([this](MessageDialog::DialogResult result) {
         if (result == MessageDialog::DialogResult::Accepted) {
+            // Hívjuk meg a _valueCallback-et a végleges, elfogadott értékkel.
             notifyValueChange();
         } else if (result == MessageDialog::DialogResult::Rejected) {
-            restoreOriginalValue();
+            restoreOriginalValue(); // Ez most már tartalmazza a notifyValueChange() hívást is.
         }
     });
 }
@@ -128,7 +131,9 @@ void ValueChangeDialog::createDialogContent() {
             std::make_shared<UIButton>(tft, 3, Rect(0, 0, SMALL_BUTTON_WIDTH, BUTTON_HEIGHT), "-", UIButton::ButtonType::Pushable, [this](const UIButton::ButtonEvent &event) {
                 if (event.state == UIButton::EventButtonState::Clicked) {
                     decrementValue();
-                    redrawValueArea(); // Csak az érték területet rajzoljuk újra
+                    // A decrementValue már hívja a validateAndClampValue-t és a notifyValueChange-t.
+                    // Az érték terület újrarajzolása itt továbbra is szükséges.
+                    redrawValueArea(); 
                 }
             });
         _decreaseButton->setUseMiniFont(true);
@@ -139,7 +144,8 @@ void ValueChangeDialog::createDialogContent() {
             std::make_shared<UIButton>(tft, 4, Rect(0, 0, SMALL_BUTTON_WIDTH, BUTTON_HEIGHT), "+", UIButton::ButtonType::Pushable, [this](const UIButton::ButtonEvent &event) {
                 if (event.state == UIButton::EventButtonState::Clicked) {
                     incrementValue();
-                    redrawValueArea(); // Csak az érték területet rajzoljuk újra
+                    // Az incrementValue már hívja a validateAndClampValue-t és a notifyValueChange-t.
+                    redrawValueArea(); 
                 }
             });
         _increaseButton->setUseMiniFont(true);
@@ -150,7 +156,8 @@ void ValueChangeDialog::createDialogContent() {
                                                      [this](const UIButton::ButtonEvent &event) {
                                                          if (event.state == UIButton::EventButtonState::Clicked) {
                                                              decrementValue();      // FALSE-ra állítás a decrementValue() függvényen keresztül
-                                                             redrawValueTextOnly(); // Csak az érték szöveg frissítése
+                                                             // A decrementValue már hívja a notifyValueChange-t.
+                                                             redrawValueTextOnly(); 
                                                          }
                                                      });
         _decreaseButton->setUseMiniFont(true);
@@ -160,7 +167,8 @@ void ValueChangeDialog::createDialogContent() {
                                                      [this](const UIButton::ButtonEvent &event) {
                                                          if (event.state == UIButton::EventButtonState::Clicked) {
                                                              incrementValue();      // TRUE-ra állítás a incrementValue() függvényen keresztül
-                                                             redrawValueTextOnly(); // Csak az érték szöveg frissítése
+                                                             // Az incrementValue már hívja a notifyValueChange-t.
+                                                             redrawValueTextOnly(); 
                                                          }
                                                      });
         _increaseButton->setUseMiniFont(true);
@@ -266,14 +274,14 @@ bool ValueChangeDialog::handleRotary(const RotaryEvent &event) {
     // Érték változtatás kezelése görgetéssel
     if (event.direction == RotaryEvent::Direction::Up) {
         if (canIncrement()) {
-            incrementValue();
-            redrawValueArea(); // Csak az érték területet rajzoljuk újra
+            incrementValue(); // Ez már hívja a validateAndClampValue-t és a notifyValueChange-t
+            redrawValueArea(); 
         }
         return true;
     } else if (event.direction == RotaryEvent::Direction::Down) {
         if (canDecrement()) {
-            decrementValue();
-            redrawValueArea(); // Csak az érték területet rajzoljuk újra
+            decrementValue(); // Ez már hívja a validateAndClampValue-t és a notifyValueChange-t
+            redrawValueArea(); 
         }
         return true;
     }
@@ -281,7 +289,7 @@ bool ValueChangeDialog::handleRotary(const RotaryEvent &event) {
     // Ha a forgatógombot megnyomták (Clicked), azt a MessageDialog (UIDialogBase) kezeli
     // "OK"-ként, ami meghívja a setDialogCallback-ben beállított logikánkat.
     // Ezért itt csak a görgetést kezeljük, a többit az ősosztályra bízzuk.
-    return MessageDialog::handleRotary(event);
+    return MessageDialog::handleRotary(event); // Fontos, hogy az ősosztály is kezelhesse (pl. OK/Cancel gombnyomás)
 }
 
 /**
@@ -306,23 +314,32 @@ String ValueChangeDialog::getCurrentValueAsString() const {
  * Növeli az értéket a megadott lépésközzel, ha nem lépi túl a maximumot
  */
 void ValueChangeDialog::incrementValue() {
+    bool valueChanged = false;
     switch (_valueType) {
     case ValueType::Integer:
-        if (_intPtr && (*_intPtr + _stepInt) <= _maxInt) {
+        if (_intPtr && *_intPtr < _maxInt) { // Szigorúan kisebb, hogy a stepInt ne vigye túl
             *_intPtr += _stepInt;
+            valueChanged = true;
         }
         break;
     case ValueType::Float:
-        if (_floatPtr && (*_floatPtr + _stepFloat) <= _maxFloat) {
+        if (_floatPtr && *_floatPtr < _maxFloat) {
             *_floatPtr += _stepFloat;
+            valueChanged = true;
         }
         break;
     case ValueType::Boolean:
         if (_boolPtr && !(*_boolPtr)) {
             *_boolPtr = true;
+            valueChanged = true;
         }
         break;
     }
+    if (valueChanged) {
+        validateAndClampValue();
+        notifyValueChange();
+    }
+    // A redrawValueArea() / redrawValueTextOnly() hívása a hívó oldalon történik (gombnyomás, rotary)
 }
 
 /**
@@ -330,23 +347,32 @@ void ValueChangeDialog::incrementValue() {
  * Csökkenti az értéket a megadott lépésközzel, ha nem megy a minimum alá
  */
 void ValueChangeDialog::decrementValue() {
+    bool valueChanged = false;
     switch (_valueType) {
     case ValueType::Integer:
-        if (_intPtr && (*_intPtr - _stepInt) >= _minInt) {
+        if (_intPtr && *_intPtr > _minInt) { // Szigorúan nagyobb
             *_intPtr -= _stepInt;
+            valueChanged = true;
         }
         break;
     case ValueType::Float:
-        if (_floatPtr && (*_floatPtr - _stepFloat) >= _minFloat) {
+        if (_floatPtr && *_floatPtr > _minFloat) {
             *_floatPtr -= _stepFloat;
+            valueChanged = true;
         }
         break;
     case ValueType::Boolean:
         if (_boolPtr && (*_boolPtr)) {
             *_boolPtr = false;
+            valueChanged = true;
         }
         break;
     }
+    if (valueChanged) {
+        validateAndClampValue();
+        notifyValueChange();
+    }
+    // A redrawValueArea() / redrawValueTextOnly() hívása a hívó oldalon történik (gombnyomás, rotary)
 }
 
 /**
@@ -371,6 +397,10 @@ void ValueChangeDialog::restoreOriginalValue() {
         }
         break;
     }
+    // Miután visszaállt az érték, értesítjük a külső callback-et
+    notifyValueChange();
+    // És frissítjük a dialógusban megjelenő értéket is
+    redrawValueArea(); // Vagy redrawValueTextOnly(), de az Area általánosabb
 }
 
 /**

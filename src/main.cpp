@@ -286,8 +286,9 @@ void loop() {
 
         // Esemény továbbítása a ScreenManager-nek
         RotaryEvent rotaryEvent(direction, buttonState);
-        bool handled = screenManager.handleRotary(rotaryEvent);
-        DEBUG("Rotary event handled by screen: %s\n", handled ? "YES" : "NO");
+        screenManager.handleRotary(rotaryEvent);
+        // bool handled = screenManager.handleRotary(rotaryEvent);
+        // DEBUG("Rotary event handled by screen: %s\n", handled ? "YES" : "NO");
     }
 
     // Deferred actions feldolgozása - biztonságos képernyőváltások végrehajtása
