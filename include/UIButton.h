@@ -13,9 +13,9 @@
 class UIButton : public UIComponent {
   public:
     // Alapértelmezett gomb méretek
-    static constexpr uint16_t DEFAULT_BUTTON_WIDTH = 72; // 63;
+    static constexpr uint16_t DEFAULT_BUTTON_WIDTH = 72;
     static constexpr uint16_t DEFAULT_BUTTON_HEIGHT = 35;
-    static constexpr uint16_t HORIZONTAL_TEXT_PADDING = 16; // 8px padding a szöveg mindkét oldalán
+    static constexpr uint16_t HORIZONTAL_TEXT_PADDING = 2 * 8; // 8px padding a szöveg mindkét oldalán
 
     // Gomb típusok
     enum class ButtonType {
@@ -57,8 +57,9 @@ class UIButton : public UIComponent {
     bool longPressThresholdMet = false; // Jelzi, ha a hosszú lenyomás küszöbét elértük
     bool longPressEventFired = false;   // Jelzi, ha a hosszú lenyomás esemény már aktiválódott
 
-    std::function<void(const ButtonEvent &)> eventCallback;
-    std::function<void()> clickCallback; // Backward compatibility
+    ButtonColorScheme currentButtonScheme;                  // Gomb-specifikus színséma
+    std::function<void(const ButtonEvent &)> eventCallback; // Az UIComponent::colors továbbra is létezik és az alap sémát tárolja
+    std::function<void()> clickCallback;                    // Backward compatibility
 
     // Gomb állapot színek
     struct StateColors {
@@ -74,22 +75,24 @@ class UIButton : public UIComponent {
      */
     StateColors getStateColors() const {
         StateColors resultColors;
-        // Az alap UIComponent::colors tagot használjuk (ami egy ColorScheme)
+        // A currentButtonScheme tagot használjuk, ami ButtonColorScheme típusú
 
         if (currentState == ButtonState::Disabled) {
-            resultColors.background = this->colors.disabledBackground;
-            resultColors.border = this->colors.disabledBorder;
-            resultColors.text = this->colors.disabledForeground;
-            resultColors.led = TFT_BLACK; // Vagy this->colors.disabledLedColor, ha lenne
+            resultColors.background = this->currentButtonScheme.disabledBackground;
+            resultColors.border = this->currentButtonScheme.disabledBorder;
+            resultColors.text = this->currentButtonScheme.disabledForeground;
+            resultColors.led = this->currentButtonScheme.ledOffColor;
+            // TODO: A disabled állapot LED-jének láthatóságát még átvezetni a kódon
 
         } else if (this->pressed) {
-            resultColors.background = this->colors.pressedBackground; // Gradiens alapja
-            resultColors.border = this->colors.pressedBorder;
-            resultColors.text = this->colors.pressedForeground;
+            resultColors.background = this->currentButtonScheme.pressedBackground; // Gradiens alapja
+            resultColors.border = this->currentButtonScheme.pressedBorder;
+            resultColors.text = this->currentButtonScheme.pressedForeground;
 
             // LED színe lenyomott állapotban
-            if (buttonType == ButtonType::Toggleable) { // Toggleable esetén a LED a logikai állapotot mutatja lenyomáskor is
-                resultColors.led = (currentState == ButtonState::On) ? this->colors.ledOnColor : this->colors.ledOffColor;
+            if (buttonType == ButtonType::Toggleable) {
+                // Toggleable esetén a LED a logikai állapotot mutatja lenyomáskor is
+                resultColors.led = (currentState == ButtonState::On) ? this->currentButtonScheme.ledOnColor : this->currentButtonScheme.ledOffColor;
             } else { // Pushable
                 resultColors.led = TFT_BLACK;
             }
@@ -97,23 +100,24 @@ class UIButton : public UIComponent {
         } else {
             // Ha On állapotban van, az a konstruktor és a setButtonState miatt csak Toggleable lehet.
             if (currentState == ButtonState::On) {
-                resultColors.background = this->colors.background; // Alapértelmezett háttér
-                resultColors.border = this->colors.ledOnColor;     // Keret színe a LED "On" színével
-                resultColors.text = this->colors.foreground;       // Alapértelmezett szövegszín
-                resultColors.led = this->colors.ledOnColor;
+                resultColors.background = this->currentButtonScheme.activeBackground; // Vagy .background, ha az ON állapot háttere azonos
+                resultColors.border = this->currentButtonScheme.ledOnColor;           // Keret színe a LED "On" színével
+                resultColors.text = this->currentButtonScheme.activeForeground;       // Vagy .foreground
+                resultColors.led = this->currentButtonScheme.ledOnColor;
 
             } else if (currentState == ButtonState::CurrentActive) {
-                resultColors.background = this->colors.background; // Vagy this->colors.activeBackground, ha más, mint az ON
-                resultColors.border = TFT_BLUE;                    // Speciális eset, vagy this->colors.activeBorder
-                resultColors.text = this->colors.foreground;       // Vagy this->colors.activeForeground
+                resultColors.background = this->currentButtonScheme.activeBackground; // Vagy this->colors.activeBackground, ha más, mint az ON
+                resultColors.border = TFT_BLUE;                                       // Speciális eset, vagy this->colors.activeBorder
+                resultColors.text = this->currentButtonScheme.activeForeground;       // Vagy this->colors.activeForeground
 
                 // CurrentActive állapotban a LED jellemzően nem releváns, a kiemelés a háttér/keret színeivel történik.
                 resultColors.led = TFT_BLACK;
-            } else { // ButtonState::Off (Pushable és Toggleable esetén is)
-                resultColors.background = this->colors.background;
-                resultColors.border = this->colors.border;
-                resultColors.text = this->colors.foreground;
-                resultColors.led = (buttonType == ButtonType::Toggleable) ? this->colors.ledOffColor : TFT_BLACK;
+            } else {
+                // ButtonState::Off (Pushable és Toggleable esetén is)
+                resultColors.background = this->currentButtonScheme.background;
+                resultColors.border = this->currentButtonScheme.border;
+                resultColors.text = this->currentButtonScheme.foreground;
+                resultColors.led = (buttonType == ButtonType::Toggleable) ? this->currentButtonScheme.ledOffColor : TFT_BLACK;
             }
         }
         return resultColors;
@@ -165,14 +169,16 @@ class UIButton : public UIComponent {
      * Csak akkor fut le, ha az autoSizeToText engedélyezve van.
      */
     void updateWidthToFitText() {
-        if (!autoSizeToText || label == nullptr) { // Üres label esetén is lehet alapértelmezett szélesség
+
+        // Üres label esetén is lehet alapértelmezett szélesség
+        if (!autoSizeToText || label == nullptr) {
             if (!autoSizeToText)
                 return;
         }
 
         // TFT szövegbeállítások mentése és visszaállítása a számításhoz
         uint8_t prevDatum = tft.getTextDatum();
-        uint8_t currentTftTextSize = tft.textsize; // Feltételezzük, hogy a tft.textsize tartalmazza az aktuális méretet
+        uint8_t currentTftTextSize = tft.textsize; // A tft.textsize tartalmazza az aktuális méretet
 
         // Betűtípus beállítása a felirathoz
         tft.setTextSize(1);
@@ -201,7 +207,7 @@ class UIButton : public UIComponent {
 
   public:
     /**
-     * @brief Számolja ki a gomb szélességét a szöveg, betűméret és aktuális gombmagasság alapján.
+     * @brief Kiszámítja a gomb szélességét a szöveg, betűméret és aktuális gombmagasság alapján.
      * @param tftRef TFT_eSPI referencia
      * @param text A gomb felirata
      * @param btnUseMiniFont Ha true, akkor a kisebb betűtípust használja
@@ -253,21 +259,22 @@ class UIButton : public UIComponent {
      * @details A gomb alapértelmezett színpalettát használ, ha nem adunk meg másikat.
      */
     UIButton(TFT_eSPI &tft,
-             uint8_t id,                                                              // ID
-             const Rect &bounds,                                                      // rect
-             const char *label,                                                       // label
-             ButtonType type = ButtonType::Pushable,                                  // type
-             ButtonState state = ButtonState::Off,                                    // initial state
-             std::function<void(const ButtonEvent &)> callback = nullptr,             // callback
-             const ColorScheme &colors = UIColorPalette::createDefaultButtonScheme(), // colors
-             bool autoSizeToText = false                                              // Automatikus méretezés flag
+             uint8_t id,                                                                    // ID
+             const Rect &bounds,                                                            // rect
+             const char *label,                                                             // label
+             ButtonType type = ButtonType::Pushable,                                        // type
+             ButtonState state = ButtonState::Off,                                          // initial state
+             std::function<void(const ButtonEvent &)> callback = nullptr,                   // callback
+             const ButtonColorScheme &scheme = UIColorPalette::createDefaultButtonScheme(), // scheme
+             bool autoSizeToText = false                                                    // Automatikus méretezés flag
              )
         : UIComponent(tft,
                       Rect(bounds.x, bounds.y,
                            (bounds.width == 0 && !autoSizeToText ? DEFAULT_BUTTON_WIDTH : bounds.width), // Szélesség beállítása
                            (bounds.height == 0 ? DEFAULT_BUTTON_HEIGHT : bounds.height)),                // Magasság beállítása
-                      colors),
-          buttonId(id), label(label), buttonType(type), eventCallback(callback), autoSizeToText(autoSizeToText) {
+                      scheme),                                                                           // UIComponent konstruktora az alap ColorScheme résszel inicializálódik
+          buttonId(id), label(label), buttonType(type), currentButtonScheme(scheme),                     // Teljes ButtonColorScheme mentése
+          eventCallback(callback), autoSizeToText(autoSizeToText) {
 
         if (autoSizeToText) {
             updateWidthToFitText(); // Méret frissítése a szöveghez, ha kérték
@@ -275,9 +282,9 @@ class UIButton : public UIComponent {
 
         this->currentState = state;
         if (buttonType == ButtonType::Pushable && this->currentState == ButtonState::On) {
-            DEBUG("UIButton Constructor: Pushable button %d ('%s') initialized with On state. Setting to Off.\n", buttonId, label);
             this->currentState = ButtonState::Off;
         }
+
         // Ha a gombot eleve letiltott állapottal hozzuk létre,
         // akkor az ősosztály 'disabled' flag-jét is be kell állítani.
         if (this->currentState == ButtonState::Disabled) {
@@ -299,19 +306,20 @@ class UIButton : public UIComponent {
      */
     // Második konstruktor overload az autoSizeToText paraméterrel
     UIButton(TFT_eSPI &tft,
-             uint8_t id,                                                              // ID
-             const Rect &bounds,                                                      // rect
-             const char *label,                                                       // label
-             ButtonType type,                                                         // Nincs alapértelmezett
-             std::function<void(const ButtonEvent &)> callback,                       // Nincs alapértelmezett
-             const ColorScheme &colors = UIColorPalette::createDefaultButtonScheme(), // colors
-             bool autoSizeToText = false                                              // Automatikus méretezés flag
+             uint8_t id,                                                                    // ID
+             const Rect &bounds,                                                            // rect
+             const char *label,                                                             // label
+             ButtonType type,                                                               // Nincs alapértelmezett
+             std::function<void(const ButtonEvent &)> callback,                             // Nincs alapértelmezett
+             const ButtonColorScheme &scheme = UIColorPalette::createDefaultButtonScheme(), // scheme
+             bool autoSizeToText = false                                                    // Automatikus méretezés flag
              )
         : UIComponent(
               tft,
               Rect(bounds.x, bounds.y, (bounds.width == 0 && !autoSizeToText ? DEFAULT_BUTTON_WIDTH : bounds.width), (bounds.height == 0 ? DEFAULT_BUTTON_HEIGHT : bounds.height)),
-              colors),
-          buttonId(id), label(label), buttonType(type), eventCallback(callback), autoSizeToText(autoSizeToText) {
+              scheme),                                                               // UIComponent konstruktora az alap ColorScheme résszel inicializálódik
+          buttonId(id), label(label), buttonType(type), currentButtonScheme(scheme), // Teljes ButtonColorScheme mentése
+          eventCallback(callback), autoSizeToText(autoSizeToText) {
         this->currentState = ButtonState::Off; // Alapértelmezett állapot ennél a konstruktornál
         if (autoSizeToText) {
             updateWidthToFitText();
@@ -339,36 +347,37 @@ class UIButton : public UIComponent {
         : UIComponent(
               tft,
               Rect(bounds.x, bounds.y, (bounds.width == 0 && !autoSizeToText ? DEFAULT_BUTTON_WIDTH : bounds.width), (bounds.height == 0 ? DEFAULT_BUTTON_HEIGHT : bounds.height)),
-              UIColorPalette::createDefaultButtonScheme()),
-          buttonId(id), label(label), buttonType(UIButton::ButtonType::Pushable), currentState(UIButton::ButtonState::Off), eventCallback(callback),
-          autoSizeToText(autoSizeToText) {
+              UIColorPalette::createDefaultButtonScheme()), // UIComponent konstruktora az alap ColorScheme résszel inicializálódik
+          buttonId(id), label(label), buttonType(UIButton::ButtonType::Pushable),
+          currentButtonScheme(UIColorPalette::createDefaultButtonScheme()), // Teljes ButtonColorScheme mentése
+          currentState(UIButton::ButtonState::Off), eventCallback(callback), autoSizeToText(autoSizeToText) {
         if (autoSizeToText) {
             updateWidthToFitText();
         }
     }
 
-    /**
-     * @brief Gomb állapotának szöveges megjelenítése
-     * @param state Az állapot, amelyet szövegesen szeretnénk megjeleníteni
-     */
-    static const char *eventButtonStateToString(EventButtonState state) {
-        switch (state) {
-        case EventButtonState::Off:
-            return "Off";
-        case EventButtonState::On:
-            return "On";
-        case EventButtonState::Disabled:
-            return "Disabled";
-        case EventButtonState::CurrentActive:
-            return "CurrentActive";
-        case EventButtonState::Clicked:
-            return "Clicked";
-        case EventButtonState::LongPressed:
-            return "LongPressed";
-        default:
-            return "Unknown";
-        }
-    }
+    // /**
+    //  * @brief Gomb állapotának szöveges megjelenítése
+    //  * @param state Az állapot, amelyet szövegesen szeretnénk megjeleníteni
+    //  */
+    // static const char *eventButtonStateToString(EventButtonState state) {
+    //     switch (state) {
+    //     case EventButtonState::Off:
+    //         return "Off";
+    //     case EventButtonState::On:
+    //         return "On";
+    //     case EventButtonState::Disabled:
+    //         return "Disabled";
+    //     case EventButtonState::CurrentActive:
+    //         return "CurrentActive";
+    //     case EventButtonState::Clicked:
+    //         return "Clicked";
+    //     case EventButtonState::LongPressed:
+    //         return "LongPressed";
+    //     default:
+    //         return "Unknown";
+    //     }
+    // }
 
     // // Segédfüggvény a ButtonType szöveges megjelenítéséhez (ha később kellene)
     // static const char *buttonTypeToString(ButtonType type) {
@@ -558,8 +567,19 @@ class UIButton : public UIComponent {
      * A gomb nem lesz interaktív, és a felhasználó nem tudja megnyomni.
      */
     void setAsDefaultChoiceButton() {
-        setEnabled(false);                                                 // Letiltjuk a gombot
-        setColorScheme(UIColorPalette::createDefaultChoiceButtonScheme()); // Alkalmazzuk a default choice színsémát
+        setEnabled(false); // Letiltjuk a gombot
+        // A createDefaultChoiceButtonScheme ColorScheme-et ad vissza.
+        // Ha ButtonColorScheme-et adna vissza, akkor a setButtonColorScheme-et hívnánk.
+        // Jelenlegi implementáció szerint a UIComponent::setColorScheme hívódik meg.
+        // Ahhoz, hogy a ButtonColorScheme specifikus részei is beállítódjanak, vagy
+        // a createDefaultChoiceButtonScheme-nek ButtonColorScheme-et kell visszaadnia,
+        // vagy itt manuálisan kell létrehozni egy ButtonColorScheme-et.
+        // Tegyük fel, hogy createDefaultChoiceButtonScheme ButtonColorScheme-et ad vissza a jövőben:
+        // setButtonColorScheme(UIColorPalette::createDefaultChoiceButtonScheme());
+        // Addig is, ha ColorScheme-et ad vissza:
+        ColorScheme baseScheme = UIColorPalette::createDefaultChoiceButtonScheme();
+        ButtonColorScheme btnScheme(baseScheme, baseScheme.activeBorder, TFT_DARKGREY); // Próbáljuk meg kitölteni a LED színeket
+        setButtonColorScheme(btnScheme);
     }
 
     /**
@@ -612,6 +632,17 @@ class UIButton : public UIComponent {
         needsRedraw = false;
     }
 
+    /**
+     * @brief Beállítja a gomb színsémáját.
+     * @param newScheme Az új ButtonColorScheme.
+     */
+    void setButtonColorScheme(const ButtonColorScheme &newScheme) {
+        this->currentButtonScheme = newScheme;
+        // Az ősosztálynak is átadjuk az alap ColorScheme részt, hogy konzisztens maradjon
+        UIComponent::setColorScheme(newScheme); // Implicit konverzió ButtonColorScheme -> ColorScheme
+        markForRedraw();
+    }
+
   protected:
     /**
      * @brief Gomb lenyomása esemény kezelése
@@ -621,14 +652,14 @@ class UIButton : public UIComponent {
      */
     virtual void onTouchDown(const TouchEvent &event) override {
         UIComponent::onTouchDown(event); // Alap implementáció (pressed = true, markForRedraw)
+
+        // A UIComponent::handleTouch már ellenrőrzi a 'disabled' állapotot, így ez a vizsgálat elvileg redundáns.
         if (currentState == ButtonState::Disabled)
             return;
-        // A UIComponent::handleTouch már ellenrőrzi a 'disabled' állapotot, így ez a fenti sor elvileg redundáns.
 
         longPressThresholdMet = false;
         longPressEventFired = false;
         pressStartTime = millis();
-        // A vizuális "lenyomott" állapotot a UIComponent::pressed és a draw() kezeli
     }
 
     /**
@@ -637,7 +668,9 @@ class UIButton : public UIComponent {
      * @details Ez a metódus kezeli a gomb felengedését, és ellenőrzi, hogy hosszú lenyomás történt-e.
      */
     virtual void onTouchUp(const TouchEvent &event) override {
-        UIComponent::onTouchUp(event); // Alap osztály hívása (jelenleg csak DEBUG üzenet)
+
+        // Alap osztály hívása (jelenleg csak DEBUG üzenet)
+        UIComponent::onTouchUp(event);
 
         if (currentState == ButtonState::Disabled) {
             // Biztonsági reset, bár a disabled állapotnak már korábban meg kellett volna akadályoznia az interakciót
@@ -735,7 +768,9 @@ class UIButton : public UIComponent {
      * Ha a gomb lenyomva van, és a hosszú lenyomás küszöbértéke elérve van, akkor beállítja a hosszú lenyomás eseményt.
      */
     virtual void loop() override {
-        UIComponent::loop(); // Alap osztály loop-ja (ha van)
+
+        // Alap osztály loop-ja (ha van)
+        UIComponent::loop();
 
         if (currentState == ButtonState::Disabled || !this->pressed) // `this->pressed` a UIComponent-ből jön
             return;

@@ -7,7 +7,7 @@
 #define TFT_COLOR(r, g, b) (((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3))
 #define TFT_COLOR_BACKGROUND TFT_BLACK
 
-// Színsémák
+// Alap színséma, LED specifikus színek nélkül
 struct ColorScheme {
     uint16_t background;
     uint16_t foreground;
@@ -21,8 +21,6 @@ struct ColorScheme {
     uint16_t activeBackground;
     uint16_t activeForeground;
     uint16_t activeBorder;
-    uint16_t ledOnColor;
-    uint16_t ledOffColor;
 
     static ColorScheme defaultScheme() {
         return {
@@ -33,14 +31,41 @@ struct ColorScheme {
             TFT_WHITE,     // pressedForeground
             TFT_WHITE,     // pressedBorder
             TFT_BLACK,     // disabledBackground
-            TFT_DARKGREY,  // disabledForeground
-            TFT_DARKGREY,  // disabledBorder
-            TFT_GREEN,     // activeBackground (pl. gomb ON állapota)
+            TFT_DARKGREY,  // disabledForeground (korábban ledColor értékével egyezett meg a defaultScheme-ben)
+            TFT_DARKGREY,  // disabledBorder (korábban disabledLedColor értékével egyezett meg)
+            TFT_GREEN,     // activeBackground (általános aktív, vagy gomb ON háttér)
             TFT_WHITE,     // activeForeground
-            TFT_GREEN,     // activeBorder
-            TFT_GREEN,     // ledOnColor
-            TFT_DARKGREEN  // ledOffColor
+            TFT_GREEN      // activeBorder (általános aktív, vagy gomb ON keret)
         };
+    }
+};
+
+/**
+ * Gomb színséma, amely a ColorScheme-t kiterjeszti LED színekkel
+ * Ez a struktúra tartalmazza a gomb LED színeit ON és OFF állapotban,
+ */
+struct ButtonColorScheme : public ColorScheme {
+    uint16_t ledOnColor;
+    uint16_t ledOffColor;
+    // TODO: A disabled állapot LED-jének láthatóságát még átvezetni a kódon
+    uint16_t disabledLedOnColor;  // Letiltott gomb LED színe ON állapotban (ha szükséges, de alapértelmezett a ledOnColor)
+    uint16_t disabledLedOffColor; // Letiltott gomb LED színe (ha szükséges, de alapértelmezett a ledOffColor)
+
+    // Konstruktor az alap séma és LED színek megadásával
+    ButtonColorScheme(const ColorScheme &base, uint16_t on, uint16_t off) : ColorScheme(base), ledOnColor(on), ledOffColor(off) {}
+
+    // Alapértelmezett konstruktor gombokhoz
+    ButtonColorScheme()
+        : ColorScheme(ColorScheme::defaultScheme()), //
+          ledOnColor(TFT_GREEN),                     // Alapértelmezett LED ON szín
+          ledOffColor(TFT_DARKGREY),                 // Alapértelmezett LED OFF szín
+          // TODO: A disabled állapot LED-jének láthatóságát még átvezetni a kódon
+          disabledLedOnColor(TFT_DARKGREEN), // Alapértelmezett Letiltott gomb LED ON színe
+          disabledLedOffColor(TFT_BLACK)     // Alapértelmezett Letiltott gomb LED OFF színe
+    {
+        // Itt felülírhatók az alap ColorScheme::defaultScheme() értékei, ha a gomboknak más alapértelmezés kell
+        // Például: this->background = UIColorPalette::BUTTON_DEFAULT_BACKGROUND;
+        // A UIColorPalette::createDefaultButtonScheme() fogja ezt finomhangolni.
     }
 };
 
@@ -85,7 +110,7 @@ class UIColorPalette {
     // Letiltott gomb színek - nagyon finom, de még felismerhető
     static constexpr uint16_t BUTTON_DISABLED_BACKGROUND = TFT_COLOR(72, 72, 75); // Halvány szürke
     static constexpr uint16_t BUTTON_DISABLED_TEXT = TFT_COLOR(156, 156, 156);    // Világos szürke
-    static constexpr uint16_t BUTTON_DISABLED_BORDER = TFT_COLOR(156, 156, 156); // Világos szürke
+    static constexpr uint16_t BUTTON_DISABLED_BORDER = TFT_COLOR(156, 156, 156);  // Világos szürke
 
     // === KÉPERNYŐ SZÍNEK ===
 
@@ -101,59 +126,29 @@ class UIColorPalette {
     // === SEGÉD METÓDUSOK ===
 
     /**
-     * Dialógus bezáró gomb ColorScheme létrehozása
-     */
-    static ColorScheme createDialogCloseButtonScheme() {
-        ColorScheme colors;
-        colors.background = DIALOG_CLOSE_BUTTON_BACKGROUND;
-        colors.foreground = DIALOG_CLOSE_BUTTON_TEXT;
-        colors.border = DIALOG_CLOSE_BUTTON_BORDER;
-        colors.pressedForeground = DIALOG_CLOSE_BUTTON_TEXT;
-        colors.pressedBackground = DIALOG_CLOSE_BUTTON_PRESSED;
-        return colors;
-    }
-
-    /**
      * Alapértelmezett gomb ColorScheme létrehozása
      */
-    static ColorScheme createDefaultButtonScheme() {
-        ColorScheme colors = ColorScheme::defaultScheme();
-
-        colors.background = BUTTON_DEFAULT_BACKGROUND;
-        colors.foreground = BUTTON_DEFAULT_TEXT;
-        colors.border = BUTTON_DEFAULT_BORDER;
-        colors.pressedBackground = BUTTON_DEFAULT_PRESSED;
-        colors.pressedForeground = BUTTON_DEFAULT_TEXT;
-        colors.pressedBorder = BUTTON_DEFAULT_PRESSED_BORDER; // A lenyomott állapot szegélye
-        colors.disabledBackground = BUTTON_DISABLED_BACKGROUND;
-        colors.disabledForeground = BUTTON_DISABLED_TEXT;
-        colors.disabledBorder = BUTTON_DISABLED_BORDER;
-        return colors;
-    }
-
-    /**
-     * OK gomb ColorScheme létrehozása
-     */
-    static ColorScheme createOkButtonScheme() {
-        ColorScheme colors;
-        colors.background = BUTTON_OK_BACKGROUND;
-        colors.foreground = BUTTON_OK_TEXT;
-        colors.border = BUTTON_OK_BORDER;
-        colors.pressedBackground = BUTTON_DEFAULT_PRESSED_BORDER; // A lenyomott állapot szegélye
-        colors.pressedForeground = BUTTON_OK_TEXT;
-        return colors;
-    }
-    /**
-     * Cancel gomb ColorScheme létrehozása
-     */
-    static ColorScheme createCancelButtonScheme() {
-        ColorScheme colors;
-        colors.background = BUTTON_CANCEL_BACKGROUND;
-        colors.foreground = BUTTON_CANCEL_TEXT;
-        colors.border = BUTTON_CANCEL_BORDER;
-        colors.pressedBackground = TFT_RED;
-        colors.pressedForeground = BUTTON_CANCEL_TEXT;
-        return colors;
+    static ButtonColorScheme createDefaultButtonScheme() { // Visszatérési érték ButtonColorScheme
+        ButtonColorScheme scheme;                          // Alapértelmezett ButtonColorScheme konstruktor
+        scheme.background = BUTTON_DEFAULT_BACKGROUND;
+        scheme.foreground = BUTTON_DEFAULT_TEXT;
+        scheme.border = BUTTON_DEFAULT_BORDER;
+        scheme.pressedBackground = BUTTON_DEFAULT_PRESSED;
+        scheme.pressedForeground = BUTTON_DEFAULT_TEXT; // Lenyomáskor a szövegszín maradhat
+        scheme.pressedBorder = BUTTON_DEFAULT_PRESSED_BORDER;
+        scheme.disabledBackground = BUTTON_DISABLED_BACKGROUND;
+        scheme.disabledForeground = BUTTON_DISABLED_TEXT;
+        scheme.disabledBorder = BUTTON_DISABLED_BORDER;
+        // Az "active" állapot (pl. toggle gomb ON) színei:
+        // A UIButton logikája szerint az ON állapot háttere azonos a normál háttérrel,
+        // a keret pedig a ledOnColor.
+        scheme.activeBackground = BUTTON_DEFAULT_BACKGROUND; // Vagy egyedi ON háttér
+        scheme.activeForeground = BUTTON_DEFAULT_TEXT;       // Vagy egyedi ON szövegszín
+        scheme.activeBorder = TFT_GREEN;                     // Ezt a UIButton felülírhatja a ledOnColor-ral
+        scheme.ledOnColor = TFT_GREEN;
+        scheme.ledOffColor = TFT_DARKGREY; // Jobban látható, mint a TFT_DARKGREEN fekete alapon
+        // TODO: A disabled állapot LED-jének láthatóságát még átvezetni a kódon
+        return scheme;
     }
 
     /**
@@ -161,15 +156,17 @@ class UIColorPalette {
      */
     static ColorScheme createDefaultChoiceButtonScheme() {
         ColorScheme colors = createDefaultButtonScheme();
-        colors.background = TFT_DARKGREEN; //  háttér
-        colors.foreground = TFT_NAVY;      //  szöveg
-        colors.border = TFT_DARKGREEN;     //  szegély
+        // Mivel ez a függvény ColorScheme-et ad vissza, a ButtonColorScheme részeket nem tudja beállítani.
+        // Ha ez is ButtonColorScheme-et adna vissza:
+        // ButtonColorScheme scheme = createDefaultButtonScheme();
+        colors.background = TFT_DARKGREEN;
+        colors.foreground = TFT_NAVY;
+        colors.border = TFT_DARKGREEN;
         //---Letiltott default állapot
-        colors.disabledBackground = TFT_DARKGREEN; // Sötétzöld háttér a tiltott gombokhoz
-        colors.disabledForeground = TFT_BROWN;     // Barna szöveg a tiltott gombokhoz
-        colors.disabledBorder = TFT_GREENYELLOW;   // Világos sárga szegély a tiltott gombokhoz
+        colors.disabledBackground = TFT_DARKGREEN;
+        colors.disabledForeground = TFT_BROWN;
+        colors.disabledBorder = TFT_GREENYELLOW;
         return colors;
     }
 };
-
 #endif // __UI_COLOR_PALETTE_H
