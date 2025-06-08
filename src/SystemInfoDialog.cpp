@@ -1,20 +1,17 @@
 #include "SystemInfoDialog.h"
 
-SystemInfoDialog::SystemInfoDialog(UIScreen *parentScreen, TFT_eSPI &tft, const Rect &bounds) : UIDialogBase(parentScreen, tft, bounds, "System Information") {
-
-    // Rendszer információk összegyűjtése
-    collectSystemInfo();
-
-    // Dialógus tartalmának létrehozása
-    createDialogContent();
+SystemInfoDialog::SystemInfoDialog(UIScreen *parentScreen, TFT_eSPI &tft, const Rect &bounds, const ColorScheme &cs)
+    : MessageDialog(parentScreen, tft, bounds, "System Information", "", ButtonsType::Ok, cs) {
+    // Üres message stringet adunk át, mert saját drawSelf-fel rajzoljuk a tartalmat
 }
 
-void SystemInfoDialog::collectSystemInfo() {
-    infoContent = "";
-    infoContent += formatProgramInfo();
-    infoContent += formatMemoryInfo();
-    infoContent += formatHardwareInfo();
-    infoContent += formatSi4735Info();
+String SystemInfoDialog::buildSystemInfoText() {
+    String info = "";
+    info += formatProgramInfo();
+    info += formatMemoryInfo();
+    info += formatHardwareInfo();
+    info += formatSi4735Info();
+    return info;
 }
 
 String SystemInfoDialog::formatProgramInfo() {
@@ -63,7 +60,7 @@ String SystemInfoDialog::formatHardwareInfo() {
     info += "MCU: RP2040 @ 133MHz\n";
     info += "Flash: 2MB\n";
     info += "RAM: 256kB\n";
-    info += "Display: TFT " + String(tft.width()) + "x" + String(tft.height()) + "\n\n";
+    info += "Display: TFT 320x240\n\n"; // Hardkódolt érték, mivel a TFT közvetlenül nem érhető el
     return info;
 }
 
@@ -77,40 +74,18 @@ String SystemInfoDialog::formatSi4735Info() {
     return info;
 }
 
-void SystemInfoDialog::createDialogContent() {
-    // Tartalom területének számítása
-    const int16_t margin = 10;
-    const int16_t buttonHeight = UIButton::DEFAULT_BUTTON_HEIGHT;
-    const int16_t buttonWidth = 80;
-
-    // OK gomb létrehozása - dialógus jobb alsó sarkában
-    Rect buttonBounds(bounds.width - buttonWidth - margin, bounds.height - buttonHeight - margin, buttonWidth, buttonHeight);
-
-    okButton = std::make_shared<UIButton>(tft, 0, buttonBounds, "OK", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, [this](const UIButton::ButtonEvent &event) {
-        if (event.state == UIButton::EventButtonState::Clicked) {
-            onOkButtonClicked();
-        }
-    });
-
-    addChild(okButton);
-}
-
-void SystemInfoDialog::layoutDialogContent() {
-    // Az elrendezés a createDialogContent-ben történik
-    // Ez a metódus dinamikus elrendezés frissítésekhez használható, ha szükséges
-}
-
 void SystemInfoDialog::drawSelf() {
-    // Előbb rajzoljuk az alapértelmezett dialógus hátteret és fejlécet
+    // Előbb rajzoljuk az alapértelmezett dialógus hátteret és fejlécet (de nem a message-t)
     UIDialogBase::drawSelf();
 
-    // Szöveg tulajdonságok beállítása
-    tft.setTextColor(TFT_WHITE, colors.background);
-    tft.setTextDatum(TL_DATUM);
-    tft.setTextSize(1);
+    // Rendszerinformációk összeállítása
+    String infoContent = buildSystemInfoText();
 
-    // Kisebb font használata jobb információsűrűség érdekében
-    tft.setFreeFont(); // Alapértelmezett font a jobb kompatibilitás érdekében
+    // Szöveg tulajdonságok beállítása
+    tft.setTextColor(colors.foreground, colors.background);
+    tft.setTextDatum(TL_DATUM); // Top-Left pozicionálás
+    tft.setTextSize(1);
+    tft.setFreeFont(); // Alapértelmezett kisebb font a jobb olvashatósághoz
 
     // Szöveges terület számítása (fejléc és gomb terület nélkül)
     const int16_t margin = 8;
@@ -122,7 +97,9 @@ void SystemInfoDialog::drawSelf() {
 
     // Tartalom sorokra bontása és kirajzolása
     int16_t currentY = textStartY;
-    const int16_t lineHeight = 12; // Sűrűbb sorok a jobb kihasználás érdekében    // Egyszerű soronkénti kirajzolás
+    const int16_t lineHeight = tft.fontHeight() + 2; // Kis extra hely a sorok között
+
+    // Egyszerű soronkénti kirajzolás
     String remainingText = infoContent;
     int lineStart = 0;
 
@@ -134,10 +111,10 @@ void SystemInfoDialog::drawSelf() {
 
         String line = remainingText.substring(lineStart, lineEnd);
 
-        // Egyszerű sortörés - ha a sor túl hosszú, csonkítjuk "..."-tal
+        // Hosszú sorok csonkítása, ha szükséges
         int16_t textWidth_px = tft.textWidth(line.c_str());
         if (textWidth_px > textWidth) {
-            // Jó törési pont keresése
+            // Jó törési pont keresése - csonkítjuk "..."-tal
             while (line.length() > 3 && tft.textWidth(line.c_str()) > textWidth - 20) {
                 line = line.substring(0, line.length() - 1);
             }
@@ -148,9 +125,4 @@ void SystemInfoDialog::drawSelf() {
         currentY += lineHeight;
         lineStart = lineEnd + 1;
     }
-}
-
-void SystemInfoDialog::onOkButtonClicked() {
-    // Dialógus bezárása
-    close(DialogResult::Accepted);
 }

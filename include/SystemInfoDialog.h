@@ -1,47 +1,46 @@
 #ifndef __SYSTEM_INFO_DIALOG_H
 #define __SYSTEM_INFO_DIALOG_H
 
+#include "MessageDialog.h"
 #include "PicoMemoryInfo.h"
 #include "StationData.h"
-#include "UIButton.h"
-#include "UIDialogBase.h"
 #include "defines.h"
 
 /**
- * @brief Rendszer információ dialógus
+ * @brief Rendszer információ dialógus - MessageDialog alapú implementáció
  *
  * Átfogó rendszer információkat jelenít meg angolul:
  * - Program információk (név, verzió, szerző, fordítás dátuma)
  * - Memória használat (Flash, RAM, EEPROM)
  * - Hardver információk
  * - Si4735 rádió modul információk (helykitöltő)
+ *
+ * A MessageDialog-ból örökli az OK gomb automatikus kezelését.
  */
-class SystemInfoDialog : public UIDialogBase {
-  public: /**
-           * @brief Konstruktor
-           * @param parentScreen Szülő képernyő, amely ezt a dialógust birtokolja
-           * @param tft TFT kijelző referencia
-           * @param bounds Dialógus határok (használd Rect(-1, -1, width, 0) auto-magassághoz)
-           */
-    SystemInfoDialog(UIScreen *parentScreen, TFT_eSPI &tft, const Rect &bounds);
+class SystemInfoDialog : public MessageDialog {
+  public:
+    /**
+     * @brief Konstruktor
+     * @param parentScreen Szülő képernyő, amely ezt a dialógust birtokolja
+     * @param tft TFT kijelző referencia
+     * @param bounds Dialógus határok
+     * @param cs Színséma (opcionális)
+     */
+    SystemInfoDialog(UIScreen *parentScreen, TFT_eSPI &tft, const Rect &bounds, const ColorScheme &cs = ColorScheme::defaultScheme());
+
     virtual ~SystemInfoDialog() = default;
 
   protected:
-    std::shared_ptr<UIButton> okButton;
-    String infoContent; // Adatok összegyűjtési módszerek
-    void collectSystemInfo();
+    // Felülírjuk a drawSelf-et a custom szöveg megjelenítéshez
+    virtual void drawSelf() override;
+
+  private:
+    // Adatok összegyűjtési módszerek
+    String buildSystemInfoText();
     String formatProgramInfo();
     String formatMemoryInfo();
     String formatHardwareInfo();
     String formatSi4735Info();
-
-    // UI módszerek
-    virtual void createDialogContent() override;
-    virtual void layoutDialogContent() override;
-    virtual void drawSelf() override;
-
-    // Eseménykezelés
-    void onOkButtonClicked();
 };
 
 #endif // __SYSTEM_INFO_DIALOG_H
