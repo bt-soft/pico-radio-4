@@ -3,6 +3,9 @@
 
 #include "IScrollableListDataSource.h"
 #include "MultiButtonDialog.h"
+#include "PicoMemoryInfo.h"
+#include "StationData.h"
+#include "SystemInfoDialog.h"
 #include "UIScreen.h"
 #include "UIScrollableListComponent.h"
 #include "ValueChangeDialog.h"
@@ -19,7 +22,6 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
   private:
     enum class ItemAction {
         BRIGHTNESS,
-        INFO,
         SQUELCH_BASIS,
         SAVER_TIMEOUT,
         INACTIVE_DIGIT_LIGHT,
@@ -28,6 +30,7 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
         FFT_CONFIG_FM,
         CW_RECEIVER_OFFSET, // CW vételi eltolás
         RTTY_FREQUENCIES,   // RTTY Mark és Shift frekvenciák
+        INFO,
         FACTORY_RESET,
         NONE
     };
@@ -96,6 +99,7 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
         settingItems.push_back(
             {"RTTY Frequencies", String(round(config.data.rttyMarkFrequencyHz)) + "/" + String(round(config.data.rttyShiftHz)) + " Hz", ItemAction::RTTY_FREQUENCIES});
 
+        settingItems.push_back({"System Information", "", ItemAction::INFO});     // "Show Info"
         settingItems.push_back({"Factory Reset", "", ItemAction::FACTORY_RESET}); // Nincs érték, vagy "Execute"
 
         if (menuList) {
@@ -305,36 +309,6 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
                 }
             } break;
 
-                // TODO: Implement other actions (FFT_CONFIG_AM, FFT_CONFIG_FM, CW_RECEIVER_OFFSET, RTTY_FREQUENCIES, FACTORY_RESET)
-                // using ValueChangeDialog or MessageDialog as appropriate.
-
-            case ItemAction::INFO: // Példa: Információs dialógus
-            {
-                // TODO: Valós információk megjelenítése
-                String infoMsg = "Firmware Version: " PROGRAM_VERSION "\nAuthor: " PROGRAM_AUTHOR;
-                auto infoDialog = std::make_shared<MessageDialog>(this, this->tft, Rect(-1, -1, 300, 0), "Information", infoMsg.c_str(), MessageDialog::ButtonsType::Ok);
-                this->showDialog(infoDialog);
-            } break;
-
-            case ItemAction::FACTORY_RESET: {
-                auto confirmDialog =
-                    std::make_shared<MessageDialog>(this, this->tft, Rect(-1, -1, 300, 0), "Factory Reset", "Are you sure you want to reset all settings to default?",
-                                                    MessageDialog::ButtonsType::YesNo, ColorScheme::defaultScheme(), true);
-                confirmDialog->setDialogCallback([this, index](UIDialogBase *sender, MessageDialog::DialogResult result) {
-                    if (result == MessageDialog::DialogResult::Accepted) { // Yes
-                        DEBUG("SetupScreen: Performing factory reset.\n");
-                        config.loadDefaults(); // Betölti az alapértelmezett értékeket
-                        config.forceSave();    // Kimenti az EEPROM-ba
-
-                        // Itt további teendők lehetnek, pl. más store-ok resetelése
-                        // fmStationStore.loadDefaults(); fmStationStore.forceSave();
-                        // amStationStore.loadDefaults(); amStationStore.forceSave();
-                        // TODO: Szükség esetén újraindítás vagy a felhasználó tájékoztatása
-                        populateMenuItems(); // Itt helyénvaló a teljes frissítés
-                    }
-                });
-                this->showDialog(confirmDialog);
-            } break;
             case ItemAction::FFT_CONFIG_AM:
             case ItemAction::FFT_CONFIG_FM: {
                 bool isAM = (item.action == ItemAction::FFT_CONFIG_AM);
@@ -436,6 +410,51 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
                 // No need for additional setDialogCallback as it conflicts with ValueChangeDialog's callback
 
                 this->showDialog(fftDialog);
+            } break;
+            case ItemAction::CW_RECEIVER_OFFSET: {
+                auto cwOffsetDialog = std::make_shared<ValueChangeDialog>(              //
+                    this, this->tft,                                                    //
+                    "CW Receiver Offset",                                               // title
+                    "Set CW receiver offset (Hz):",                                     // message
+                    reinterpret_cast<int *>(&config.data.cwReceiverOffsetHz),           // valuePtr (cast uint16_t* to int*)
+                    CW_DECODER_MIN_FREQUENCY, CW_DECODER_MAX_FREQUENCY, 10,             // min, max, step
+                    [this, index](const std::variant<int, float, bool> &liveNewValue) { // "Élő" ValueChangeCallback
+                        if (std::holds_alternative<int>(liveNewValue)) {
+                            int currentDialogVal = std::get<int>(liveNewValue);
+                            config.data.cwReceiverOffsetHz = static_cast<uint16_t>(currentDialogVal);
+                            config.checkSave();
+                        }
+                    },
+                    // DialogCallback paraméter - egyszerűsítve a segédfüggvénnyel
+                    createListUpdateCallback(index, []() { return String(config.data.cwReceiverOffsetHz) + " Hz"; }), //
+                    Rect(-1, -1, 280, 0));
+
+                this->showDialog(cwOffsetDialog);
+            } break;
+            case ItemAction::INFO: // Rendszer információ dialógus
+            {
+                auto systemInfoDialog = std::make_shared<SystemInfoDialog>(this, this->tft, Rect(-1, -1, 320, 240));
+                this->showDialog(systemInfoDialog);
+            } break;
+
+            case ItemAction::FACTORY_RESET: {
+                auto confirmDialog =
+                    std::make_shared<MessageDialog>(this, this->tft, Rect(-1, -1, 300, 0), "Factory Reset", "Are you sure you want to reset all settings to default?",
+                                                    MessageDialog::ButtonsType::YesNo, ColorScheme::defaultScheme(), true);
+                confirmDialog->setDialogCallback([this, index](UIDialogBase *sender, MessageDialog::DialogResult result) {
+                    if (result == MessageDialog::DialogResult::Accepted) { // Yes
+                        DEBUG("SetupScreen: Performing factory reset.\n");
+                        config.loadDefaults(); // Betölti az alapértelmezett értékeket
+                        config.forceSave();    // Kimenti az EEPROM-ba
+
+                        // Itt további teendők lehetnek, pl. más store-ok resetelése
+                        // fmStationStore.loadDefaults(); fmStationStore.forceSave();
+                        // amStationStore.loadDefaults(); amStationStore.forceSave();
+                        // TODO: Szükség esetén újraindítás vagy a felhasználó tájékoztatása
+                        populateMenuItems(); // Itt helyénvaló a teljes frissítés
+                    }
+                });
+                this->showDialog(confirmDialog);
             } break;
 
             case ItemAction::NONE:
