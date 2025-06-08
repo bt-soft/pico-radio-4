@@ -2,6 +2,7 @@
 #define __SETUP_SCREEN_H
 
 #include "IScrollableListDataSource.h"
+#include "MultiButtonDialog.h"
 #include "UIScreen.h"
 #include "UIScrollableListComponent.h"
 #include "config.h"
@@ -231,37 +232,31 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
 
                 this->showDialog(brightnessDialog);
             } break;
-
             case ItemAction::SQUELCH_BASIS: {
                 const char *options[] = {"RSSI", "SNR"};
-                auto basisDialog = std::make_shared<MessageDialog>(                           //
-                    this, this->tft,                                                          // parentScreen
-                    "Squelch Basis",                                                          // title
-                    "Select squelch basis:",                                                  // message
-                    options, ARRAY_ITEM_COUNT(options),                                       // gombok feliratai és a számossága
-                    [this, index](UIDialogBase *sender, MessageDialog::DialogResult result) { //
-                        // Visszaalakítjuk MessageDialog-ra a sender-t
-                        auto actualBasisDialog = static_cast<MessageDialog *>(sender);
-                        // Ha nem csak bezárta a dialogot...
-                        if (result == MessageDialog::DialogResult::Accepted) {
-                            int clickedIndex = actualBasisDialog->getClickedUserButtonIndex();
-                            // Ha kellene a klinkkelt gomb felirata is, akkor itt lekérhetjük:
-                            //  const char *clickedLabel = actualBasisDialog->getClickedUserButtonLabel();
-                            //  DEBUG("SetupScreen: Squelch basis selected: '%s' (index: %d)\n", clickedLabel, clickedIndex);
+                int currentSelection = config.data.squelchUsesRSSI ? 0 : 1; // Current squelch basis as default
+                auto basisDialog = std::make_shared<MultiButtonDialog>(
+                    this, this->tft,                                                                     // parentScreen, tft
+                    "Squelch Basis",                                                                     // title
+                    "Select squelch basis:",                                                             // message
+                    options, ARRAY_ITEM_COUNT(options),                                                  // gombok feliratai és számossága
+                    [this, index](int buttonIndex, const char *buttonLabel, MultiButtonDialog *dialog) { // ButtonClickCallback
+                        DEBUG("SetupScreen: Squelch basis selected: '%s' (index: %d)\n", buttonLabel, buttonIndex);
 
-                            // Beállítjuk az új értéket
-                            bool newSquelchUsesRSSI = (clickedIndex == 0); // 0 for RSSI, 1 for SNR
-                            if (config.data.squelchUsesRSSI != newSquelchUsesRSSI) {
-                                config.data.squelchUsesRSSI = newSquelchUsesRSSI;
-                                config.checkSave();
-                            }
-                            // Frissítjük a lista UI elemét
-                            settingItems[index].value = String(config.data.squelchUsesRSSI ? "RSSI" : "SNR");
-                            if (menuList) {
-                                menuList->refreshItemDisplay(index);
-                            }
+                        // Beállítjuk az új értéket
+                        bool newSquelchUsesRSSI = (buttonIndex == 0); // 0 for RSSI, 1 for SNR
+                        if (config.data.squelchUsesRSSI != newSquelchUsesRSSI) {
+                            config.data.squelchUsesRSSI = newSquelchUsesRSSI;
+                            config.checkSave();
                         }
-                    },                     // DialogCallback vége
+                        // Frissítjük a lista UI elemét
+                        settingItems[index].value = String(config.data.squelchUsesRSSI ? "RSSI" : "SNR");
+                        if (menuList) {
+                            menuList->refreshItemDisplay(index);
+                        }
+                    },                     // ButtonClickCallback vége
+                    true,                  // autoClose
+                    currentSelection,      // defaultButtonIndex - current setting highlighted
                     Rect(-1, -1, 250, 120) // bounds
                 );
                 this->showDialog(basisDialog);
