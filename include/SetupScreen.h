@@ -224,21 +224,35 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
             } break;
 
             case ItemAction::SQUELCH_BASIS: {
-                // Direkt váltás, nincs szükség megerősítő dialógusra
-                config.data.squelchUsesRSSI = !config.data.squelchUsesRSSI;
-                DEBUG("SetupScreen: Squelch basis changed to %s\n", config.data.squelchUsesRSSI ? "RSSI" : "SNR");
-                config.checkSave();
-                // Frissítjük csak az érintett menüelemet
-                if (index >= 0 && index < settingItems.size()) {
-                    settingItems[index].value = String(config.data.squelchUsesRSSI ? "RSSI" : "SNR");
-                    // Frissítjük csak az érintett menüelemet
-                    if (index >= 0 && index < settingItems.size()) {
-                        settingItems[index].value = String(config.data.squelchUsesRSSI ? "RSSI" : "SNR");
-                        if (menuList) {
-                            menuList->refreshItemDisplay(index);
+                const char *options[] = {"RSSI", "SNR"};
+                String currentBasisMsg = "Current: " + String(config.data.squelchUsesRSSI ? "RSSI" : "SNR");
+                auto basisDialog = std::make_shared<MessageDialog>( //
+                    this, this->tft, "Squelch Basis", currentBasisMsg.c_str(),
+                    options, ARRAY_ITEM_COUNT(options),
+                    nullptr, // Kezdetben nullptr a DialogCallback
+                    Rect(-1, -1, 280, 0) // bounds
+                );
+                // Most, hogy a basisDialog már létezik, beállíthatjuk a callback-et, ami capture-öli
+                basisDialog->setDialogCallback([this, index, basisDialog](MessageDialog::DialogResult result) {
+                    if (result == MessageDialog::DialogResult::Accepted) {
+                        int clickedIndex = basisDialog->getClickedUserButtonIndex();
+                        // const char* clickedLabel = basisDialog->getClickedUserButtonLabel();
+
+                        bool newSquelchUsesRSSI = (clickedIndex == 0); // 0 for RSSI, 1 for SNR
+                        if (config.data.squelchUsesRSSI != newSquelchUsesRSSI) {
+                            config.data.squelchUsesRSSI = newSquelchUsesRSSI;
+                            DEBUG("SetupScreen: Squelch basis changed to %s\n", config.data.squelchUsesRSSI ? "RSSI" : "SNR");
+                            config.checkSave();
+                        }
+                        // Frissítjük a lista UI elemét
+                        if (index >= 0 && index < settingItems.size()) {
+                            settingItems[index].value = String(config.data.squelchUsesRSSI ? "RSSI" : "SNR");
+                            if (menuList)
+                                menuList->refreshItemDisplay(index);
                         }
                     }
-                }
+                });
+                this->showDialog(basisDialog);
             } break;
 
             case ItemAction::SAVER_TIMEOUT: {

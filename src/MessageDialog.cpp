@@ -60,6 +60,76 @@ MessageDialog::MessageDialog(UIScreen *parentScreen, TFT_eSPI &tft, const Rect &
     layoutDialogContent(); // Ez létrehozza és hozzáadja a gombokat, és markForRedraw-t hív.
     // Az UIComponent::setBounds már beállította a markForRedraw-t a dialógusra, ha a boundsHaveChanged igaz volt.
     // Ha nem, akkor a layoutDialogContent() hívja. Dupla hívás nem probléma.
+
+    // Belső DialogCallback beállítása, ami meghívja a _userDialogCallback-et, ha van.
+    // Ez a UIDialogBase::callback-et állítja be.
+    UIDialogBase::setDialogCallback([this](DialogResult result) {
+        if (_userDialogCallback) {
+            _userDialogCallback(result);
+        }
+    });
+}
+
+/**
+ * @brief MessageDialog konstruktor felhasználó által definiált gombokkal.
+ *
+ * @param parentScreen A szülő UIScreen.
+ * @param tft TFT_eSPI referencia.
+ * @param title A dialógus címe.
+ * @param message Az üzenet szövege.
+ * @param options Gombok feliratainak tömbje (const char* []).
+ * @param numOptions A gombok száma (options tömb mérete).
+ * @param userDialogCb Dialógus lezárásakor hívandó callback.
+ * @param ctorInputBounds A dialógus határai (pozíció és méret).
+ * @param cs Színséma.
+ * @param okClosesDialog Meghatározza, hogy az "OK" típusú gombok bezárják-e a dialógust.
+ */
+MessageDialog::MessageDialog(UIScreen *parentScreen, TFT_eSPI &tft, const char *title, const char *message, const char *const *options, uint8_t numOptions,
+                             DialogCallback userDialogCb, const Rect &ctorInputBounds, const ColorScheme &cs, bool okClosesDialog)
+    : UIDialogBase(parentScreen, tft, ctorInputBounds, title, cs), // UIDialogBase kezeli a kezdeti x,y,w,h alapértelmezéseket
+
+      message(message), buttonsType(ButtonsType::UserDefined), _okClosesDialog(okClosesDialog), _userOptions(options), _numUserOptions(numOptions) {
+
+    // Dialógus tartalmának létrehozása és elrendezése
+    createDialogContent(); // Előkészíti a _buttonDefs-et
+
+    // A UIDialogBase beállította a this->bounds értékét. Most, ha a ctorInputBounds.height 0 volt,
+    // finomítjuk a magasságot a MessageDialog tartalma alapján.
+    if (ctorInputBounds.height == 0) {
+        Rect refinedBounds = this->bounds; // Azzal kezdünk, amit a UIDialogBase kalkulált
+
+        tft.setFreeFont(&FreeSansBold9pt7b);
+        tft.setTextSize(1);
+        int16_t textHeight = tft.fontHeight() * 2; // Becslés az üzenet területére
+
+        uint16_t buttonAreaHeight = 0;
+        if (_numUserOptions > 0) {                                                      // Csak akkor vesszük figyelembe a gombok magasságát, ha vannak gombok
+            buttonAreaHeight = UIButton::DEFAULT_BUTTON_HEIGHT + UIDialogBase::PADDING; // Egy sor gomb magassága + padding
+        }
+
+        uint16_t contentHeight = UIDialogBase::PADDING + textHeight + UIDialogBase::PADDING + buttonAreaHeight;
+        uint16_t requiredTotalHeight = getHeaderHeight() + contentHeight + UIDialogBase::PADDING;
+
+        if (refinedBounds.height < requiredTotalHeight) {
+            refinedBounds.height = requiredTotalHeight;
+            // Ha a magasság változott, és az eredeti Y középre igazítást kért, újra középre igazítjuk az Y-t.
+            if (ctorInputBounds.y == -1) {
+                refinedBounds.y = (tft.height() - refinedBounds.height) / 2;
+            }
+            UIComponent::setBounds(refinedBounds); // Frissítjük a határokat és újrarajzolásra jelöljük
+        }
+        tft.setFreeFont(); // Betűtípus visszaállítása
+    }
+
+    layoutDialogContent();
+
+    // Belső DialogCallback beállítása, ami meghívja a _userDialogCallback-et, ha van.
+    // Ez a UIDialogBase::callback-et állítja be.
+    UIDialogBase::setDialogCallback([this](DialogResult result) {
+        if (_userDialogCallback) {
+            _userDialogCallback(result);
+        }
+    });
 }
 
 /**
@@ -71,90 +141,110 @@ void MessageDialog::createDialogContent() {
     uint8_t buttonIdCounter = 1;
 
     switch (buttonsType) {
-    case ButtonsType::Ok:
-        _buttonDefs.push_back({buttonIdCounter++, "OK", UIButton::ButtonType::Pushable,
-                               [this](const UIButton::ButtonEvent &event) {
-                                   if (event.state == UIButton::EventButtonState::Clicked) {
-                                       if (_okClosesDialog) {
-                                           close(DialogResult::Accepted);
-                                       } else {
-                                           if (this->callback) { // UIDialogBase::callback
-                                               this->callback(DialogResult::Accepted);
+        case ButtonsType::Ok:
+            _buttonDefs.push_back({buttonIdCounter++, "OK", UIButton::ButtonType::Pushable,
+                                   [this](const UIButton::ButtonEvent &event) {
+                                       if (event.state == UIButton::EventButtonState::Clicked) {
+                                           if (_okClosesDialog) {
+                                               close(DialogResult::Accepted);
+                                           } else {
+                                               if (this->callback) { // UIDialogBase::callback
+                                                   this->callback(DialogResult::Accepted);
+                                               }
                                            }
                                        }
-                                   }
-                               },
-                               UIButton::ButtonState::Off, 0, UIButton::DEFAULT_BUTTON_HEIGHT});
-        break;
-    case ButtonsType::OkCancel:
-        _buttonDefs.push_back({buttonIdCounter++, "OK", UIButton::ButtonType::Pushable,
-                               [this](const UIButton::ButtonEvent &event) {
-                                   if (event.state == UIButton::EventButtonState::Clicked) {
-                                       if (_okClosesDialog) {
-                                           close(DialogResult::Accepted);
-                                       } else {
-                                           if (this->callback) {
-                                               this->callback(DialogResult::Accepted);
+                                   },
+                                   UIButton::ButtonState::Off, 0, UIButton::DEFAULT_BUTTON_HEIGHT});
+            break;
+        case ButtonsType::OkCancel:
+            _buttonDefs.push_back({buttonIdCounter++, "OK", UIButton::ButtonType::Pushable,
+                                   [this](const UIButton::ButtonEvent &event) {
+                                       if (event.state == UIButton::EventButtonState::Clicked) {
+                                           if (_okClosesDialog) {
+                                               close(DialogResult::Accepted);
+                                           } else {
+                                               if (this->callback) {
+                                                   this->callback(DialogResult::Accepted);
+                                               }
                                            }
                                        }
-                                   }
-                               },
-                               UIButton::ButtonState::Off, 0, UIButton::DEFAULT_BUTTON_HEIGHT});
-        _buttonDefs.push_back({buttonIdCounter++, "Cancel", UIButton::ButtonType::Pushable,
-                               [this](const UIButton::ButtonEvent &event) {
-                                   if (event.state == UIButton::EventButtonState::Clicked)
-                                       close(DialogResult::Rejected);
-                               },
-                               UIButton::ButtonState::Off, 0, UIButton::DEFAULT_BUTTON_HEIGHT});
-        break;
-    case ButtonsType::YesNo:
-        _buttonDefs.push_back({buttonIdCounter++, "Yes", UIButton::ButtonType::Pushable,
-                               [this](const UIButton::ButtonEvent &event) {
-                                   if (event.state == UIButton::EventButtonState::Clicked) {
-                                       if (_okClosesDialog) {
-                                           close(DialogResult::Accepted);
-                                       } else {
-                                           if (this->callback) {
-                                               this->callback(DialogResult::Accepted);
+                                   },
+                                   UIButton::ButtonState::Off, 0, UIButton::DEFAULT_BUTTON_HEIGHT});
+            _buttonDefs.push_back({buttonIdCounter++, "Cancel", UIButton::ButtonType::Pushable,
+                                   [this](const UIButton::ButtonEvent &event) {
+                                       if (event.state == UIButton::EventButtonState::Clicked)
+                                           close(DialogResult::Rejected);
+                                   },
+                                   UIButton::ButtonState::Off, 0, UIButton::DEFAULT_BUTTON_HEIGHT});
+            break;
+        case ButtonsType::YesNo:
+            _buttonDefs.push_back({buttonIdCounter++, "Yes", UIButton::ButtonType::Pushable,
+                                   [this](const UIButton::ButtonEvent &event) {
+                                       if (event.state == UIButton::EventButtonState::Clicked) {
+                                           if (_okClosesDialog) {
+                                               close(DialogResult::Accepted);
+                                           } else {
+                                               if (this->callback) {
+                                                   this->callback(DialogResult::Accepted);
+                                               }
                                            }
                                        }
-                                   }
-                               },
-                               UIButton::ButtonState::Off, 0, UIButton::DEFAULT_BUTTON_HEIGHT});
-        _buttonDefs.push_back({buttonIdCounter++, "No", UIButton::ButtonType::Pushable,
-                               [this](const UIButton::ButtonEvent &event) {
-                                   if (event.state == UIButton::EventButtonState::Clicked)
-                                       close(DialogResult::Rejected);
-                               },
-                               UIButton::ButtonState::Off, 0, UIButton::DEFAULT_BUTTON_HEIGHT});
-        break;
-    case ButtonsType::YesNoCancel:
-        _buttonDefs.push_back({buttonIdCounter++, "Yes", UIButton::ButtonType::Pushable,
-                               [this](const UIButton::ButtonEvent &event) {
-                                   if (event.state == UIButton::EventButtonState::Clicked) {
-                                       if (_okClosesDialog) {
-                                           close(DialogResult::Accepted);
-                                       } else {
-                                           if (this->callback) {
-                                               this->callback(DialogResult::Accepted);
+                                   },
+                                   UIButton::ButtonState::Off, 0, UIButton::DEFAULT_BUTTON_HEIGHT});
+            _buttonDefs.push_back({buttonIdCounter++, "No", UIButton::ButtonType::Pushable,
+                                   [this](const UIButton::ButtonEvent &event) {
+                                       if (event.state == UIButton::EventButtonState::Clicked)
+                                           close(DialogResult::Rejected);
+                                   },
+                                   UIButton::ButtonState::Off, 0, UIButton::DEFAULT_BUTTON_HEIGHT});
+            break;
+        case ButtonsType::YesNoCancel:
+            _buttonDefs.push_back({buttonIdCounter++, "Yes", UIButton::ButtonType::Pushable,
+                                   [this](const UIButton::ButtonEvent &event) {
+                                       if (event.state == UIButton::EventButtonState::Clicked) {
+                                           if (_okClosesDialog) {
+                                               close(DialogResult::Accepted);
+                                           } else {
+                                               if (this->callback) {
+                                                   this->callback(DialogResult::Accepted);
+                                               }
                                            }
                                        }
-                                   }
-                               },
-                               UIButton::ButtonState::Off, 0, UIButton::DEFAULT_BUTTON_HEIGHT});
-        _buttonDefs.push_back({buttonIdCounter++, "No", UIButton::ButtonType::Pushable,
-                               [this](const UIButton::ButtonEvent &event) {
-                                   if (event.state == UIButton::EventButtonState::Clicked)
-                                       close(DialogResult::Rejected);
-                               },
-                               UIButton::ButtonState::Off, 0, UIButton::DEFAULT_BUTTON_HEIGHT});
-        _buttonDefs.push_back({buttonIdCounter++, "Cancel", UIButton::ButtonType::Pushable,
-                               [this](const UIButton::ButtonEvent &event) {
-                                   if (event.state == UIButton::EventButtonState::Clicked)
-                                       close(DialogResult::Dismissed);
-                               },
-                               UIButton::ButtonState::Off, 0, UIButton::DEFAULT_BUTTON_HEIGHT});
-        break;
+                                   },
+                                   UIButton::ButtonState::Off, 0, UIButton::DEFAULT_BUTTON_HEIGHT});
+            _buttonDefs.push_back({buttonIdCounter++, "No", UIButton::ButtonType::Pushable,
+                                   [this](const UIButton::ButtonEvent &event) {
+                                       if (event.state == UIButton::EventButtonState::Clicked)
+                                           close(DialogResult::Rejected);
+                                   },
+                                   UIButton::ButtonState::Off, 0, UIButton::DEFAULT_BUTTON_HEIGHT});
+            _buttonDefs.push_back({buttonIdCounter++, "Cancel", UIButton::ButtonType::Pushable,
+                                   [this](const UIButton::ButtonEvent &event) {
+                                       if (event.state == UIButton::EventButtonState::Clicked)
+                                           close(DialogResult::Dismissed);
+                                   },
+                                   UIButton::ButtonState::Off, 0, UIButton::DEFAULT_BUTTON_HEIGHT});
+            break;
+
+        case ButtonsType::UserDefined:
+            if (_userOptions && _numUserOptions > 0) {
+                for (uint8_t i = 0; i < _numUserOptions; ++i) {
+                    _buttonDefs.push_back({static_cast<uint8_t>(buttonIdCounter + i), _userOptions[i], UIButton::ButtonType::Pushable,
+                                           [this, index = i, label = _userOptions[i]](const UIButton::ButtonEvent &event) {
+                                               if (event.state == UIButton::EventButtonState::Clicked) {
+                                                   _clickedUserButtonIndex = index;
+                                                   _clickedUserButtonLabel = label;
+                                                   // UserDefined gomb mindig bezárja a dialógust Accepted eredménnyel
+                                                   // A close() metódus fogja meghívni a UIDialogBase::callback-et,
+                                                   // ami pedig a mi belsőleg beállított lambdánkon keresztül
+                                                   // meghívja a _userDialogCallback-et, ha az létezik.
+                                                   close(DialogResult::Accepted);
+                                               }
+                                           },
+                                           UIButton::ButtonState::Off, 0, UIButton::DEFAULT_BUTTON_HEIGHT});
+                }
+            }
+            break;
     }
 }
 
