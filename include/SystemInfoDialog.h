@@ -34,13 +34,27 @@ class SystemInfoDialog : public MessageDialog {
     // Felülírjuk a drawSelf-et a custom szöveg megjelenítéshez
     virtual void drawSelf() override;
 
+    // Felülírjuk a layoutDialogContent-et a navigációs gombok helyes pozicionálásához
+    virtual void layoutDialogContent() override;
+
   private:
+    // Lapozás állapot
+    int currentPage;
+
+    // Navigációs gombok
+    std::shared_ptr<UIButton> prevButton;
+    std::shared_ptr<UIButton> nextButton;
+
     // Adatok összegyűjtési módszerek
-    String buildSystemInfoText();
+    String getCurrentPageContent();
     String formatProgramInfo();
     String formatMemoryInfo();
     String formatHardwareInfo();
-    String formatSi4735Info();
+    String formatSi4735Info(); // Segéd módszerek
+    void updateNavigationButtons();
+
+    // Konstansok
+    static const int TOTAL_PAGES = 4; // Program, Memory, Hardware, Radio
 };
 
 #endif // __SYSTEM_INFO_DIALOG_H

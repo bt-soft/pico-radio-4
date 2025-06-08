@@ -28,6 +28,9 @@ class MessageDialog : public UIDialogBase, public ButtonsGroupManager<MessageDia
     virtual void createDialogContent() override;
     virtual void layoutDialogContent() override;
 
+    // Protected method to access buttons list for derived classes
+    const std::vector<std::shared_ptr<UIButton>> &getButtonsList() const { return _buttonsList; }
+
     // Felülírjuk a drawSelf-et az üzenet kirajzolásához
     virtual void drawSelf() override;
 
