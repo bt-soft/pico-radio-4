@@ -56,11 +56,15 @@ class TestScreen : public UIScreen, public ButtonsGroupManager<TestScreen> {
      * @note Ez a metódus nem hívja meg a gyerek komponensek loop-ját, csak saját logikát tartalmaz.
      */
     virtual void handleOwnLoop() override {}
-
     /**
      * @brief Kirajzolja a képernyő saját tartalmát
      */
     virtual void drawSelf() override {
+        // Ne rajzoljuk ki a képernyő tartalmát, ha van aktív dialógus
+        if (isDialogActive()) {
+            return;
+        }
+
         // Szöveg középre igazítása
         tft.setTextDatum(MC_DATUM);
         tft.setTextColor(TFT_WHITE, TFT_COLOR_BACKGROUND);
