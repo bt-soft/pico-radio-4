@@ -60,7 +60,7 @@ void UIDialogBase::close(DialogResult result) {
 
     // Callback meghívása ELŐBB - így a callback-ben lehet új dialógust megnyitni
     if (callback) {
-        callback(result);
+        callback(this, result);
     }
 
     // Szülő képernyő értesítése UTÁNA - dialógus eltávolítása a stackből
@@ -138,9 +138,9 @@ bool UIDialogBase::handleRotary(const RotaryEvent &event) {
     if (event.buttonState == RotaryEvent::ButtonState::Clicked) {
         // A dialógus maga kezeli a klikket, az OK-nak/elfogadásnak feleltetjük meg
         if (autoClose) {
-            close(DialogResult::Accepted);
+            close(DialogResult::Accepted); // This close will call the callback with 'this'
         } else if (callback) {
-            callback(DialogResult::Accepted);
+            callback(this, DialogResult::Accepted);
         }
         return true;
     }

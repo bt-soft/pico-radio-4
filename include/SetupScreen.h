@@ -205,10 +205,11 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
                             analogWrite(PIN_TFT_BACKGROUND_LED, config.data.tftBackgroundBrightness);
                             DEBUG("SetupScreen: Live brightness preview: %u (config updated)\n", config.data.tftBackgroundBrightness);
                         }
-                    },
-                    [this, index](MessageDialog::DialogResult dialogResult) {
+                    }, // "Élő" ValueChangeCallback vége
+                    // Most jön az új, opcionális DialogCallback paraméter
+                    [this, index](UIDialogBase *sender, MessageDialog::DialogResult dialogResult) {
                         // A dialog bezárásakor hívódik meg ez a callback.
-                        // A dialogResult lehet Accepted vagy Rejected
+                        // A dialogResult lehet Accepted vagy Rejected. A sender a brightnessDialog maga.
                         // Nem figyeljük a dialogResult-ot, minden esetben frissítjük a lista UI elemét a végleges (elfogadott vagy visszaállított) értékkel
                         if (index >= 0 && index < settingItems.size()) {
                             settingItems[index].value = String(config.data.tftBackgroundBrightness);
@@ -216,7 +217,7 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
                                 menuList->refreshItemDisplay(index);
                             }
                         }
-                    },
+                    },                   // DialogCallback vége
                     Rect(-1, -1, 280, 0) // Auto-magasság
                 );
 
@@ -225,33 +226,35 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
 
             case ItemAction::SQUELCH_BASIS: {
                 const char *options[] = {"RSSI", "SNR"};
-                String currentBasisMsg = "Current: " + String(config.data.squelchUsesRSSI ? "RSSI" : "SNR");
                 auto basisDialog = std::make_shared<MessageDialog>( //
-                    this, this->tft, "Squelch Basis", currentBasisMsg.c_str(),
-                    options, ARRAY_ITEM_COUNT(options),
-                    nullptr, // Kezdetben nullptr a DialogCallback
+                    this, this->tft,                                // parentScreen
+                    "Squelch Basis",                                // title
+                    "Select basis:",                                // message
+                    options, ARRAY_ITEM_COUNT(options),             // gombok feliratai és a számossága
+                    [this, index](UIDialogBase *sender, MessageDialog::DialogResult result) {
+                        // Visszaalakítjuk MessageDialog-ra a sender-t
+                        auto actualBasisDialog = static_cast<MessageDialog *>(sender);
+
+                        if (result == MessageDialog::DialogResult::Accepted) {
+                            int clickedIndex = actualBasisDialog->getClickedUserButtonIndex();
+
+                            // const char* clickedLabel = basisDialog->getClickedUserButtonLabel();
+                            bool newSquelchUsesRSSI = (clickedIndex == 0); // 0 for RSSI, 1 for SNR
+                            if (config.data.squelchUsesRSSI != newSquelchUsesRSSI) {
+                                config.data.squelchUsesRSSI = newSquelchUsesRSSI;
+                                DEBUG("SetupScreen: Squelch basis changed to %s\n", config.data.squelchUsesRSSI ? "RSSI" : "SNR");
+                                config.checkSave();
+                            }
+                            // Frissítjük a lista UI elemét
+                            if (index >= 0 && index < settingItems.size()) {
+                                settingItems[index].value = String(config.data.squelchUsesRSSI ? "RSSI" : "SNR");
+                                if (menuList)
+                                    menuList->refreshItemDisplay(index);
+                            }
+                        }
+                    },                   // DialogCallback vége
                     Rect(-1, -1, 280, 0) // bounds
                 );
-                // Most, hogy a basisDialog már létezik, beállíthatjuk a callback-et, ami capture-öli
-                basisDialog->setDialogCallback([this, index, basisDialog](MessageDialog::DialogResult result) {
-                    if (result == MessageDialog::DialogResult::Accepted) {
-                        int clickedIndex = basisDialog->getClickedUserButtonIndex();
-                        // const char* clickedLabel = basisDialog->getClickedUserButtonLabel();
-
-                        bool newSquelchUsesRSSI = (clickedIndex == 0); // 0 for RSSI, 1 for SNR
-                        if (config.data.squelchUsesRSSI != newSquelchUsesRSSI) {
-                            config.data.squelchUsesRSSI = newSquelchUsesRSSI;
-                            DEBUG("SetupScreen: Squelch basis changed to %s\n", config.data.squelchUsesRSSI ? "RSSI" : "SNR");
-                            config.checkSave();
-                        }
-                        // Frissítjük a lista UI elemét
-                        if (index >= 0 && index < settingItems.size()) {
-                            settingItems[index].value = String(config.data.squelchUsesRSSI ? "RSSI" : "SNR");
-                            if (menuList)
-                                menuList->refreshItemDisplay(index);
-                        }
-                    }
-                });
                 this->showDialog(basisDialog);
             } break;
 
@@ -266,8 +269,8 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
                     "Timeout (minutes):",                                  // message
                     &tempSaverTimeout,                                     // valuePtr
                     SCREEN_SAVER_TIMEOUT_MIN, SCREEN_SAVER_TIMEOUT_MAX, 1, // min, max, step
-                    nullptr,                                               // Nincs szükség live callback-re itt
-                    [this, index](MessageDialog::DialogResult result) {
+                    nullptr,                                               // Nincs "élő" ValueChangeCallback
+                    [this, index](UIDialogBase *sender, MessageDialog::DialogResult result) {
                         if (result == MessageDialog::DialogResult::Accepted) {
                             config.data.screenSaverTimeoutMinutes = static_cast<uint8_t>(tempSaverTimeout);
                             DEBUG("SetupScreen: Screen saver timeout set to: %u min\n", config.data.screenSaverTimeoutMinutes);
@@ -280,8 +283,7 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
                                 }
                             }
                         }
-                        // populateMenuItems(); // Eltávolítva
-                    },
+                    }, // DialogCallback vége
                     dlgBounds);
 
                 this->showDialog(saverDialog);
@@ -325,8 +327,8 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
                 auto confirmDialog =
                     std::make_shared<MessageDialog>(this, this->tft, Rect(-1, -1, 300, 0), "Factory Reset", "Are you sure you want to reset all settings to default?",
                                                     MessageDialog::ButtonsType::YesNo, ColorScheme::defaultScheme(), true);
-                confirmDialog->setDialogCallback([this, index](MessageDialog::DialogResult result) { // index itt lehet, hogy nem is kell, de a konzisztencia miatt maradhat
-                    if (result == MessageDialog::DialogResult::Accepted) {                           // Yes
+                confirmDialog->setDialogCallback([this, index](UIDialogBase *sender, MessageDialog::DialogResult result) {
+                    if (result == MessageDialog::DialogResult::Accepted) { // Yes
                         DEBUG("SetupScreen: Performing factory reset.\n");
                         config.loadDefaults(); // Betölti az alapértelmezett értékeket
                         config.forceSave();    // Kimenti az EEPROM-ba

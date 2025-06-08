@@ -18,7 +18,7 @@ class UIDialogBase : public UIContainerComponent {
         Dismissed // 'X' gombbal vagy programatikusan bezárva
     };
 
-    using DialogCallback = std::function<void(DialogResult)>;
+    using DialogCallback = std::function<void(UIDialogBase*, DialogResult)>;
 
     static constexpr const uint8_t DIALOG_DEFAULT_CLOSE_BUTTON_ID = 111; // Alapértelmezett bezáró gomb ID
 

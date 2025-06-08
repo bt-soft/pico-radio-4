@@ -121,8 +121,7 @@ class TestScreen : public UIScreen, public ButtonsGroupManager<TestScreen> {
                              auto showDialog3 = [this]() {
                                  Rect dlg3Bounds(90, 110, 200, 0);
                                  auto dialog3 = std::make_shared<MessageDialog>(this, this->tft, dlg3Bounds, "Dialog 3/3", "Final. Click OK.", MessageDialog::ButtonsType::Ok,
-                                                                                ColorScheme::defaultScheme(), true /*okClosesDialog=true*/);
-                                 dialog3->setDialogCallback([this](MessageDialog::DialogResult result) {
+                                                                                ColorScheme::defaultScheme(), true /*okClosesDialog=true*/);                                 dialog3->setDialogCallback([this](UIDialogBase* sender, MessageDialog::DialogResult result) {
                                      if (result == MessageDialog::DialogResult::Accepted) {
                                          DEBUG("Dialog 3 OK. Closing Dialog 3.\n");
                                      }
@@ -134,8 +133,7 @@ class TestScreen : public UIScreen, public ButtonsGroupManager<TestScreen> {
                              auto showDialog2 = [this, showDialog3]() {
                                  Rect dlg2Bounds(60, 70, 200, 0);
                                  auto dialog2 = std::make_shared<MessageDialog>(this, this->tft, dlg2Bounds, "Dialog 2/3", "Next or Cancel.", MessageDialog::ButtonsType::OkCancel,
-                                                                                ColorScheme::defaultScheme(), false /*okClosesDialog=false*/);
-                                 dialog2->setDialogCallback([this, showDialog3](MessageDialog::DialogResult result) {
+                                                                                ColorScheme::defaultScheme(), false /*okClosesDialog=false*/);                                 dialog2->setDialogCallback([this, showDialog3](UIDialogBase* sender, MessageDialog::DialogResult result) {
                                      if (result == MessageDialog::DialogResult::Accepted) {
                                          DEBUG("Dialog 2 Next. Showing Dialog 3.\n");
                                          showDialog3();
@@ -151,8 +149,7 @@ class TestScreen : public UIScreen, public ButtonsGroupManager<TestScreen> {
                              // Ennek az "OK" (Next) gombja nem zárja be, csak a callback-et hívja
                              Rect dlg1Bounds(30, 30, 200, 0);
                              auto dialog1 = std::make_shared<MessageDialog>(this, this->tft, dlg1Bounds, "Dialog 1/3", "Next or Cancel.", MessageDialog::ButtonsType::OkCancel,
-                                                                            ColorScheme::defaultScheme(), false /*okClosesDialog=false*/);
-                             dialog1->setDialogCallback([this, showDialog2](MessageDialog::DialogResult result) {
+                                                                            ColorScheme::defaultScheme(), false /*okClosesDialog=false*/);                             dialog1->setDialogCallback([this, showDialog2](UIDialogBase* sender, MessageDialog::DialogResult result) {
                                  if (result == MessageDialog::DialogResult::Accepted) {
                                      DEBUG("Dialog 1 Next. Showing Dialog 2.\n");
                                      showDialog2();
@@ -214,8 +211,7 @@ class TestScreen : public UIScreen, public ButtonsGroupManager<TestScreen> {
                          if (showSpecificDialog) {
                              Rect dialogBounds(-1, -1, 300, 0); // Centered X, auto Y, width 180, auto-height
                              auto dialog = std::make_shared<MessageDialog>(this, this->tft, dialogBounds, "Test Dialog", dialogMessage, dialogType, ColorScheme::defaultScheme(),
-                                                                           true /*okClosesDialog=true alapértelmezetten*/);
-                             dialog->setDialogCallback([this, label = event.label](MessageDialog::DialogResult result) {
+                                                                           true /*okClosesDialog=true alapértelmezetten*/);                             dialog->setDialogCallback([this, label = event.label](UIDialogBase* sender, MessageDialog::DialogResult result) {
                                  const char *resultStr = "Unknown";
                                  if (result == MessageDialog::DialogResult::Accepted)
                                      resultStr = "Accepted";

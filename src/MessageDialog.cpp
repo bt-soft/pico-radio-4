@@ -63,9 +63,9 @@ MessageDialog::MessageDialog(UIScreen *parentScreen, TFT_eSPI &tft, const Rect &
 
     // Belső DialogCallback beállítása, ami meghívja a _userDialogCallback-et, ha van.
     // Ez a UIDialogBase::callback-et állítja be.
-    UIDialogBase::setDialogCallback([this](DialogResult result) {
+    UIDialogBase::setDialogCallback([this](UIDialogBase* sender, DialogResult result) {
         if (_userDialogCallback) {
-            _userDialogCallback(result);
+            _userDialogCallback(sender, result);
         }
     });
 }
@@ -125,9 +125,9 @@ MessageDialog::MessageDialog(UIScreen *parentScreen, TFT_eSPI &tft, const char *
 
     // Belső DialogCallback beállítása, ami meghívja a _userDialogCallback-et, ha van.
     // Ez a UIDialogBase::callback-et állítja be.
-    UIDialogBase::setDialogCallback([this](DialogResult result) {
+    UIDialogBase::setDialogCallback([this](UIDialogBase* sender, DialogResult result) {
         if (_userDialogCallback) {
-            _userDialogCallback(result);
+            _userDialogCallback(sender, result);
         }
     });
 }
@@ -149,7 +149,7 @@ void MessageDialog::createDialogContent() {
                                                close(DialogResult::Accepted);
                                            } else {
                                                if (this->callback) { // UIDialogBase::callback
-                                                   this->callback(DialogResult::Accepted);
+                                                   this->callback(this, DialogResult::Accepted);
                                                }
                                            }
                                        }
@@ -164,7 +164,7 @@ void MessageDialog::createDialogContent() {
                                                close(DialogResult::Accepted);
                                            } else {
                                                if (this->callback) {
-                                                   this->callback(DialogResult::Accepted);
+                                                   this->callback(this, DialogResult::Accepted);
                                                }
                                            }
                                        }
@@ -185,7 +185,7 @@ void MessageDialog::createDialogContent() {
                                                close(DialogResult::Accepted);
                                            } else {
                                                if (this->callback) {
-                                                   this->callback(DialogResult::Accepted);
+                                                   this->callback(this, DialogResult::Accepted);
                                                }
                                            }
                                        }
@@ -206,7 +206,7 @@ void MessageDialog::createDialogContent() {
                                                close(DialogResult::Accepted);
                                            } else {
                                                if (this->callback) {
-                                                   this->callback(DialogResult::Accepted);
+                                                   this->callback(this, DialogResult::Accepted);
                                                }
                                            }
                                        }

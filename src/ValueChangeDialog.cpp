@@ -38,16 +38,16 @@ ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, cons
     layoutDialogContent();
 
     // Callback beállítása az OK/Cancel események kezelésére
-    setDialogCallback([this](MessageDialog::DialogResult result) {
+    setDialogCallback([this](UIDialogBase *sender, DialogResult result) {
         if (result == MessageDialog::DialogResult::Accepted) {
             // Hívjuk meg a _valueCallback-et a végleges, elfogadott értékkel.
             notifyValueChange();
             if (_userDialogCallback)
-                _userDialogCallback(result);
+                _userDialogCallback(sender, result);
         } else if (result == MessageDialog::DialogResult::Rejected) {
             restoreOriginalValue(); // Ez most már tartalmazza a notifyValueChange() hívást is.
             if (_userDialogCallback)
-                _userDialogCallback(result);
+                _userDialogCallback(sender, result);
         }
         // A MessageDialog maga kezeli a close() hívást az _okClosesDialog alapján
     });
@@ -81,16 +81,16 @@ ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, cons
     layoutDialogContent();
 
     // Callback beállítása az OK/Cancel események kezelésére
-    setDialogCallback([this](MessageDialog::DialogResult result) {
+    setDialogCallback([this](UIDialogBase *sender, DialogResult result) {
         if (result == MessageDialog::DialogResult::Accepted) {
             // Hívjuk meg a _valueCallback-et a végleges, elfogadott értékkel.
             notifyValueChange();
             if (_userDialogCallback)
-                _userDialogCallback(result);
+                _userDialogCallback(sender, result);
         } else if (result == MessageDialog::DialogResult::Rejected) {
             restoreOriginalValue(); // Ez most már tartalmazza a notifyValueChange() hívást is.
             if (_userDialogCallback)
-                _userDialogCallback(result);
+                _userDialogCallback(sender, result);
         }
     });
 }
@@ -120,16 +120,16 @@ ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, cons
     layoutDialogContent();
 
     // Callback beállítása az OK/Cancel események kezelésére
-    setDialogCallback([this](MessageDialog::DialogResult result) {
+    setDialogCallback([this](UIDialogBase *sender, DialogResult result) {
         if (result == MessageDialog::DialogResult::Accepted) {
             // Hívjuk meg a _valueCallback-et a végleges, elfogadott értékkel.
             notifyValueChange();
             if (_userDialogCallback)
-                _userDialogCallback(result);
+                _userDialogCallback(sender, result);
         } else if (result == MessageDialog::DialogResult::Rejected) {
             restoreOriginalValue(); // Ez most már tartalmazza a notifyValueChange() hívást is.
             if (_userDialogCallback)
-                _userDialogCallback(result);
+                _userDialogCallback(sender, result);
         }
     });
 }
@@ -161,17 +161,17 @@ ValueChangeDialog::ValueChangeDialog(UIScreen *parentScreen, TFT_eSPI &tft, cons
     layoutDialogContent();
 
     // Callback beállítása az OK/Cancel események kezelésére
-    setDialogCallback([this](MessageDialog::DialogResult result) {
+    setDialogCallback([this](UIDialogBase *sender, DialogResult result) {
         if (result == MessageDialog::DialogResult::Accepted) {
             // Hívjuk meg a _valueCallback-et a végleges, elfogadott értékkel.
             // A _valueCallback int-et vár a variantban, ezért castolunk.
             notifyValueChange();
             if (_userDialogCallback)
-                _userDialogCallback(result);
+                _userDialogCallback(sender, result);
         } else if (result == MessageDialog::DialogResult::Rejected) {
             restoreOriginalValue(); // Ez most már tartalmazza a notifyValueChange() hívást is.
             if (_userDialogCallback)
-                _userDialogCallback(result);
+                _userDialogCallback(sender, result);
         }
         // A MessageDialog maga kezeli a close() hívást az _okClosesDialog alapján
     });
