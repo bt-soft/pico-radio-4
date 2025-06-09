@@ -38,18 +38,19 @@ struct FreqSegmentColors {
 class FreqDisplay : public UIComponent {
   private:
     // === Referenciák és alapobjektumok ===
-    Band &band;      ///< Referencia a sávkezelő objektumra
-    Config &config;  ///< Referencia a konfigurációs objektumra
-    TFT_eSprite spr; ///< Sprite objektum a 7-szegmenses rajzolásához
-
-    // === Színkonfigurációk ===
+    Band &band;                     ///< Referencia a sávkezelő objektumra
+    Config &config;                 ///< Referencia a konfigurációs objektumra
+    TFT_eSprite spr;                ///< Sprite objektum a 7-szegmenses rajzolásához    // === Színkonfigurációk ===
     FreqSegmentColors normalColors; ///< Színek normál módban
     FreqSegmentColors bfoColors;    ///< Színek BFO módban
+    FreqSegmentColors customColors; ///< Egyedi színkonfiguráció (pl. képernyővédő módhoz)
+    bool useCustomColors;           ///< Ha true, akkor customColors-t használ normalColors helyett
 
     // === Állapotváltozók ===
     uint16_t currentDisplayFrequency; ///< Az aktuálisan kijelzendő frekvencia
     bool bfoModeActiveLastDraw;       ///< BFO mód állapota az utolsó rajzoláskor (változás detektáláshoz)
     bool redrawOnlyFrequencyDigits;   ///< Optimalizálási flag: csak számjegyek újrarajzolása
+    bool hideUnderline;               ///< Ha true, az aláhúzás nem jelenik meg
 
     /**
      * @brief Frekvencia megjelenítési adatok struktúrája
@@ -298,13 +299,28 @@ class FreqDisplay : public UIComponent {
     /**
      * @brief Virtuális destruktor
      */
-    virtual ~FreqDisplay() = default;
+    virtual ~FreqDisplay() = default; /**
+                                       * @brief Beállítja a megjelenítendő frekvenciát
+                                       * @param freq Az új frekvencia érték
+                                       */
+    void setFrequency(uint16_t freq);
 
     /**
-     * @brief Beállítja a megjelenítendő frekvenciát
-     * @param freq Az új frekvencia érték
+     * @brief Beállítja az egyedi színkonfigurációt (pl. képernyővédő módhoz)
+     * @param colors Az új színkonfiguráció
      */
-    void setFrequency(uint16_t freq);
+    void setCustomColors(const FreqSegmentColors &colors);
+
+    /**
+     * @brief Visszaállítja az alapértelmezett színkonfigurációt
+     */
+    void resetToDefaultColors();
+
+    /**
+     * @brief Beállítja, hogy megjelenjen-e az aláhúzás
+     * @param hide Ha true, az aláhúzás elrejtve
+     */
+    void setHideUnderline(bool hide);
 
     // === UIComponent felülírt metódusok ===
     /**

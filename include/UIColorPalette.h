@@ -124,9 +124,7 @@ class UIColorPalette {
 
     // === Batterry szimbólum színek ===
     static constexpr uint16_t TFT_COLOR_DRAINED_BATTERY = TFT_COLOR(248, 252, 0);
-    static constexpr uint16_t TFT_COLOR_SUBMERSIBLE_BATTERY = TFT_ORANGE;
-
-    // === FREKVENCIA KIJELZŐ SZÍNEK ===
+    static constexpr uint16_t TFT_COLOR_SUBMERSIBLE_BATTERY = TFT_ORANGE; // === FREKVENCIA KIJELZŐ SZÍNEK ===
 
     // Normál (SSB/CW) mód színei
     static constexpr uint16_t FREQ_NORMAL_ACTIVE = TFT_GOLD;                // Aktív számjegyek színe
@@ -139,7 +137,10 @@ class UIColorPalette {
     static constexpr uint16_t FREQ_BFO_INDICATOR = TFT_ORANGE; // Indikátor elemek színe BFO módban    // BFO címke háttere
     static constexpr uint16_t FREQ_BFO_LABEL_TEXT = TFT_BLACK; // "BFO" címke szövegszíne
 
-    // === SEGÉD METÓDUSOK ===
+    // ScreenSaver mód színei (kék színséma)
+    static constexpr uint16_t FREQ_SCREENSAVER_ACTIVE = TFT_CYAN;                    // Aktív számjegyek színe képernyővédő módban
+    static constexpr uint16_t FREQ_SCREENSAVER_INACTIVE = TFT_COLOR(0, 0, 80);       // Inaktív számjegyek színe (sötét kék)
+    static constexpr uint16_t FREQ_SCREENSAVER_INDICATOR = TFT_COLOR(173, 216, 230); // Indikátor elemek színe (világos kék)    // === SEGÉD METÓDUSOK ===
 
     /**
      * FreqSegmentColors létrehozása normál módhoz
@@ -150,6 +151,11 @@ class UIColorPalette {
      * FreqSegmentColors létrehozása BFO módhoz
      */
     static FreqSegmentColors createBfoFreqColors();
+
+    /**
+     * FreqSegmentColors létrehozása képernyővédő módhoz (kék színséma)
+     */
+    static FreqSegmentColors createScreenSaverFreqColors();
 
     /**
      * Alapértelmezett gomb ColorScheme létrehozása

@@ -67,11 +67,6 @@ constexpr uint16_t SsbCwUnitYOffset = SpriteYOffset + FREQ_7SEGMENT_HEIGHT + 20;
 
 } // namespace FreqDisplayConstants
 
-// === UIColorPalette metódusok implementációja ===
-FreqSegmentColors UIColorPalette::createNormalFreqColors() { return {FREQ_NORMAL_ACTIVE, FREQ_NORMAL_INACTIVE, FREQ_NORMAL_INDICATOR}; }
-
-FreqSegmentColors UIColorPalette::createBfoFreqColors() { return {FREQ_BFO_ACTIVE, FREQ_BFO_INACTIVE, FREQ_BFO_INDICATOR}; }
-
 // === Globális színkonfigurációk - UIColorPalette használatával ===
 /// Alapértelmezett színkonfiguráció normál módhoz (nem BFO)
 const FreqSegmentColors defaultNormalColors = UIColorPalette::createNormalFreqColors();
@@ -91,8 +86,10 @@ const FreqSegmentColors defaultBfoColors = UIColorPalette::createBfoFreqColors()
  */
 FreqDisplay::FreqDisplay(TFT_eSPI &tft_param, const Rect &bounds_param, Band &band_ref, Config &config_ref)
     : UIComponent(tft_param, bounds_param), band(band_ref), config(config_ref), spr(&(this->tft)), normalColors(defaultNormalColors), bfoColors(defaultBfoColors),
-      currentDisplayFrequency(0),                                           // Kezdetben 0, hogy az első setFrequency biztosan frissítsen
-      bfoModeActiveLastDraw(rtv::bfoOn), redrawOnlyFrequencyDigits(false) { // Alapértelmezetten false, hogy az első rajzolás teljes legyen
+      customColors(defaultNormalColors), useCustomColors(false),           // Egyedi színek inicializálása
+      currentDisplayFrequency(0),                                          // Kezdetben 0, hogy az első setFrequency biztosan frissítsen
+      bfoModeActiveLastDraw(rtv::bfoOn), redrawOnlyFrequencyDigits(false), // Alapértelmezetten false, hogy az első rajzolás teljes legyen
+      hideUnderline(false) {                                               // Alapértelmezetten megjelenik az aláhúzás
 
     // Alapértelmezett háttérszín beállítása a globális háttérszínre
     this->colors.background = TFT_COLOR_BACKGROUND;
@@ -121,6 +118,35 @@ void FreqDisplay::setFrequency(uint16_t freq) {
         // frissítése, nem a teljes komponens újrarajzolása
         redrawOnlyFrequencyDigits = true;
         markForRedraw();
+    }
+}
+
+/**
+ * @brief Beállítja az egyedi színkonfigurációt (pl. képernyővédő módhoz)
+ * @param colors Az új színkonfiguráció
+ */
+void FreqDisplay::setCustomColors(const FreqSegmentColors &colors) {
+    customColors = colors;
+    useCustomColors = true;
+    markForRedraw(); // Teljes újrarajzolás szükséges a színváltás miatt
+}
+
+/**
+ * @brief Visszaállítja az alapértelmezett színkonfigurációt
+ */
+void FreqDisplay::resetToDefaultColors() {
+    useCustomColors = false;
+    markForRedraw(); // Teljes újrarajzolás szükséges a színváltás miatt
+}
+
+/**
+ * @brief Beállítja, hogy megjelenjen-e az aláhúzás
+ * @param hide Ha true, az aláhúzás elrejtve
+ */
+void FreqDisplay::setHideUnderline(bool hide) {
+    if (hideUnderline != hide) {
+        hideUnderline = hide;
+        markForRedraw(); // Teljes újrarajzolás szükséges az aláhúzás váltás miatt
     }
 }
 
@@ -275,8 +301,8 @@ void FreqDisplay::drawStepUnderline(const FreqSegmentColors &colors) {
     const int underlineAreaWidth = (DigitXStart[2] + DigitWidth) - DigitXStart[0]; // Teljes szélesség
     const int underlineAreaY_abs = bounds.y + UnderlineYOffset;                    // Y pozíció
 
-    // Ha a komponens le van tiltva vagy BFO mód aktív, töröljük az aláhúzást
-    if (isDisabled() || rtv::bfoOn) {
+    // Ha a komponens le van tiltva, BFO mód aktív, vagy az aláhúzás el van rejtve, töröljük az aláhúzást
+    if (isDisabled() || rtv::bfoOn || hideUnderline) {
         tft.fillRect(underlineAreaX_abs, underlineAreaY_abs, underlineAreaWidth, UnderlineHeight, this->colors.background);
         return;
     }
@@ -297,9 +323,14 @@ void FreqDisplay::drawStepUnderline(const FreqSegmentColors &colors) {
 /**
  * @brief Visszaadja az aktuális színkonfigurációt a mód alapján
  *
- * @return Referencia a normalColors-ra vagy bfoColors-ra a BFO állapot szerint
+ * @return Referencia a customColors-ra (ha useCustomColors), egyébként normalColors-ra vagy bfoColors-ra a BFO állapot szerint
  */
-const FreqSegmentColors &FreqDisplay::getSegmentColors() const { return rtv::bfoOn ? bfoColors : normalColors; }
+const FreqSegmentColors &FreqDisplay::getSegmentColors() const {
+    if (useCustomColors) {
+        return customColors;
+    }
+    return rtv::bfoOn ? bfoColors : normalColors;
+}
 
 /**
  * @brief SSB/CW frekvencia kijelzésének kezelése
