@@ -64,15 +64,21 @@ class SystemInfoDialog : public MessageDialog {
      * rajzoljon ki az üzenet helyett. Kezeli az oldalszám megjelenítését, a szöveges
      * tartalom formázását és az összes gomb újrarajzolását.
      */
-    virtual void drawSelf() override;
+    virtual void drawSelf() override; /**
+                                       * @brief A dialógus tartalmának elrendezése felüldefiniálva
+                                       * @details Felülírja a MessageDialog::layoutDialogContent() metódust, hogy
+                                       * létrehozza a navigációs gombokat és mini fontot állítson be minden gombra,
+                                       * beleértve az OK gombot is.
+                                       */
+    virtual void layoutDialogContent() override;
 
     /**
-     * @brief A dialógus tartalmának elrendezése felüldefiniálva
-     * @details Felülírja a MessageDialog::layoutDialogContent() metódust, hogy
-     * létrehozza a navigációs gombokat és mini fontot állítson be minden gombra,
-     * beleértve az OK gombot is.
+     * @brief Visszaadja az összes dialógus gombot (kivéve a bezáró X gombot).
+     * @return A gombok listája shared_ptr-ekben.
+     * @details Felülírja a UIDialogBase virtuális metódusát. A SystemInfoDialog esetében
+     * ez magában foglalja a MessageDialog gombokat (OK) és a navigációs gombokat (Previous, Next).
      */
-    virtual void layoutDialogContent() override;
+    virtual std::vector<std::shared_ptr<UIButton>> getButtonsList() const override;
 
   private:
     // Lapozási állapot és navigáció

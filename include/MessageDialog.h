@@ -90,11 +90,17 @@ class MessageDialog : public UIDialogBase, public ButtonsGroupManager<MessageDia
         const ColorScheme &cs = ColorScheme::defaultScheme(), //
         bool okClosesDialog = true                            //
     );
-
     virtual ~MessageDialog() override = default;
 
     int getClickedUserButtonIndex() const { return _clickedUserButtonIndex; }
     const char *getClickedUserButtonLabel() const { return _clickedUserButtonLabel; }
+
+    /**
+     * @brief Visszaadja az OK/Yes/első gombot, ha létezik.
+     * @return Az OK/Yes/első gomb shared_ptr-je, vagy nullptr ha nincs gomb.
+     * @details Helper metódus az első (általában OK/Yes) gomb egyszerű eléréséhez.
+     */
+    std::shared_ptr<UIButton> getOkButton() const { return (_buttonsList.empty()) ? nullptr : _buttonsList[0]; }
 };
 
 #endif // __MESSAGE_DIALOG_H

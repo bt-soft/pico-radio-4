@@ -35,6 +35,32 @@ SystemInfoDialog::SystemInfoDialog(UIScreen *parentScreen, TFT_eSPI &tft, const 
     // Üres message stringet adunk át, mert saját drawSelf-fel rajzoljuk a tartalmat
     // Lapozós navigáció gombokkal történik
     // A navigációs gombokat a layoutDialogContent()-ben hozzuk létre
+
+    // FONTOS: Explicit layoutDialogContent() hívás szükséges, mert a virtuális
+    // hívás a MessageDialog konstruktorban a MessageDialog::layoutDialogContent()-et
+    // hívná meg, nem a mi felülírt változatunkat.
+    layoutDialogContent();
+}
+
+/**
+ * @brief Visszaadja az összes dialógus gombot (kivéve a bezáró X gombot).
+ * @return A gombok listája shared_ptr-ekben.
+ * @details Kombinálja a MessageDialog gombokat (OK) és a SystemInfoDialog navigációs gombokat (Previous, Next).
+ * Ez biztosítja, hogy az egységes getButtonsList() interfész minden gombot visszaadjon.
+ */
+std::vector<std::shared_ptr<UIButton>> SystemInfoDialog::getButtonsList() const {
+    // Kezdjük a MessageDialog gombok listájával (OK gomb)
+    std::vector<std::shared_ptr<UIButton>> allButtons = MessageDialog::getButtonsList();
+
+    // Adjuk hozzá a navigációs gombokat, ha léteznek
+    if (prevButton) {
+        allButtons.push_back(prevButton);
+    }
+    if (nextButton) {
+        allButtons.push_back(nextButton);
+    }
+
+    return allButtons;
 }
 
 /**
@@ -190,52 +216,54 @@ void SystemInfoDialog::layoutDialogContent() {
     };
 
     // Previous gomb létrehozása (bal oldal)
-    prevButton = std::make_shared<UIButton>(                                                 //
-        tft,                                                                                 // A gomb ID-je 200
-        200,                                                                                 // A gomb területe
-        Rect(bounds.x + SIDE_SPACING, buttonY, COMPACT_BUTTON_WIDTH, COMPACT_BUTTON_HEIGHT), // A gomb szövege
-        "< Prev",                                                                            // A gomb színsémája
-        UIButton::ButtonType::Pushable,                                                      // A típus Pushable
-        [this, updatePageAndUI](const UIButton::ButtonEvent &event) {                        // A gomb esemény callbackje
+    int16_t prevButtonX = bounds.x + SIDE_SPACING;
+    prevButton = std::make_shared<UIButton>(                                     //
+        tft,                                                                     // TFT referencia
+        200,                                                                     // A gomb ID-je 200
+        Rect(prevButtonX, buttonY, COMPACT_BUTTON_WIDTH, COMPACT_BUTTON_HEIGHT), // A gomb területe
+        "< Prev",                                                                // A gomb szövege
+        UIButton::ButtonType::Pushable,                                          // A típus Pushable
+        [this, updatePageAndUI](const UIButton::ButtonEvent &event) {            // A gomb esemény callbackje
             if (event.state == UIButton::EventButtonState::Clicked && currentPage > 0) {
                 currentPage--;
                 updatePageAndUI();
             }
-        });
+        },
+        UIColorPalette::createDefaultButtonScheme() // A gomb színsémája
+    );
     prevButton->setUseMiniFont(true);
 
     // Next gomb létrehozása (jobb oldal)
-    nextButton = std::make_shared<UIButton>(                                                                                       //
-        tft,                                                                                                                       // A gomb ID-je 200
-        201,                                                                                                                       // A gomb területe
-        Rect(bounds.x + bounds.width - SIDE_SPACING - COMPACT_BUTTON_WIDTH, buttonY, COMPACT_BUTTON_WIDTH, COMPACT_BUTTON_HEIGHT), // A gomb szövege
-        "Next >",                                                                                                                  // A gomb színsémája
-        UIButton::ButtonType::Pushable,                                                                                            // A típus Pushable
-        [this, updatePageAndUI](const UIButton::ButtonEvent &event) {
+    int16_t nextButtonX = bounds.x + bounds.width - SIDE_SPACING - COMPACT_BUTTON_WIDTH;
+    nextButton = std::make_shared<UIButton>(                                     //
+        tft,                                                                     // TFT referencia
+        201,                                                                     // A gomb ID-je 201
+        Rect(nextButtonX, buttonY, COMPACT_BUTTON_WIDTH, COMPACT_BUTTON_HEIGHT), // A gomb területe
+        "Next >",                                                                // A gomb szövege
+        UIButton::ButtonType::Pushable,                                          // A típus Pushable
+        [this, updatePageAndUI](const UIButton::ButtonEvent &event) {            // A gomb esemény callbackje
             if (event.state == UIButton::EventButtonState::Clicked && currentPage < TOTAL_PAGES - 1) {
                 currentPage++;
                 updatePageAndUI();
             }
-        });
+        },
+        UIColorPalette::createDefaultButtonScheme() // A gomb színsémája
+    );
     nextButton->setUseMiniFont(true);
 
-    // Navigációs gombok hozzáadása
+    // Navigációs gombok hozzáadása a dialógushoz
     addChild(prevButton);
     addChild(nextButton);
 
-    // A navigációs és az OK gomb konfigurálása - mini font és egységes méret/pozíció beállítása
-    const auto &buttonsList = getButtonsList();
-    for (const auto &button : buttonsList) {
-        if (button) {
+    // Az OK gomb konfigurálása - sokkal egyszerűbb módszer a helper metódussal
+    auto okButton = MessageDialog::getOkButton();
+    if (okButton) {
 
-            DEBUG("SystemInfoDialog::layoutDialogContent() - Button ID: %d, Label: %s\n", button->getId(), button->getLabel());
-
-            // A gomb mini fontot használjon
-            button->setUseMiniFont(true);
-            // A gombok Y pozíciójának beállítása, hogy a gombok azonos vonalban legyenek
-            Rect currentBounds = button->getBounds();
-            button->setBounds(Rect(currentBounds.x, buttonY, currentBounds.width, COMPACT_BUTTON_HEIGHT));
-        }
+        // A gomb mini fontot használjon
+        okButton->setUseMiniFont(true);
+        // A gombok Y pozíciójának beállítása, hogy a gombok azonos vonalban legyenek
+        Rect currentBounds = okButton->getBounds();
+        okButton->setBounds(Rect(currentBounds.x, buttonY, currentBounds.width, COMPACT_BUTTON_HEIGHT));
     }
 
     // Navigációs gombok kezdeti állapotának beállítása
@@ -361,21 +389,14 @@ void SystemInfoDialog::drawSelf() {
     // UIDialogBase bezárás gomb (closeButton) újrarajzolása
     if (closeButton) {
         closeButton->draw();
-    }
-
-    // MessageDialog OK gombjai újrarajzolása (az OK gomb mini fonttal)
+    } // Összes dialógus gomb újrarajzolása (OK + navigációs gombok)
     const auto &buttonsList = getButtonsList();
+    DEBUG("SystemInfoDialog::drawSelf() - Drawing %d buttons\n", buttonsList.size());
     for (const auto &button : buttonsList) {
         if (button) {
+            DEBUG("Drawing button ID=%d, Label='%s', Bounds=(%d,%d,%d,%d)\n", button->getId(), button->getLabel(), button->getBounds().x, button->getBounds().y,
+                  button->getBounds().width, button->getBounds().height);
             button->draw();
         }
-    }
-
-    // Navigációs gombok újrarajzolása (Previous és Next gombok mini fonttal)
-    if (prevButton) {
-        prevButton->draw();
-    }
-    if (nextButton) {
-        nextButton->draw();
     }
 }
