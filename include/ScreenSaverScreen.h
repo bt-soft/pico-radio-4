@@ -13,79 +13,128 @@
 // class Band;
 // class Config;
 
+/**
+ * @brief Képernyővédő konstansok namespace
+ * @details Animáció és UI elem pozicionálási konstansok
+ */
 namespace ScreenSaverConstants {
-// Copied from ScreenSaverDisplay.cpp
-constexpr int SAVER_ANIMATION_STEPS = 500;
-constexpr int SAVER_ANIMATION_LINE_LENGTH = 63;
-constexpr int SAVER_LINE_CENTER = 31;
-// ... other animation constants
-constexpr int SAVER_NEW_POS_INTERVAL_MSEC = 15000;
-constexpr int SAVER_COLOR_FACTOR = 64;
-constexpr int SAVER_ANIMATION_STEP_JUMP = 3;
+// Animáció alapvető paraméterei
+constexpr int SAVER_ANIMATION_STEPS = 500;         // Animációs lépések száma
+constexpr int SAVER_ANIMATION_LINE_LENGTH = 63;    // Animációs vonal hossza
+constexpr int SAVER_LINE_CENTER = 31;              // Vonal középpontja
+constexpr int SAVER_NEW_POS_INTERVAL_MSEC = 15000; // Új pozíció intervalluma (ms)
+constexpr int SAVER_COLOR_FACTOR = 64;             // Szín változtatási faktor
+constexpr int SAVER_ANIMATION_STEP_JUMP = 3;       // Animációs lépés ugrás
 
-// Offsets for the animated line relative to saverAnimationX, saverAnimationY
-// Scaled values for 320x240 screen to ensure animation stays within bounds
-constexpr int SAVER_X_OFFSET_1 = 10;  // Left edge of rectangle
-constexpr int SAVER_Y_OFFSET_1 = 5;   // Top edge
-constexpr int SAVER_X_OFFSET_2 = 90;  // Right edge (scaled from 189 to fit 320px screen)
-constexpr int SAVER_Y_OFFSET_2 = 100; // Vertical movement offset for right edge (scaled from 205)
-constexpr int SAVER_X_OFFSET_3 = 200; // Horizontal movement offset for bottom (scaled from 439)
-constexpr int SAVER_Y_OFFSET_3 = 44;  // Bottom edge (kept original as it's small)
-constexpr int SAVER_X_OFFSET_4 = 10;  // Left edge again
-constexpr int SAVER_Y_OFFSET_4 = 220; // Vertical movement offset for left edge (scaled from 494 to fit 240px screen)
+// Animált keret mérete és UI elemek relatív pozíciói a keret bal felső sarkához képest
+constexpr int ANIMATION_BORDER_WIDTH = 280;  // Animált keret szélessége
+constexpr int ANIMATION_BORDER_HEIGHT = 80; // Animált keret magassága
 
-// Battery display constants (can be fine-tuned)
-constexpr int BATTERY_RECT_X_OFFSET = 145; // Relative to FreqDisplay's top-left
-constexpr int BATTERY_RECT_Y_OFFSET = 0;
-constexpr int BATTERY_RECT_W = 38;
-constexpr int BATTERY_RECT_H = 18;
-constexpr int BATTERY_NUB_X_OFFSET = BATTERY_RECT_X_OFFSET + BATTERY_RECT_W + 1;
-constexpr int BATTERY_NUB_Y_OFFSET = BATTERY_RECT_Y_OFFSET + 4;
-constexpr int BATTERY_NUB_W = 2;
-constexpr int BATTERY_NUB_H = 10;
-constexpr int BATTERY_TEXT_X_OFFSET = BATTERY_RECT_X_OFFSET + BATTERY_RECT_W / 2;
-constexpr int BATTERY_TEXT_Y_OFFSET = BATTERY_RECT_Y_OFFSET + BATTERY_RECT_H / 2 - 1; // Centered in the rect
+// FreqDisplay pozíció a keret bal felső sarkához képest
+constexpr int FREQ_DISPLAY_X_OFFSET = 10; // FreqDisplay X eltolás a kereten belül
+constexpr int FREQ_DISPLAY_Y_OFFSET = 15; // FreqDisplay Y eltolás a kereten belül
+constexpr int FREQ_DISPLAY_WIDTH = 180;   // FreqDisplay szélessége (kisebb)
+constexpr int FREQ_DISPLAY_HEIGHT = 50;   // FreqDisplay magassága (kisebb)
+
+// Akkumulátor szimbólum pozíció a keret bal felső sarkához képest (FreqDisplay mellett)
+constexpr int BATTERY_BASE_X_OFFSET = 205; // Akkumulátor alap X pozíció a kereten belül (jobb oldal)
+constexpr int BATTERY_BASE_Y_OFFSET = 35;  // Akkumulátor alap Y pozíció a kereten belül (FreqDisplay szintjén)
+constexpr int BATTERY_RECT_W = 38;         // Akkumulátor téglalap szélessége
+constexpr int BATTERY_RECT_H = 18;         // Akkumulátor téglalap magassága
+constexpr int BATTERY_NUB_W = 2;           // Akkumulátor "Dudor" (+ érintkező) szélessége
+constexpr int BATTERY_NUB_H = 10;          // Akkumulátor "Dudor" (+ érintkező) magassága
 } // namespace ScreenSaverConstants
 
 /**
  * @file ScreenSaverScreen.h
- * @brief Képernyővédő osztály
+ * @brief Képernyővédő osztály implementációja
+ * @details Animált kerettel és frekvencia kijelzéssel rendelkező képernyővédő
  */
 class ScreenSaverScreen : public UIScreen {
   private:
-    uint32_t activationTime;
-    uint32_t lastAnimationUpdateTime;
+    // Időzítés változók
+    uint32_t activationTime;          // Képernyővédő aktiválásának időpontja
+    uint32_t lastAnimationUpdateTime; // Utolsó animáció frissítés időpontja
 
-    virtual void activate() override;
+    /**
+     * @brief Képernyővédő aktiválása
+     * @details Privát metódus, konstruktorból hívva
+     */
+    virtual void activate() override; // Animáció állapot változók
+    uint16_t animationBorderX;        // Animált keret bal felső sarkának X koordinátája
+    uint16_t animationBorderY;        // Animált keret bal felső sarkának Y koordinátája
+    uint16_t currentFrequencyValue;   // Aktuális frekvencia érték
 
-    // Variables from ScreenSaverDisplay logic
-    uint16_t saverAnimationX;
-    uint16_t saverAnimationY;
-    uint16_t currentFrequencyValue;
+    uint16_t posSaver;                                                          // Animáció pozíció számláló
+    uint8_t saverLineColors[ScreenSaverConstants::SAVER_ANIMATION_LINE_LENGTH]; // Animációs vonal színei
 
-    uint16_t posSaver;
-    uint8_t saverLineColors[ScreenSaverConstants::SAVER_ANIMATION_LINE_LENGTH];
+    // UI komponensek és referenciák
+    std::shared_ptr<FreqDisplay> freqDisplayComp; // Frekvencia kijelző komponens
+    Band &band;                                   // Sáv referencia
+    Config &config;                               // Konfiguráció referencia
 
-    std::shared_ptr<FreqDisplay> freqDisplayComp;
-    Band &band;
-    Config &config;
+    uint32_t lastFullUpdateSaverTime; // Utolsó teljes frissítés időpontja
 
-    uint32_t lastFullUpdateSaverTime;
+    /**
+     * @brief Animált keret rajzolása
+     * @details Frekvencia kijelző körül mozgó téglalap keret rajzolása
+     */
+    void drawAnimatedBorder(); /**
+                                * @brief Akkumulátor információ rajzolása
+                                * @details Akkumulátor szimbólum és töltöttségi szöveg kirajzolása
+                                * Az animált keret pozíciójához relatívan pozícionálva
+                                */
+    void drawBatteryInfo();
 
-    void drawAnimatedBorder();
-    void drawBatteryInfo(uint16_t baseX, uint16_t baseY);
+    /**
+     * @brief Frekvencia és akkumulátor kijelző frissítése
+     * @details 15 másodpercenként frissíti a pozíciót és a kijelzett információkat
+     */
     void updateFrequencyAndBatteryDisplay();
 
   public:
+    /**
+     * @brief Konstruktor
+     * @param tft TFT kijelző referencia
+     * @param band_ref Sáv objektum referencia
+     * @param config_ref Konfiguráció objektum referencia
+     */
     ScreenSaverScreen(TFT_eSPI &tft, Band &band_ref, Config &config_ref);
+
+    /**
+     * @brief Destruktor
+     */
     virtual ~ScreenSaverScreen() = default;
 
-    // virtual void activate() override; // Moved to private for internal use via constructor
+    /**
+     * @brief Képernyővédő deaktiválása
+     */
     virtual void deactivate() override;
+
+    /**
+     * @brief Tartalom rajzolása
+     * @details Minden animációs frame-ben meghívódik
+     */
     virtual void drawContent() override;
+
+    /**
+     * @brief Saját loop kezelése
+     * @details Animáció és időzítés logika
+     */
     virtual void handleOwnLoop() override;
 
+    /**
+     * @brief Érintés esemény kezelése
+     * @param event Érintés esemény
+     * @return true ha kezelte az eseményt, false egyébként
+     */
     virtual bool handleTouch(const TouchEvent &event) override;
+
+    /**
+     * @brief Forgó encoder esemény kezelése
+     * @param event Forgó encoder esemény
+     * @return true ha kezelte az eseményt, false egyébként
+     */
     virtual bool handleRotary(const RotaryEvent &event) override;
 };
 
