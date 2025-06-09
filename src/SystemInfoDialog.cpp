@@ -159,7 +159,7 @@ String SystemInfoDialog::formatHardwareInfo() {
     String info = "";
     info += "=== Hardware Information ===\n";
     info += "MCU: RP2040 @ " + String(F_CPU / 1000000) + "MHz\n";
-    info += "Display: TFT 320x240\n\n";
+    info += "Display: TFT " + String(tft.width()) + "x" + String(tft.height()) + "\n\n";
     return info;
 }
 
@@ -362,6 +362,7 @@ void SystemInfoDialog::drawSelf() {
 
     // Ciklus a szöveg soronkénti kirajzolásához a rendelkezésre álló területen belül
     while (lineStart < remainingText.length() && currentY < (textStartY + textHeight - lineHeight)) {
+
         // Következő sortörés keresése
         int lineEnd = remainingText.indexOf('\n', lineStart);
         if (lineEnd == -1) {
@@ -384,18 +385,19 @@ void SystemInfoDialog::drawSelf() {
         tft.drawString(line.c_str(), textStartX, currentY);
         currentY += lineHeight;
         lineStart = lineEnd + 1; // Következő sor kezdésének beállítása
-    } // FONTOS: Összes gomb újrarajzolása, mert a UIDialogBase::drawSelf() felülírja őket
+    }
+
+    // FONTOS: Összes gomb újrarajzolása, mert a UIDialogBase::drawSelf() felülírja őket
 
     // UIDialogBase bezárás gomb (closeButton) újrarajzolása
     if (closeButton) {
         closeButton->draw();
-    } // Összes dialógus gomb újrarajzolása (OK + navigációs gombok)
+    }
+
+    // Összes dialógus gomb újrarajzolása (OK + navigációs gombok)
     const auto &buttonsList = getButtonsList();
-    DEBUG("SystemInfoDialog::drawSelf() - Drawing %d buttons\n", buttonsList.size());
     for (const auto &button : buttonsList) {
         if (button) {
-            DEBUG("Drawing button ID=%d, Label='%s', Bounds=(%d,%d,%d,%d)\n", button->getId(), button->getLabel(), button->getBounds().x, button->getBounds().y,
-                  button->getBounds().width, button->getBounds().height);
             button->draw();
         }
     }

@@ -1,4 +1,5 @@
 #include "MessageDialog.h"
+#include <vector>
 
 /**
  * @brief MessageDialog konstruktor
@@ -298,7 +299,6 @@ void MessageDialog::layoutDialogContent() {
  * @details A dialógus háttere és kerete rajzolódik, majd az üzenet szövege jelenik meg a középső területen.
  */
 void MessageDialog::drawSelf() {
-
     UIDialogBase::drawSelf(); // Alap dialógus keret és fejléc rajzolása
 
     if (message) {
@@ -316,12 +316,46 @@ void MessageDialog::drawSelf() {
             bounds.height - headerH - UIButton::DEFAULT_BUTTON_HEIGHT - (4 * UIDialogBase::PADDING); // Header, PADDING_alatta, text, PADDING_alatta, gombok, 2*PADDING_alatta
 
         if (textArea.width > 0 && textArea.height > 0) {
-            tft.setTextDatum(TC_DATUM); // Top-Center
-            int16_t textDrawY = textArea.y + textArea.height / 2;
-            if (tft.fontHeight() > textArea.height) {          // Ha a szöveg magasabb, mint a terület
-                textDrawY = textArea.y + tft.fontHeight() / 2; // Próbáljuk középre igazítani a szöveg tetejét
+            // Többsoros szöveg kezelése - sorok felosztása \n karakterek alapján
+            String messageStr = String(message);
+            std::vector<String> lines;
+            int start = 0;
+            int lineEnd = messageStr.indexOf('\n');
+
+            // Sorok felosztása
+            while (lineEnd != -1) {
+                lines.push_back(messageStr.substring(start, lineEnd));
+                start = lineEnd + 1;
+                lineEnd = messageStr.indexOf('\n', start);
             }
-            tft.drawString(message, textArea.x + textArea.width / 2, textDrawY);
+            // Utolsó sor hozzáadása
+            if (start < messageStr.length()) {
+                lines.push_back(messageStr.substring(start));
+            }
+
+            // Ha nincs \n karakter, az egész szöveget egy sorként kezeljük
+            if (lines.empty()) {
+                lines.push_back(messageStr);
+            }
+
+            // Sorok renderelése
+            int16_t lineHeight = tft.fontHeight();
+            int16_t totalTextHeight = lines.size() * lineHeight;
+            int16_t startY = textArea.y + (textArea.height - totalTextHeight) / 2;
+
+            // Ha a szöveg túl magas, kezdjük a terület tetejéről
+            if (totalTextHeight > textArea.height) {
+                startY = textArea.y;
+            }
+
+            tft.setTextDatum(TC_DATUM); // Top-Center
+            for (size_t i = 0; i < lines.size(); i++) {
+                int16_t lineY = startY + (i * lineHeight);
+                // Csak akkor rajzoljuk ki a sort, ha még a látható területen belül van
+                if (lineY + lineHeight <= textArea.y + textArea.height) {
+                    tft.drawString(lines[i], textArea.x + textArea.width / 2, lineY);
+                }
+            }
         }
     }
 }

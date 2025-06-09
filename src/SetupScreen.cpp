@@ -673,12 +673,12 @@ void SetupScreen::handleSystemInfoDialog() {
  */
 void SetupScreen::handleFactoryResetDialog() {
     // Megerősítő dialógus létrehozása Igen/Nem gombokkal
-    auto confirmDialog = std::make_shared<MessageDialog>(          //
-        this, this->tft,                                           //
-        Rect(-1, -1, 300, 0),                                      // Dialógus mérete
-        "Factory Reset",                                           // Cím
-        "Are you sure you want to reset all settings to default?", // Üzenet
-        MessageDialog::ButtonsType::YesNo                          // Gombok típusa
+    auto confirmDialog = std::make_shared<MessageDialog>(            //
+        this, this->tft,                                             //
+        Rect(-1, -1, 320, 0),                                        // Dialógus mérete (szélesebb)
+        "Factory Reset",                                             // Cím
+        "Reset all settings to defaults?\n\nThis cannot be undone!", // Rövidebb üzenet
+        MessageDialog::ButtonsType::YesNo                            // Gombok típusa
     );
 
     // Dialógus callback beállítása
