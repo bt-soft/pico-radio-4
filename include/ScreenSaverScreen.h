@@ -28,7 +28,7 @@ constexpr int SAVER_ANIMATION_STEP_JUMP = 3;       // Animációs lépés ugrás
 
 // Animált keret mérete és UI elemek relatív pozíciói a keret bal felső sarkához képest
 constexpr int ANIMATION_BORDER_WIDTH = 280; // Animált keret szélessége
-constexpr int ANIMATION_BORDER_HEIGHT = 60; // Animált keret magassága (kompaktabb)
+constexpr int ANIMATION_BORDER_HEIGHT = 45; // Animált keret magassága (kompaktabb)
 
 // FreqDisplay pozíció a keret bal felső sarkához képest
 constexpr int FREQ_DISPLAY_X_OFFSET = 10;  // FreqDisplay X eltolás a kereten belül
