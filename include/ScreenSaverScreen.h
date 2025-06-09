@@ -31,14 +31,14 @@ constexpr int ANIMATION_BORDER_WIDTH = 210; // Animált keret szélessége (még
 constexpr int ANIMATION_BORDER_HEIGHT = 45; // Animált keret magassága (kompaktabb)
 
 // FreqDisplay pozíció a keret bal felső sarkához képest
-constexpr int FREQ_DISPLAY_X_OFFSET = 5;   // FreqDisplay X eltolás a kereten belül
+constexpr int FREQ_DISPLAY_X_OFFSET = -20;   // FreqDisplay X eltolás a kereten belül
 constexpr int FREQ_DISPLAY_Y_OFFSET = -18; // FreqDisplay Y eltolás a kereten belül (kompenzálja a belső SpriteYOffset = 20-at hogy 2px gap legyen)
 constexpr int FREQ_DISPLAY_WIDTH = 180;    // FreqDisplay szélessége (kisebb)
 constexpr int FREQ_DISPLAY_HEIGHT = 30;    // FreqDisplay magassága (még kisebb)
 
 // Akkumulátor szimbólum pozíció a keret bal felső sarkához képest (FreqDisplay mellett)
-constexpr int BATTERY_BASE_X_OFFSET = 167; // Akkumulátor alap X pozíció a kereten belül (167 + 38 = 205px, 5px margó a keret jobb oldalától)
-constexpr int BATTERY_BASE_Y_OFFSET = 2;   // Akkumulátor alap Y pozíció a kereten belül (2px gap a keret tetejétől)
+constexpr int BATTERY_BASE_X_OFFSET = 170; // Akkumulátor alap X pozíció a kereten belül (167 + 38 = 205px, 5px margó a keret jobb oldalától)
+constexpr int BATTERY_BASE_Y_OFFSET = 3;   // Akkumulátor alap Y pozíció a kereten belül (2px gap a keret tetejétől)
 constexpr int BATTERY_RECT_W = 38;         // Akkumulátor téglalap szélessége
 constexpr int BATTERY_RECT_H = 18;         // Akkumulátor téglalap magassága
 constexpr int BATTERY_NUB_W = 2;           // Akkumulátor "Dudor" (+ érintkező) szélessége
