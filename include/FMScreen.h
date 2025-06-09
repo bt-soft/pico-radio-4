@@ -1,10 +1,9 @@
 #ifndef __FM_SCREEN_H
 #define __FM_SCREEN_H
 
-#include "FreqDisplay.h" // Új include
+#include "FreqDisplay.h"
 #include "UIButton.h"
 #include "UIScreen.h"
-
 
 /**
  * @file FMScreen.h
@@ -14,7 +13,7 @@
 class FMScreen : public UIScreen {
 
   private:
-    // Navigációs és egyéb gombok
+    // Frekvencia kijelző komponens
     std::shared_ptr<FreqDisplay> freqDisplayComp;
 
   public:
