@@ -7,6 +7,9 @@
 #define TFT_COLOR(r, g, b) (((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3))
 #define TFT_COLOR_BACKGROUND TFT_BLACK
 
+// Forward deklaráció a FreqDisplay struktúrájához
+struct FreqSegmentColors;
+
 // Alap színséma, LED specifikus színek nélkül
 struct ColorScheme {
     uint16_t background;
@@ -123,7 +126,30 @@ class UIColorPalette {
     static constexpr uint16_t TFT_COLOR_DRAINED_BATTERY = TFT_COLOR(248, 252, 0);
     static constexpr uint16_t TFT_COLOR_SUBMERSIBLE_BATTERY = TFT_ORANGE;
 
+    // === FREKVENCIA KIJELZŐ SZÍNEK ===
+
+    // Normál (SSB/CW) mód színei
+    static constexpr uint16_t FREQ_NORMAL_ACTIVE = TFT_GOLD;                // Aktív számjegyek színe
+    static constexpr uint16_t FREQ_NORMAL_INACTIVE = TFT_COLOR(50, 50, 50); // Inaktív (háttér) számjegyek színe
+    static constexpr uint16_t FREQ_NORMAL_INDICATOR = TFT_YELLOW;           // Indikátor elemek színe (egységek, aláhúzás)
+
+    // BFO mód színei
+    static constexpr uint16_t FREQ_BFO_ACTIVE = TFT_ORANGE;    // Aktív számjegyek színe BFO módban
+    static constexpr uint16_t FREQ_BFO_INACTIVE = TFT_BROWN;   // Inaktív számjegyek színe BFO módban
+    static constexpr uint16_t FREQ_BFO_INDICATOR = TFT_ORANGE; // Indikátor elemek színe BFO módban    // BFO címke háttere
+    static constexpr uint16_t FREQ_BFO_LABEL_TEXT = TFT_BLACK; // "BFO" címke szövegszíne
+
     // === SEGÉD METÓDUSOK ===
+
+    /**
+     * FreqSegmentColors létrehozása normál módhoz
+     */
+    static FreqSegmentColors createNormalFreqColors();
+
+    /**
+     * FreqSegmentColors létrehozása BFO módhoz
+     */
+    static FreqSegmentColors createBfoFreqColors();
 
     /**
      * Alapértelmezett gomb ColorScheme létrehozása
@@ -162,11 +188,11 @@ class UIColorPalette {
         colors.background = TFT_DARKGREEN;
         colors.foreground = TFT_NAVY;
         colors.border = TFT_DARKGREEN;
-        //---Letiltott default állapot
-        colors.disabledBackground = TFT_DARKGREEN;
+        //---Letiltott default állapot        colors.disabledBackground = TFT_DARKGREEN;
         colors.disabledForeground = TFT_BROWN;
         colors.disabledBorder = TFT_GREENYELLOW;
         return colors;
     }
 };
+
 #endif // __UI_COLOR_PALETTE_H

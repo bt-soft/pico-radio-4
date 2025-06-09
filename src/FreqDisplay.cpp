@@ -1,295 +1,575 @@
 // src/FreqDisplay.cpp
+/**
+ * @file FreqDisplay.cpp
+ * @brief Frekvencia kijelző komponens implementáció
+ *
+ * Ez a fájl tartalmazza a FreqDisplay osztály teljes implementációját,
+ * amely különböző rádiós demodulációs módokhoz optimalizált frekvencia
+ * megjelenítést biztosít 7-szegmenses digitális kijelző stílusban.
+ */
+
 #include "FreqDisplay.h"
 #include "DSEG7_Classic_Mini_Regular_34.h" // 7-szegmenses font
+#include "UIColorPalette.h"                // Centralizált színkonstansok
 #include "defines.h"                       // TFT_COLOR_BACKGROUND
 #include "utils.h"                         // Utils::beepError
 
+/**
+ * @namespace FreqDisplayConstants
+ * @brief Frekvencia kijelző konstansok és pozícionálási adatok
+ *
+ * Ez a névtér tartalmazza az összes pozícionálási konstanst, méretet
+ * és eltolási értéket, ami a komponens különböző elemeinek (digitek,
+ * címkék, egységek, aláhúzások) pontos elhelyezéséhez szükséges.
+ */
 namespace FreqDisplayConstants {
-// FREQ_7SEGMENT_HEIGHT a SevenSegmentFreq.h-ból
-constexpr int FREQ_7SEGMENT_HEIGHT = 38;
+// === 7-szegmenses kijelző alapadatok ===
+constexpr int FREQ_7SEGMENT_HEIGHT = 38; ///< A 7-szegmenses font magassága pixelben
 
-// Digit pozíciók és méretek az aláhúzáshoz (bounds.x, bounds.y relatív)
-constexpr int DigitXStart[] = {141, 171, 200}; // Ezek az X értékek a komponens bal szélétől (bounds.x) számítódnak
-constexpr int DigitWidth = 25;
-constexpr int DigitHeight = FREQ_7SEGMENT_HEIGHT;
-constexpr int DigitYStart = 20;                                 // Relatív Y a bounds.y-hoz képest
-constexpr int UnderlineYOffset = DigitYStart + DigitHeight + 2; // Aláhúzás Y pozíciója a számjegyek alatt
-constexpr int UnderlineHeight = 5;
+// === Digit pozíciók és méretek az érintéses aláhúzáshoz ===
+// Megjegyzés: Minden pozíció a komponens bounds.x, bounds.y koordinátájához relatív
+constexpr int DigitXStart[] = {141, 171, 200};                  ///< Digitek X kezdőpozíciói (komponens bal szélétől)
+constexpr int DigitWidth = 25;                                  ///< Egy digit szélessége pixelben
+constexpr int DigitHeight = FREQ_7SEGMENT_HEIGHT;               ///< Digitek magassága (azonos a font magasságával)
+constexpr int DigitYStart = 20;                                 ///< Digitek Y kezdőpozíciója (komponens tetejétől)
+constexpr int UnderlineYOffset = DigitYStart + DigitHeight + 2; ///< Aláhúzás Y pozíciója
+constexpr int UnderlineHeight = 5;                              ///< Aláhúzás magassága pixelben
 
-// Sprite és Unit pozíciók (bounds.y relatív)
-constexpr uint16_t SpriteYOffset = 20; // A 7-szegmenses kijelző Y eltolása a komponens tetejétől (bounds.y)
-constexpr uint16_t UnitXOffset = 5;    // Az egység ("kHz", "MHz") X eltolása a frekvencia kijelző jobb szélétől
+// === Sprite és egység pozicionálás ===
+constexpr uint16_t SpriteYOffset = 20; ///< 7-szegmenses kijelző Y eltolása a komponens tetejétől
+constexpr uint16_t UnitXOffset = 5;    ///< Egység ("kHz", "MHz") X eltolása a frekvencia jobb szélétől
 
-// Referencia X pozíciók a jobb igazításhoz (bounds.x relatív)
-// Ezek az értékek a 7-szegmenses kijelző jobb szélének X pozícióját jelentik a komponens bal széléhez (bounds.x) képest.
-// A tényleges sprite rajzolási X pozíciója (spritePushX) ebből és a sprite szélességéből (contentWidth) számolódik.
-constexpr uint16_t RefXDefault = 222;
-constexpr uint16_t RefXSeek = 144;
-constexpr uint16_t RefXBfo = 115;
-constexpr uint16_t RefXFmAm = 190;
+// === Referencia X pozíciók különböző módokhoz (jobb igazításhoz) ===
+// Ezek az értékek a 7-szegmenses kijelző jobb szélének X pozícióját jelentik
+// a komponens bal széléhez (bounds.x) viszonyítva. A tényleges sprite rajzolási
+// X pozíciója (spritePushX) ebből és a sprite szélességéből számolódik.
+constexpr uint16_t RefXDefault = 222; ///< Alapértelmezett mód (SSB/CW normál)
+constexpr uint16_t RefXSeek = 144;    ///< SEEK mód során
+constexpr uint16_t RefXBfo = 115;     ///< BFO mód során
+constexpr uint16_t RefXFmAm = 190;    ///< FM/AM módokban
 
-// BFO mód specifikus pozíciók és méretek (bounds.x, bounds.y relatív)
-constexpr uint16_t BfoLabelRectXOffset = 156;
-constexpr uint16_t BfoLabelRectYOffset = 21;
-constexpr uint16_t BfoLabelRectW = 42;
-constexpr uint16_t BfoLabelRectH = 20;
-// constexpr uint16_t BfoLabelTextXOffset = 160; // Nem használjuk, a téglalap közepére rajzolunk
-// constexpr uint16_t BfoLabelTextYOffset = 40;  // Nem használjuk
-constexpr uint16_t BfoHzLabelXOffset = 120;                                      // "Hz" felirat X pozíciója a BFO frekvencia mellett
-constexpr uint16_t BfoHzLabelYOffset = SpriteYOffset + FREQ_7SEGMENT_HEIGHT;     // "Hz" felirat Y pozíciója
-constexpr uint16_t BfoMiniFreqX = 220;                                           // A kis méretű (háttér) frekvencia X pozíciója BFO módban
-constexpr uint16_t BfoMiniFreqY = SpriteYOffset + FREQ_7SEGMENT_HEIGHT + 5;      // A kis méretű (háttér) frekvencia Y pozíciója
-constexpr uint16_t BfoMiniUnitXOffset = 20;                                      // A kis méretű "kHz" X eltolása BFO módban
-constexpr uint16_t SsbCwUnitXOffset = 215;                                       // "kHz" felirat X pozíciója SSB/CW módban (nem BFO)
-constexpr uint16_t SsbCwUnitYOffset = SpriteYOffset + FREQ_7SEGMENT_HEIGHT + 20; // "kHz" felirat Y pozíciója SSB/CW módban (nem BFO)
+// === BFO mód specifikus pozíciók és méretek ===
+// Minden pozíció relatív a komponens bounds.x, bounds.y koordinátájához
+constexpr uint16_t BfoLabelRectXOffset = 156; ///< "BFO" címke téglalap X pozíciója
+constexpr uint16_t BfoLabelRectYOffset = 21;  ///< "BFO" címke téglalap Y pozíciója
+constexpr uint16_t BfoLabelRectW = 42;        ///< "BFO" címke téglalap szélessége
+constexpr uint16_t BfoLabelRectH = 20;        ///< "BFO" címke téglalap magassága
+
+constexpr uint16_t BfoHzLabelXOffset = 120;                                  ///< "Hz" felirat X pozíciója BFO érték mellett
+constexpr uint16_t BfoHzLabelYOffset = SpriteYOffset + FREQ_7SEGMENT_HEIGHT; ///< "Hz" felirat Y pozíciója
+
+constexpr uint16_t BfoMiniFreqX = 220;                                      ///< Kis méretű háttér frekvencia X pozíciója BFO módban
+constexpr uint16_t BfoMiniFreqY = SpriteYOffset + FREQ_7SEGMENT_HEIGHT + 5; ///< Kis méretű háttér frekvencia Y pozíciója
+constexpr uint16_t BfoMiniUnitXOffset = 20;                                 ///< Kis méretű "kHz" egység X eltolása BFO módban
+
+constexpr uint16_t SsbCwUnitXOffset = 215;                                       ///< "kHz" felirat X pozíciója normál SSB/CW módban
+constexpr uint16_t SsbCwUnitYOffset = SpriteYOffset + FREQ_7SEGMENT_HEIGHT + 20; ///< "kHz" felirat Y pozíciója normál SSB/CW módban
 
 } // namespace FreqDisplayConstants
 
-// Színek
-const FreqSegmentColors defaultNormalColors = {TFT_GOLD, TFT_COLOR(50, 50, 50), TFT_YELLOW};
-const FreqSegmentColors defaultBfoColors = {TFT_ORANGE, TFT_BROWN, TFT_ORANGE};
+// === UIColorPalette metódusok implementációja ===
+FreqSegmentColors UIColorPalette::createNormalFreqColors() { return {FREQ_NORMAL_ACTIVE, FREQ_NORMAL_INACTIVE, FREQ_NORMAL_INDICATOR}; }
 
+FreqSegmentColors UIColorPalette::createBfoFreqColors() { return {FREQ_BFO_ACTIVE, FREQ_BFO_INACTIVE, FREQ_BFO_INDICATOR}; }
+
+// === Globális színkonfigurációk - UIColorPalette használatával ===
+/// Alapértelmezett színkonfiguráció normál módhoz (nem BFO)
+const FreqSegmentColors defaultNormalColors = UIColorPalette::createNormalFreqColors();
+/// Alapértelmezett színkonfiguráció BFO módhoz
+const FreqSegmentColors defaultBfoColors = UIColorPalette::createBfoFreqColors();
+
+/**
+ * @brief FreqDisplay konstruktor - inicializálja a frekvencia kijelző komponenst
+ *
+ * A konstruktor beállítja az alapértelmezett értékeket, színkonfigurációkat,
+ * és biztosítja, hogy az első rajzolás teljes újrarajzolásként történjen meg.
+ *
+ * @param tft_param TFT kijelző referencia
+ * @param bounds_param Komponens terület (pozíció és méret)
+ * @param band_ref Sávkezelő objektum referencia
+ * @param config_ref Konfiguráció objektum referencia
+ */
 FreqDisplay::FreqDisplay(TFT_eSPI &tft_param, const Rect &bounds_param, Band &band_ref, Config &config_ref)
-    : UIComponent(tft_param, bounds_param), band(band_ref), config(config_ref), spr(&(this->tft)),
-      normalColors(defaultNormalColors), bfoColors(defaultBfoColors),
-      currentDisplayFrequency(0), // Kezdetben 0, hogy az első setFrequency biztosan frissítsen
-      bfoModeActiveLastDraw(rtv::bfoOn),
-      redrawOnlyFrequencyDigits(false) { // Fontos: Alapértelmezetten false, hogy az első rajzolás teljes legyen
+    : UIComponent(tft_param, bounds_param), band(band_ref), config(config_ref), spr(&(this->tft)), normalColors(defaultNormalColors), bfoColors(defaultBfoColors),
+      currentDisplayFrequency(0),                                           // Kezdetben 0, hogy az első setFrequency biztosan frissítsen
+      bfoModeActiveLastDraw(rtv::bfoOn), redrawOnlyFrequencyDigits(false) { // Alapértelmezetten false, hogy az első rajzolás teljes legyen
 
     // Alapértelmezett háttérszín beállítása a globális háttérszínre
     this->colors.background = TFT_COLOR_BACKGROUND;
 
-    // Kezdeti frekvencia beállítása.
+    // Kezdeti frekvencia beállítása a jelenlegi sáv frekvenciájára
     // Mivel a redrawOnlyFrequencyDigits false-ra van inicializálva,
-    // az első markForRedraw() (amit a setFrequency hívhat, vagy amit itt explicit hívunk)
-    // egy teljes újrarajzolást fog eredményezni.
+    // az első markForRedraw() egy teljes újrarajzolást fog eredményezni
     currentDisplayFrequency = band.getCurrentBand().currFreq;
-    // A redrawOnlyFrequencyDigits itt még mindig false.
-    markForRedraw(); // Biztosítjuk, hogy az első rajzolás megtörténjen.
+
+    // Explicit újrarajzolás kérése az első megjelenítéshez
+    markForRedraw(); // Biztosítjuk, hogy az első rajzolás megtörténjen
 }
 
+/**
+ * @brief Beállítja a megjelenítendő frekvenciát
+ *
+ * Ez a metódus frissíti a kijelzendő frekvenciát, és optimalizált
+ * újrarajzolást kér, ha a frekvencia valóban megváltozott.
+ *
+ * @param freq Az új frekvencia érték
+ */
 void FreqDisplay::setFrequency(uint16_t freq) {
     if (currentDisplayFrequency != freq) {
         currentDisplayFrequency = freq;
-        // Csak a setFrequency általi (nem a konstruktorbeli első) hívásoknál
-        // engedélyezzük az optimalizált rajzolást.
+        // Optimalizált rajzolás engedélyezése: csak a frekvencia számjegyek
+        // frissítése, nem a teljes komponens újrarajzolása
         redrawOnlyFrequencyDigits = true;
         markForRedraw();
     }
 }
 
+/**
+ * @brief Kiszámítja a frekvencia sprite X pozícióját az aktuális mód alapján
+ *
+ * A különböző rádiós módokban (SEEK, BFO, FM/AM, normál) a frekvencia kijelző
+ * sprite-ja különböző pozíciókon jelenik meg a komponensen belül.
+ *
+ * @return A sprite jobb szélének X pozíciója a komponens bal széléhez képest
+ */
 uint32_t FreqDisplay::calcFreqSpriteXPosition() const {
     using namespace FreqDisplayConstants;
     uint8_t currentDemod = band.getCurrentBand().currMod;
-    // Az x_offset a 7-szegmenses kijelző jobb szélének X pozícióját jelenti
-    // a komponens bal széléhez (bounds.x) képest.
+
+    // Alapértelmezett pozíció (normál SSB/CW mód)
     uint32_t x_offset_from_left = RefXDefault;
 
+    // Mód-specifikus pozíció beállítások
     if (rtv::SEEK) {
-        x_offset_from_left = RefXSeek;
+        x_offset_from_left = RefXSeek; // SEEK mód során más pozíció
     } else if (rtv::bfoOn) {
-        x_offset_from_left = RefXBfo;
+        x_offset_from_left = RefXBfo; // BFO mód során kompaktabb elrendezés
     } else if (currentDemod == FM || currentDemod == AM) {
-        x_offset_from_left = RefXFmAm;
+        x_offset_from_left = RefXFmAm; // FM/AM módokhoz optimált pozíció
     }
-    // A sprite-ot jobb oldalra igazítjuk, tehát a sprite bal szélének pozíciója:
+
+    // Megjegyzés: A sprite jobb oldalra van igazítva, a tényleges bal széle:
     // bounds.x + x_offset_from_left - sprite_szélessége
-    // Ezt a drawFrequencyInternal-ban számoljuk ki, itt csak a referencia jobb szélét adjuk vissza.
+    // A pontos számítás a drawFrequencyInternal metódusban történik
     return x_offset_from_left;
 }
 
+/**
+ * @brief Optimalizált sprite rajzolás - csak a frekvencia számjegyek frissítése
+ *
+ * Ez a metódus csak a 7-szegmenses frekvencia sprite-ot rajzolja újra,
+ * az egységek és egyéb UI elemek nélkül. Teljesítmény optimalizáláshoz használt.
+ *
+ * @param freq_str A formázott frekvencia string
+ * @param mask A 7-szegmenses maszk pattern
+ * @param colors A használandó színkonfiguráció
+ */
 void FreqDisplay::drawFrequencySpriteOnly(const String &freq_str, const __FlashStringHelper *mask, const FreqSegmentColors &colors) {
     using namespace FreqDisplayConstants;
 
+    // Font beállítása a maszk szélességének meghatározásához
     spr.setFreeFont(&DSEG7_Classic_Mini_Regular_34);
-    uint16_t contentWidth = spr.textWidth(mask); // A sprite szélessége a maszk alapján
+    uint16_t contentWidth = spr.textWidth(mask); // Sprite szélessége a maszk alapján
 
-    // A sprite jobb szélének X pozíciója a komponens bal széléhez képest
+    // Sprite pozícionálás számítása
     uint32_t spriteRightEdgeX_relative = calcFreqSpriteXPosition();
-    // A sprite bal szélének abszolút X pozíciója
-    uint16_t spritePushX = bounds.x + spriteRightEdgeX_relative - contentWidth;
-    // A sprite tetejének abszolút Y pozíciója
-    uint16_t spritePushY = bounds.y + SpriteYOffset;
+    uint16_t spritePushX = bounds.x + spriteRightEdgeX_relative - contentWidth; // Bal széle
+    uint16_t spritePushY = bounds.y + SpriteYOffset;                            // Teteje
 
+    // Sprite létrehozása és konfigurálása
     spr.createSprite(contentWidth, FREQ_7SEGMENT_HEIGHT);
-    spr.fillSprite(this->colors.background); // A komponens háttérszínét használjuk
+    spr.fillSprite(this->colors.background); // Háttér törlése
     spr.setTextSize(1);
     spr.setTextPadding(0);
     spr.setFreeFont(&DSEG7_Classic_Mini_Regular_34);
-    spr.setTextDatum(BR_DATUM); // Bottom Right datum a sprite-on belüli igazításhoz
+    spr.setTextDatum(BR_DATUM); // Jobb alsó sarokhoz igazítás
 
+    // Inaktív számjegyek rajzolása (ha engedélyezve van)
     if (config.data.tftDigitLigth) {
         spr.setTextColor(colors.inactive);
         spr.drawString(mask, contentWidth, FREQ_7SEGMENT_HEIGHT);
     }
+
+    // Aktív frekvencia számok rajzolása
     spr.setTextColor(colors.active);
     spr.drawString(freq_str, contentWidth, FREQ_7SEGMENT_HEIGHT);
+
+    // Sprite kirajzolása a kijelzőre és memória felszabadítása
     spr.pushSprite(spritePushX, spritePushY);
     spr.deleteSprite();
 }
 
+/**
+ * @brief Teljes frekvencia kijelző rajzolása sprite-tal és egységgel
+ *
+ * Ez a belső metódus rajzolja a 7-szegmenses frekvencia kijelzőt és
+ * opcionálisan az egységet is (MHz, kHz, Hz). A teljes rajzolási ciklusban használt.
+ *
+ * @param freq_str A formázott frekvencia string
+ * @param mask A 7-szegmenses maszk pattern
+ * @param colors A színkonfiguráció
+ * @param unit Az egység string (opcionális, lehet nullptr)
+ */
 void FreqDisplay::drawFrequencyInternal(const String &freq_str, const __FlashStringHelper *mask, const FreqSegmentColors &colors, const __FlashStringHelper *unit) {
     using namespace FreqDisplayConstants;
 
+    // Font beállítása és sprite méret számítása
     spr.setFreeFont(&DSEG7_Classic_Mini_Regular_34);
-    uint16_t contentWidth = spr.textWidth(mask); // A sprite szélessége a maszk alapján
+    uint16_t contentWidth = spr.textWidth(mask);
 
-    // A sprite jobb szélének X pozíciója a komponens bal széléhez képest
+    // Sprite pozícionálás
     uint32_t spriteRightEdgeX_relative = calcFreqSpriteXPosition();
-    // A sprite bal szélének abszolút X pozíciója
     uint16_t spritePushX = bounds.x + spriteRightEdgeX_relative - contentWidth;
-    // A sprite tetejének abszolút Y pozíciója
     uint16_t spritePushY = bounds.y + SpriteYOffset;
 
+    // Sprite létrehozása és frekvencia rajzolása
     spr.createSprite(contentWidth, FREQ_7SEGMENT_HEIGHT);
-    spr.fillSprite(this->colors.background); // A komponens háttérszínét használjuk
+    spr.fillSprite(this->colors.background);
     spr.setTextSize(1);
     spr.setTextPadding(0);
     spr.setFreeFont(&DSEG7_Classic_Mini_Regular_34);
-    spr.setTextDatum(BR_DATUM); // Bottom Right datum a sprite-on belüli igazításhoz
+    spr.setTextDatum(BR_DATUM); // Jobb alsó sarokhoz igazítás
 
+    // Inaktív (háttér) számjegyek
     if (config.data.tftDigitLigth) {
         spr.setTextColor(colors.inactive);
-        spr.drawString(mask, contentWidth, FREQ_7SEGMENT_HEIGHT); // A sprite jobb alsó sarkához igazítva
+        spr.drawString(mask, contentWidth, FREQ_7SEGMENT_HEIGHT);
     }
 
+    // Aktív frekvencia számok
     spr.setTextColor(colors.active);
-    spr.drawString(freq_str, contentWidth, FREQ_7SEGMENT_HEIGHT); // A sprite jobb alsó sarkához igazítva
+    spr.drawString(freq_str, contentWidth, FREQ_7SEGMENT_HEIGHT);
 
+    // Sprite kirajzolása
     spr.pushSprite(spritePushX, spritePushY);
     spr.deleteSprite();
 
-    // Az egység ("kHz", "MHz") kirajzolása a sprite jobb oldalához
+    // Egység kirajzolása a sprite mellé (ha meg van adva)
     if (unit != nullptr) {
         tft.setFreeFont(); // Alapértelmezett font az egységhez
         tft.setTextSize(2);
-        tft.setTextDatum(BL_DATUM);                                  // Bottom Left datum
-        tft.setTextColor(colors.indicator, this->colors.background); // Háttérszínnel rajzoljuk, hogy felülírja a régit
-        // Az egység X pozíciója: a sprite abszolút jobb széle + UnitXOffset
+        tft.setTextDatum(BL_DATUM);                                  // Bal alsó sarok igazítás
+        tft.setTextColor(colors.indicator, this->colors.background); // Háttérrel együtt rajzolás (felülírás)
+
+        // Egység pozícionálása: sprite jobb széle + kis eltolás
         uint16_t unitX = spritePushX + contentWidth + UnitXOffset;
-        // Az egység Y pozíciója: a sprite alja
         uint16_t unitY = spritePushY + FREQ_7SEGMENT_HEIGHT;
         tft.drawString(unit, unitX, unitY);
     }
 }
 
+/**
+ * @brief Rajzolja a frekvencia lépés aláhúzását
+ *
+ * Ez a metódus felelős a digitek alatti aláhúzás rajzolásáért, amely
+ * jelzi az aktuálisan kiválasztott frekvencia lépés pozícióját.
+ * BFO módban és letiltott állapotban az aláhúzás nem jelenik meg.
+ *
+ * @param colors A színkonfiguráció (az indikátor szín használatával)
+ */
 void FreqDisplay::drawStepUnderline(const FreqSegmentColors &colors) {
     using namespace FreqDisplayConstants;
-    // Az aláhúzás teljes területének X pozíciója és szélessége
-    const int underlineAreaX_abs = bounds.x + DigitXStart[0];
-    const int underlineAreaWidth = (DigitXStart[2] + DigitWidth) - DigitXStart[0];
-    const int underlineAreaY_abs = bounds.y + UnderlineYOffset;
 
+    // Az aláhúzás teljes területének számítása
+    const int underlineAreaX_abs = bounds.x + DigitXStart[0];                      // Bal oldali szél
+    const int underlineAreaWidth = (DigitXStart[2] + DigitWidth) - DigitXStart[0]; // Teljes szélesség
+    const int underlineAreaY_abs = bounds.y + UnderlineYOffset;                    // Y pozíció
+
+    // Ha a komponens le van tiltva vagy BFO mód aktív, töröljük az aláhúzást
     if (isDisabled() || rtv::bfoOn) {
-        // Ha le van tiltva vagy BFO módban van, töröljük az aláhúzást a komponens háttérszínével
         tft.fillRect(underlineAreaX_abs, underlineAreaY_abs, underlineAreaWidth, UnderlineHeight, this->colors.background);
         return;
     }
 
-    // Először töröljük a teljes aláhúzási területet a háttérszínnel
+    // Először töröljük a teljes aláhúzási területet
     tft.fillRect(underlineAreaX_abs, underlineAreaY_abs, underlineAreaWidth, UnderlineHeight, this->colors.background);
-    // Majd kirajzoljuk az aktív lépés aláhúzását az indikátor színnel
-    // Az aktív aláhúzás X pozíciója: komponens bal széle + az adott digit relatív X pozíciója
-    tft.fillRect(bounds.x + DigitXStart[rtv::freqstepnr], underlineAreaY_abs, DigitWidth, UnderlineHeight, colors.indicator);
+
+    // Majd kirajzoljuk az aktív lépés aláhúzását
+    const int activeUnderlineX = bounds.x + DigitXStart[rtv::freqstepnr];
+    tft.fillRect(activeUnderlineX, underlineAreaY_abs, DigitWidth, UnderlineHeight, colors.indicator);
 }
 
+/**
+ * @brief Visszaadja az aktuális színkonfigurációt a mód alapján
+ *
+ * @return Referencia a normalColors-ra vagy bfoColors-ra a BFO állapot szerint
+ */
+/**
+ * @brief Visszaadja az aktuális színkonfigurációt a mód alapján
+ *
+ * @return Referencia a normalColors-ra vagy bfoColors-ra a BFO állapot szerint
+ */
 const FreqSegmentColors &FreqDisplay::getSegmentColors() const { return rtv::bfoOn ? bfoColors : normalColors; }
 
+/**
+ * @brief SSB/CW frekvencia kijelzésének kezelése
+ *
+ * Ez a metódus koordinálja az SSB/CW módok frekvencia megjelenítését,
+ * beleértve a BFO animáció kezelését, és a normál/BFO módok közötti váltást.
+ *
+ * @param currentFrequencyValue A megjelenítendő frekvencia értéke
+ * @param colors A használandó színkonfiguráció
+ */
 void FreqDisplay::displaySsbCwFrequency(uint16_t currentFrequencyValue, const FreqSegmentColors &colors) {
-    using namespace FreqDisplayConstants;
+    String formattedFreq = formatSsbCwFrequency(currentFrequencyValue);
+
+    if (rtv::bfoTr) {
+        handleBfoAnimation(formattedFreq);
+    }
+
+    if (!rtv::bfoOn) {
+        drawNormalSsbCwMode(formattedFreq, colors);
+    } else {
+        drawBfoMode(formattedFreq, colors);
+    }
+}
+
+/**
+ * @brief Formázza az SSB/CW frekvenciát megjelenítésre
+ *
+ * Kiszámítja a BFO kompenzált frekvenciát és formázza kHz.hz formátumba.
+ * A számítás: (frekvencia_kHz * 1000 - BFO_offset) / 1000 = kHz rész + hz tizesek
+ *
+ * @param currentFrequencyValue A nyers frekvencia érték
+ * @return Formázott frekvencia string (pl. "14205.50")
+ */
+String FreqDisplay::formatSsbCwFrequency(uint16_t currentFrequencyValue) {
     BandTable &currentBand = band.getCurrentBand();
     uint32_t bfoOffset = currentBand.lastBFO;
     uint32_t displayFreqHz = (uint32_t)currentFrequencyValue * 1000 - bfoOffset;
 
-    char s[12];
     long khz_part = displayFreqHz / 1000;
-    int hz_tens_part = abs((int)(displayFreqHz % 1000)) / 10; // Csak a tized és század Hz kell
-    sprintf(s, "%ld.%02d", khz_part, hz_tens_part);
+    int hz_tens_part = abs((int)(displayFreqHz % 1000)) / 10;
 
-    if (!rtv::bfoOn || rtv::bfoTr) { // Ha nincs BFO, vagy BFO animáció van
-        tft.setFreeFont();
-        tft.setTextDatum(BR_DATUM); // Bottom Right
-        tft.setTextColor(colors.indicator, this->colors.background);
+    char buffer[12];
+    sprintf(buffer, "%ld.%02d", khz_part, hz_tens_part);
+    return String(buffer);
+}
 
-        if (rtv::bfoTr) { // BFO animáció
-            rtv::bfoTr = false;
-            // Az animáció a teljes komponenst érintheti, ezért a draw() elején lévő fillRect töröl.
-            // Itt csak a szöveget rajzoljuk felül.
-            for (uint8_t i = 4; i > 1; i--) {
-                tft.setTextSize(rtv::bfoOn ? i : (6 - i));
-                // A szöveg jobb alsó sarkának abszolút pozíciója
-                tft.drawString(String(s), bounds.x + BfoMiniFreqX, bounds.y + BfoMiniFreqY);
-                delay(50); // Csökkentett delay az animációhoz
-            }
-        }
+/**
+ * @brief BFO mód váltás animációjának kezelése
+ *
+ * Amikor a BFO mód be vagy ki kapcsol, ez a metódus egy fokozatos
+ * méretváltoztatási animációt jelenít meg a frekvencia értékkel.
+ *
+ * @param formattedFreq A formázott frekvencia string az animációhoz
+ */
+void FreqDisplay::handleBfoAnimation(const String &formattedFreq) {
+    using namespace FreqDisplayConstants;
 
-        if (!rtv::bfoOn) {                                                     // Normál SSB/CW kijelzés (nem BFO mód)
-            drawFrequencyInternal(String(s), F("88 888.88"), colors, nullptr); // Nincs külön unit, a "kHz" alatta lesz
-            tft.setTextDatum(BC_DATUM);                                        // Bottom Center
-            tft.setFreeFont();
-            tft.setTextSize(2);
-            tft.setTextColor(colors.indicator, this->colors.background);
-            // A "kHz" felirat abszolút pozíciója
-            tft.drawString(F("kHz"), bounds.x + SsbCwUnitXOffset, bounds.y + SsbCwUnitYOffset);
-        }
-    }
+    rtv::bfoTr = false;
+    tft.setFreeFont();
+    tft.setTextDatum(BR_DATUM);
+    tft.setTextColor(getSegmentColors().indicator, this->colors.background);
 
-    if (rtv::bfoOn) { // BFO mód aktív
-        // BFO érték kijelzése (pl. "-120")
-        drawFrequencyInternal(String(config.data.currentBFOmanu), F("-888"), colors, nullptr); // Nincs unit mellette
-        tft.setTextSize(2);
-        tft.setTextDatum(BL_DATUM); // Bottom Left
-        tft.setTextColor(colors.indicator, this->colors.background);
-        // "Hz" felirat abszolút pozíciója
-        tft.drawString("Hz", bounds.x + BfoHzLabelXOffset, bounds.y + BfoHzLabelYOffset);
-
-        // "BFO" címke rajzolása
-        uint16_t bfoRectAbsX = bounds.x + BfoLabelRectXOffset;
-        uint16_t bfoRectAbsY = bounds.y + BfoLabelRectYOffset;
-        tft.fillRect(bfoRectAbsX, bfoRectAbsY, BfoLabelRectW, BfoLabelRectH, colors.active);
-        tft.setTextColor(TFT_BLACK, colors.active); // Szöveg a kitöltött téglalapon
-        tft.setTextDatum(MC_DATUM);                 // Middle Center
-        tft.drawString("BFO", bfoRectAbsX + BfoLabelRectW / 2, bfoRectAbsY + BfoLabelRectH / 2);
-
-        // Kis méretű (háttér) frekvencia kijelzése
-        tft.setTextSize(2);
-        tft.setTextDatum(BR_DATUM); // Bottom Right
-        tft.setTextColor(colors.indicator, this->colors.background);
-        tft.drawString(String(s), bounds.x + BfoMiniFreqX, bounds.y + BfoMiniFreqY);
-
-        // Kis méretű "kHz" egység
-        tft.setTextSize(1);
-        // A "kHz" abszolút X pozíciója: a mini frekvencia jobb széle + eltolás
-        tft.drawString("kHz", bounds.x + BfoMiniFreqX + BfoMiniUnitXOffset, bounds.y + BfoMiniFreqY);
+    for (uint8_t i = 4; i > 1; i--) {
+        tft.setTextSize(rtv::bfoOn ? i : (6 - i));
+        tft.drawString(formattedFreq, bounds.x + BfoMiniFreqX, bounds.y + BfoMiniFreqY);
+        delay(50);
     }
 }
 
+/**
+ * @brief Normál SSB/CW mód frekvencia kijelzésének rajzolása
+ *
+ * Megjeleníti a nagy formátumú frekvenciát és a "kHz" egységet
+ * a normál (nem BFO) SSB/CW módban.
+ *
+ * @param formattedFreq A formázott frekvencia string
+ * @param colors A használandó színkonfiguráció
+ */
+void FreqDisplay::drawNormalSsbCwMode(const String &formattedFreq, const FreqSegmentColors &colors) {
+    using namespace FreqDisplayConstants;
+
+    // Fő frekvencia kijelzése
+    drawFrequencyInternal(formattedFreq, F("88 888.88"), colors, nullptr);
+
+    // "kHz" egység kijelzése
+    drawTextAtPosition(F("kHz"), bounds.x + SsbCwUnitXOffset, bounds.y + SsbCwUnitYOffset, 2, BC_DATUM, colors.indicator);
+}
+
+/**
+ * @brief BFO mód frekvencia kijelzésének rajzolása
+ *
+ * Komplex BFO mód megjelenítés, amely tartalmazza:
+ * - Nagy BFO értéket Hz-ben
+ * - "BFO" címkét
+ * - Kis háttér frekvenciát kHz-ben
+ *
+ * @param formattedFreq A formázott háttér frekvencia string
+ * @param colors A használandó színkonfiguráció
+ */
+void FreqDisplay::drawBfoMode(const String &formattedFreq, const FreqSegmentColors &colors) {
+    using namespace FreqDisplayConstants;
+
+    // BFO érték kijelzése
+    drawFrequencyInternal(String(config.data.currentBFOmanu), F("-888"), colors, nullptr);
+
+    // "Hz" egység
+    drawTextAtPosition("Hz", bounds.x + BfoHzLabelXOffset, bounds.y + BfoHzLabelYOffset, 2, BL_DATUM, colors.indicator);
+
+    // BFO címke
+    drawBfoLabel(colors);
+
+    // Kis frekvencia kijelzés
+    drawMiniFrequency(formattedFreq, colors);
+}
+
+/**
+ * @brief "BFO" címke rajzolása színes háttérrel
+ *
+ * Egy téglalap alakú háttérrel rendelkező "BFO" feliratot rajzol,
+ * amely jelzi, hogy a BFO beállítási mód aktív.
+ *
+ * @param colors A színkonfiguráció (active szín használata)
+ */
+void FreqDisplay::drawBfoLabel(const FreqSegmentColors &colors) {
+    using namespace FreqDisplayConstants;
+
+    uint16_t rectX = bounds.x + BfoLabelRectXOffset;
+    uint16_t rectY = bounds.y + BfoLabelRectYOffset;
+    tft.fillRect(rectX, rectY, BfoLabelRectW, BfoLabelRectH, colors.active);
+    tft.setTextColor(UIColorPalette::FREQ_BFO_LABEL_TEXT, colors.active);
+    tft.setTextDatum(MC_DATUM);
+    tft.drawString("BFO", rectX + BfoLabelRectW / 2, rectY + BfoLabelRectH / 2);
+}
+
+/**
+ * @brief Kis méretű háttér frekvencia rajzolása BFO módban
+ *
+ * A BFO mód során a háttérben kis méretben megjeleníti az eredeti
+ * frekvenciát "kHz" egységgel együtt.
+ *
+ * @param formattedFreq A formázott frekvencia string
+ * @param colors A használandó színkonfiguráció
+ */
+void FreqDisplay::drawMiniFrequency(const String &formattedFreq, const FreqSegmentColors &colors) {
+    using namespace FreqDisplayConstants;
+
+    // Kis frekvencia
+    drawTextAtPosition(formattedFreq, bounds.x + BfoMiniFreqX, bounds.y + BfoMiniFreqY, 2, BR_DATUM, colors.indicator);
+
+    // Kis "kHz" egység
+    drawTextAtPosition("kHz", bounds.x + BfoMiniFreqX + BfoMiniUnitXOffset, bounds.y + BfoMiniFreqY, 1, BR_DATUM, colors.indicator);
+}
+
+/**
+ * @brief Szöveg rajzolása megadott pozícióban és formátumban
+ *
+ * Általános segéd metódus szövegek rajzolásához specifikus formázással.
+ * Automatikusan beállítja a háttérszínt a komponens háttérszínére.
+ *
+ * @param text A rajzolandó szöveg
+ * @param x X pozíció
+ * @param y Y pozíció
+ * @param textSize Szöveg mérete
+ * @param datum Igazítási mód (pl. BR_DATUM, BC_DATUM)
+ * @param color Szöveg színe
+ */
+void FreqDisplay::drawTextAtPosition(const String &text, uint16_t x, uint16_t y, uint8_t textSize, uint8_t datum, uint16_t color) {
+    tft.setFreeFont();
+    tft.setTextSize(textSize);
+    tft.setTextDatum(datum);
+    tft.setTextColor(color, this->colors.background);
+    tft.drawString(text, x, y);
+}
+
+/**
+ * @brief FM/AM frekvencia kijelzésének kezelése
+ *
+ * Előkészíti és megjeleníti a frekvenciát FM/AM módokban.
+ * A különböző sávtípusokhoz (MW/LW vs SW) eltérő formátumokat használ.
+ *
+ * @param currentFrequencyValue A megjelenítendő frekvencia értéke
+ * @param colors A használandó színkonfiguráció
+ */
 void FreqDisplay::displayFmAmFrequency(uint16_t currentFrequencyValue, const FreqSegmentColors &colors) {
-    String freqStr_val;
-    const __FlashStringHelper *unit_val = nullptr;
-    const __FlashStringHelper *mask_val = nullptr;
-    uint8_t currentBandType = band.getCurrentBandType();
-    uint8_t currDemod = band.getCurrentBand().currMod;
-
-    if (currDemod == FM) {
-        unit_val = F("MHz");
-        mask_val = F("188.88"); // FM maszk
-        float displayFreqMHz = currentFrequencyValue / 100.0f;
-        freqStr_val = String(displayFreqMHz, 2);
-    } else { // AM (beleértve LW, MW, SW AM módjait)
-        unit_val = F("kHz");
-        if (currentBandType == MW_BAND_TYPE || currentBandType == LW_BAND_TYPE) {
-            mask_val = F("8888"); // MW/LW maszk (pl. 1602)
-            freqStr_val = String(currentFrequencyValue);
-        } else {                    // SW AM (feltételezve, hogy a frekvencia kHz-ben van, de MHz-ben jelenítjük meg 3 tizedessel)
-            mask_val = F("88.888"); // SW AM maszk (pl. 15.770 MHz)
-            freqStr_val = String(currentFrequencyValue / 1000.0f, 3);
-            unit_val = F("MHz"); // SW AM esetén is MHz-ben írjuk ki
-        }
-    }
-    drawFrequencyInternal(freqStr_val, mask_val, colors, unit_val);
+    FrequencyDisplayData displayData = prepareFrequencyDisplayData(currentFrequencyValue);
+    drawFrequencyInternal(displayData.freqStr, displayData.mask, colors, displayData.unit);
 }
 
+/**
+ * @brief Frekvencia megjelenítési adatok előkészítése FM/AM módokhoz
+ *
+ * A demodulációs mód és sávtípus alapján előkészíti a formázott
+ * frekvencia stringet, maszkot és egységet.
+ *
+ * @param frequency A nyers frekvencia érték
+ * @return FrequencyDisplayData struktúra az összes megjelenítési adattal
+ */
+FreqDisplay::FrequencyDisplayData FreqDisplay::prepareFrequencyDisplayData(uint16_t frequency) {
+    FrequencyDisplayData data;
+    uint8_t demodMode = band.getCurrentBand().currMod;
+    uint8_t bandType = band.getCurrentBandType();
+
+    if (demodMode == FM) {
+        data = prepareFmDisplayData(frequency);
+    } else { // AM modes
+        data = prepareAmDisplayData(frequency, bandType);
+    }
+
+    return data;
+}
+
+/**
+ * @brief FM mód megjelenítési adatainak előkészítése
+ *
+ * FM frekvenciákat MHz-ben jelenít meg 2 tizedesjegy pontossággal
+ * (pl. 100.50 MHz).
+ *
+ * @param frequency A nyers frekvencia érték
+ * @return FrequencyDisplayData struktúra FM formátummal
+ */
+FreqDisplay::FrequencyDisplayData FreqDisplay::prepareFmDisplayData(uint16_t frequency) {
+    FrequencyDisplayData data;
+    data.unit = F("MHz");
+    data.mask = F("188.88");
+
+    float displayFreqMHz = frequency / 100.0f;
+    data.freqStr = String(displayFreqMHz, 2);
+
+    return data;
+}
+
+/**
+ * @brief AM mód megjelenítési adatainak előkészítése sávtípus szerint
+ *
+ * MW/LW sávok: egész kHz értékek (pl. 1440 kHz)
+ * SW sávok: MHz formátum 3 tizedesjeggyel (pl. 15.230 MHz)
+ *
+ * @param frequency A nyers frekvencia érték
+ * @param bandType A sáv típusa (MW_BAND_TYPE, LW_BAND_TYPE, vagy SW)
+ * @return FrequencyDisplayData struktúra AM formátummal
+ */
+FreqDisplay::FrequencyDisplayData FreqDisplay::prepareAmDisplayData(uint16_t frequency, uint8_t bandType) {
+    FrequencyDisplayData data;
+
+    if (bandType == MW_BAND_TYPE || bandType == LW_BAND_TYPE) {
+        // MW/LW bands - display in kHz as integer
+        data.unit = F("kHz");
+        data.mask = F("8888");
+        data.freqStr = String(frequency);
+    } else {
+        // SW AM - display in MHz with 3 decimal places
+        data.unit = F("MHz");
+        data.mask = F("88.888");
+        data.freqStr = String(frequency / 1000.0f, 3);
+    }
+
+    return data;
+}
+
+/**
+ * @brief Optimalizált rajzoláshoz frekvencia string és maszk meghatározása
+ *
+ * A demodulációs mód alapján meghatározza a formázott frekvencia stringet
+ * és a megfelelő 7-szegmenses maszkot az optimalizált rajzoláshoz.
+ *
+ * @param frequency A nyers frekvencia érték
+ * @param outFreqStr [kimenet] A formázott frekvencia string
+ * @param outMask [kimenet] A 7-szegmenses maszk
+ * @return true ha sikeresen meghatározta a formátumot, false egyébként
+ */
 bool FreqDisplay::determineFreqStrAndMaskForOptimizedDraw(uint16_t frequency, String &outFreqStr, const __FlashStringHelper *&outMask) {
     const uint8_t currDemod = band.getCurrentBand().currMod;
 
@@ -326,100 +606,268 @@ bool FreqDisplay::determineFreqStrAndMaskForOptimizedDraw(uint16_t frequency, St
     return true;
 }
 
+/**
+ * @brief Fő rajzolási metódus - dönt az optimalizált vagy teljes rajzolásról
+ *
+ * Ez a metódus koordinálja a teljes rajzolási folyamatot. Először megvizsgálja,
+ * hogy szükséges-e újrarajzolás, majd dönt az optimalizált vagy teljes
+ * rajzolási mód között.
+ */
 void FreqDisplay::draw() {
-    // Ha a BFO állapot megváltozott az utolsó teljes rajzolás óta, vagy BFO animáció van folyamatban,
-    // akkor mindenképpen teljes újrarajzolás szükséges, felülírva az optimalizált kérést.
+    if (!shouldRedraw()) {
+        return;
+    }
+
+    if (canUseOptimizedDraw()) {
+        performOptimizedDraw();
+        return;
+    }
+
+    performFullDraw();
+}
+
+/**
+ * @brief Megállapítja, hogy szükséges-e újrarajzolás
+ *
+ * Figyelembe veszi a BFO állapot változásokat és animációkat.
+ * Ha a BFO állapot megváltozott, teljes újrarajzolást kényszerít ki.
+ *
+ * @return true ha újrarajzolás szükséges, false egyébként
+ */
+bool FreqDisplay::shouldRedraw() {
+    // Ha a BFO állapot megváltozott, teljes újrarajzolás szükséges
     if (bfoModeActiveLastDraw != rtv::bfoOn || rtv::bfoTr) {
         redrawOnlyFrequencyDigits = false;
     }
 
-    if (!rtv::bfoTr && !needsRedraw) {
-        return;
-    }
-
-    // Optimalizált útvonal: csak a frekvencia számjegyeinek újrarajzolása
-    if (redrawOnlyFrequencyDigits && !rtv::bfoTr) {
-        String freqStr_val;
-        const __FlashStringHelper *mask_val = nullptr;
-
-        if (determineFreqStrAndMaskForOptimizedDraw(currentDisplayFrequency, freqStr_val, mask_val)) {
-            const FreqSegmentColors &segment_colors = getSegmentColors();
-            drawFrequencySpriteOnly(freqStr_val, mask_val, segment_colors);
-
-            redrawOnlyFrequencyDigits = false; // Optimalizált rajzolás megtörtént, flag törlése
-            needsRedraw = false;               // Komponens újrarajzolva
-            return;                            // Kilépés, nem kell teljes rajzolás
-        } else {
-            // Ha nem sikerült meghatározni a stringet/maszkot (nem várt eset),
-            // akkor inkább teljes újrarajzolást végzünk.
-            redrawOnlyFrequencyDigits = false; // Biztosítjuk, hogy a teljes útvonal fusson le.
-        }
-    }
-
-    // --- Teljes újrarajzolási útvonal ---
-    // Ez akkor fut le, ha nem az optimalizált útvonalat választottuk (redrawOnlyFrequencyDigits == false),
-    // vagy ha az optimalizált útvonal valamiért nem tudott lefutni.
-    tft.fillRect(bounds.x, bounds.y, bounds.width, bounds.height, this->colors.background);
-
-    const FreqSegmentColors &segment_colors = getSegmentColors();
-    const uint8_t currDemod = band.getCurrentBand().currMod;
-
-    if (currDemod == LSB || currDemod == USB || currDemod == CW) {
-        displaySsbCwFrequency(currentDisplayFrequency, segment_colors);
-    } else { // FM, AM
-        displayFmAmFrequency(currentDisplayFrequency, segment_colors);
-    }
-
-    // Aláhúzás rajzolása (csak ha nincs BFO és engedélyezve van a komponens)
-    drawStepUnderline(segment_colors);
-
-    bfoModeActiveLastDraw = rtv::bfoOn; // Fontos a következő draw() ciklushoz
-
-    tft.setTextDatum(BC_DATUM);        // Alapértelmezett text datum visszaállítása a TFT-n
-    needsRedraw = false;               // Rajzolás után töröljük a flag-et
-    redrawOnlyFrequencyDigits = false; // Biztos, ami biztos, itt is töröljük
+    return rtv::bfoTr || needsRedraw;
 }
 
+/**
+ * @brief Megállapítja, hogy használható-e az optimalizált rajzolás
+ *
+ * Az optimalizált rajzolás csak akkor lehetséges, ha:
+ * - Csak a frekvencia számjegyek változtak (redrawOnlyFrequencyDigits = true)
+ * - Nincs BFO animáció folyamatban
+ *
+ * @return true ha optimalizált rajzolás használható, false egyébként
+ */
+bool FreqDisplay::canUseOptimizedDraw() { return redrawOnlyFrequencyDigits && !rtv::bfoTr; }
+
+/**
+ * @brief Optimalizált rajzolás végrehajtása
+ *
+ * Csak a frekvencia számjegyeket rajzolja újra, a háttér és egyéb
+ * UI elemek érintetlenül hagyásával. Teljesítmény optimalizáláshoz.
+ */
+void FreqDisplay::performOptimizedDraw() {
+    String freqStr;
+    const __FlashStringHelper *mask = nullptr;
+
+    if (determineFreqStrAndMaskForOptimizedDraw(currentDisplayFrequency, freqStr, mask)) {
+        const FreqSegmentColors &colors = getSegmentColors();
+        drawFrequencySpriteOnly(freqStr, mask, colors);
+        finishDraw();
+    } else {
+        // Fallback to full draw if optimization fails
+        redrawOnlyFrequencyDigits = false;
+        performFullDraw();
+    }
+}
+
+/**
+ * @brief Teljes rajzolás végrehajtása
+ *
+ * Teljesen újrarajzolja a komponenst: háttértörlés, frekvencia megjelenítés,
+ * aláhúzás, és minden kiegészítő elem. Jelentős állapotváltozások után használt.
+ */
+void FreqDisplay::performFullDraw() {
+    clearBackground();
+
+    const FreqSegmentColors &colors = getSegmentColors();
+    const uint8_t demodMode = band.getCurrentBand().currMod;
+
+    if (isSsbCwMode(demodMode)) {
+        displaySsbCwFrequency(currentDisplayFrequency, colors);
+    } else {
+        displayFmAmFrequency(currentDisplayFrequency, colors);
+    }
+
+    drawStepUnderline(colors);
+
+    bfoModeActiveLastDraw = rtv::bfoOn;
+    restoreDefaultTextSettings();
+    finishDraw();
+}
+
+/**
+ * @brief Komponens háttérterületének törlése
+ *
+ * A teljes komponens területét kitölti a háttérszínnel.
+ */
+void FreqDisplay::clearBackground() { tft.fillRect(bounds.x, bounds.y, bounds.width, bounds.height, this->colors.background); }
+
+/**
+ * @brief Megállapítja, hogy a demodulációs mód SSB vagy CW-e
+ *
+ * @param demodMode A vizsgálandó demodulációs mód
+ * @return true ha LSB, USB, vagy CW mód, false egyébként
+ */
+bool FreqDisplay::isSsbCwMode(uint8_t demodMode) { return demodMode == LSB || demodMode == USB || demodMode == CW; }
+
+/**
+ * @brief Visszaállítja az alapértelmezett szöveg beállításokat
+ *
+ * A rajzolás végén biztosítja, hogy a TFT szöveg beállításai
+ * visszaálljanak az alapértelmezett állapotra.
+ */
+void FreqDisplay::restoreDefaultTextSettings() { tft.setTextDatum(BC_DATUM); }
+
+/**
+ * @brief Befejezi a rajzolási ciklust
+ *
+ * Visszaállítja a rajzolási flag-eket és jelzi, hogy a rajzolás befejezödött.
+ */
+void FreqDisplay::finishDraw() {
+    needsRedraw = false;
+    redrawOnlyFrequencyDigits = false;
+}
+
+/**
+ * @brief Érintési esemény kezelésének fő metódusa
+ *
+ * Koordinálja az érintés feldolgozását: jogosultság ellenőrzés,
+ * pozíció validálás, és digit kiválasztás kezelése.
+ *
+ * @param event Az érintési esemény adatai
+ * @return true ha az érintés kezelve lett, false egyébként
+ */
 bool FreqDisplay::handleTouch(const TouchEvent &event) {
-    if (isDisabled() || rtv::bfoOn) { // Ha le van tiltva vagy BFO módban van, nem kezeljük a digit érintést
+    if (!canHandleTouch()) {
         return false;
     }
 
-    // A UIComponent::handleTouch már ellenőrzi a bounds-ot, de itt a specifikus digit területeket nézzük.
-    // Ha a kattintás nem a komponensen belül van, akkor nem kezeljük.
+    if (!isValidTouchPosition(event)) {
+        return false;
+    }
+
+    return processDigitTouch(event);
+}
+
+/**
+ * @brief Ellenőrzi, hogy a komponens képes-e érintést kezelni
+ *
+ * Az érintéskezelés csak akkor engedélyezett, ha:
+ * - A komponens nincs letiltva (isDisabled() == false)
+ * - BFO mód nincs aktív (rtv::bfoOn == false)
+ *
+ * @return true ha az érintés kezelhető, false egyébként
+ */
+bool FreqDisplay::canHandleTouch() { return !isDisabled() && !rtv::bfoOn; }
+
+/**
+ * @brief Validálja az érintési pozíciót
+ *
+ * Ellenőrzi, hogy az érintés a komponens határain belül van-e,
+ * és a frekvencia digitek érintésre érzékeny területén belül található-e.
+ *
+ * @param event Az érintési esemény adatai
+ * @return true ha a pozíció érvényes, false egyébként
+ */
+bool FreqDisplay::isValidTouchPosition(const TouchEvent &event) {
     if (!bounds.contains(event.x, event.y)) {
         return false;
     }
 
     using namespace FreqDisplayConstants;
-    bool eventHandled = false;
-
-    // Az érintés Y koordinátája a komponens tetejéhez képest
     uint16_t relativeTouchY = event.y - bounds.y;
-
-    // Ellenőrizzük, hogy az érintés a számjegyek magasságában történt-e
-    if (relativeTouchY >= DigitYStart && relativeTouchY <= DigitYStart + DigitHeight) {
-        for (int i = 0; i <= 2; ++i) { // 0, 1, 2 indexű digitek
-            // Az adott digit X kezdőpozíciója abszolút koordinátában
-            uint16_t digitStartX_abs = bounds.x + DigitXStart[i];
-            // Ellenőrizzük, hogy az érintés X koordinátája az adott digit területén belül van-e
-            if (event.x >= digitStartX_abs && event.x < digitStartX_abs + DigitWidth) {
-                if (rtv::freqstepnr != i) { // Csak akkor csinálunk valamit, ha másik digitre kattintottunk
-                    rtv::freqstepnr = i;
-                    // A freqstep beállítása a SevenSegmentFreq logika alapján
-                    if (rtv::freqstepnr == 0)
-                        rtv::freqstep = 1000; // 1kHz
-                    else if (rtv::freqstepnr == 1)
-                        rtv::freqstep = 100; // 100Hz
-                    else
-                        rtv::freqstep = 10; // 10Hz
-                    markForRedraw();        // Aláhúzás frissítéséhez kérünk újrarajzolást
-                }
-                eventHandled = true; // Az eseményt kezeltük
-                break;               // Kilépünk a ciklusból, mert megtaláltuk az érintett digitet
-            }
-        }
-    }
-    return eventHandled;
+    return relativeTouchY >= DigitYStart && relativeTouchY <= DigitYStart + DigitHeight;
 }
 
+/**
+ * @brief Feldolgozza a digit területen történt érintést
+ *
+ * Végigiterál a három frekvencia digit pozícióján és megállapítja,
+ * hogy melyik digit területére érintett a felhasználó.
+ *
+ * @param event Az érintési esemény adatai
+ * @return true ha egy digit sikeresen kiválasztásra került, false egyébként
+ */
+bool FreqDisplay::processDigitTouch(const TouchEvent &event) {
+    using namespace FreqDisplayConstants;
+
+    for (int digitIndex = 0; digitIndex <= 2; ++digitIndex) {
+        if (isTouchOnDigit(event, digitIndex)) {
+            return handleDigitSelection(digitIndex);
+        }
+    }
+
+    return false;
+}
+
+/**
+ * @brief Ellenőrzi, hogy az érintés egy adott digit területén van-e
+ *
+ * A digit területek X pozíciója DigitXStart[digitIndex] és szélessége DigitWidth.
+ *
+ * @param event Az érintési esemény adatai
+ * @param digitIndex A vizsgálandó digit indexe (0, 1, vagy 2)
+ * @return true ha az érintés a digit területén van, false egyébként
+ */
+bool FreqDisplay::isTouchOnDigit(const TouchEvent &event, int digitIndex) {
+    using namespace FreqDisplayConstants;
+
+    uint16_t digitStartX = bounds.x + DigitXStart[digitIndex];
+    return event.x >= digitStartX && event.x < digitStartX + DigitWidth;
+}
+
+/**
+ * @brief Kezeli egy digit kiválasztását
+ *
+ * Ha a kiválasztott digit különbözik a jelenlegi frekvencia lépéstől,
+ * frissíti a frekvencia lépést és újrarajzolást kér.
+ *
+ * @param digitIndex A kiválasztott digit indexe (0=kHz, 1=100Hz, 2=10Hz)
+ * @return true minden esetben (az érintés sikeresen kezelve)
+ */
+bool FreqDisplay::handleDigitSelection(int digitIndex) {
+    if (rtv::freqstepnr == digitIndex) {
+        return true; // Already selected, no change needed
+    }
+
+    updateFrequencyStep(digitIndex);
+    markForRedraw();
+    return true;
+}
+
+/**
+ * @brief Frissíti a frekvencia lépés beállításokat
+ *
+ * A kiválasztott digit pozíció alapján beállítja a globális frekvencia
+ * lépés változókat (rtv::freqstepnr és rtv::freqstep).
+ *
+ * Digit leképezés:
+ * - 0: 1000 Hz (1 kHz) lépés
+ * - 1: 100 Hz lépés
+ * - 2: 10 Hz lépés
+ *
+ * @param digitIndex A kiválasztott digit indexe
+ */
+void FreqDisplay::updateFrequencyStep(int digitIndex) {
+    rtv::freqstepnr = digitIndex;
+
+    // Set frequency step based on digit position
+    switch (digitIndex) {
+        case 0:
+            rtv::freqstep = 1000;
+            break; // 1kHz
+        case 1:
+            rtv::freqstep = 100;
+            break; // 100Hz
+        case 2:
+            rtv::freqstep = 10;
+            break; // 10Hz
+        default:
+            break;
+    }
+}
