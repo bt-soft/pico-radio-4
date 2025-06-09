@@ -28,12 +28,15 @@ class FreqDisplay : public UIComponent {
 
     uint16_t currentDisplayFrequency; // Az aktuálisan kijelzendő frekvencia
     bool bfoModeActiveLastDraw;       // Segédváltozó a BFO mód változásának detektálásához
+    bool redrawOnlyFrequencyDigits;   // Optimalizált rajzoláshoz: csak a számjegyek
 
     // Belső helper metódusok
     void drawFrequencyInternal(const String &freq, const __FlashStringHelper *mask, const FreqSegmentColors &colors, const __FlashStringHelper *unit = nullptr);
     const FreqSegmentColors &getSegmentColors() const;
     void displaySsbCwFrequency(uint16_t currentFrequencyValue, const FreqSegmentColors &colors);
     void displayFmAmFrequency(uint16_t currentFrequencyValue, const FreqSegmentColors &colors);
+    void drawFrequencySpriteOnly(const String &freq_str, const __FlashStringHelper *mask, const FreqSegmentColors &colors);
+    bool determineFreqStrAndMaskForOptimizedDraw(uint16_t frequency, String &outFreqStr, const __FlashStringHelper *&outMask);
     void drawStepUnderline(const FreqSegmentColors &colors);
     uint32_t calcFreqSpriteXPosition() const;
 

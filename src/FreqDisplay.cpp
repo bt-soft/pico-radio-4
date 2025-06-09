@@ -50,20 +50,30 @@ const FreqSegmentColors defaultNormalColors = {TFT_GOLD, TFT_COLOR(50, 50, 50), 
 const FreqSegmentColors defaultBfoColors = {TFT_ORANGE, TFT_BROWN, TFT_ORANGE};
 
 FreqDisplay::FreqDisplay(TFT_eSPI &tft_param, const Rect &bounds_param, Band &band_ref, Config &config_ref)
-    : UIComponent(tft_param, bounds_param), band(band_ref), config(config_ref), spr(&(this->tft)), normalColors(defaultNormalColors), bfoColors(defaultBfoColors),
-      currentDisplayFrequency(0), bfoModeActiveLastDraw(rtv::bfoOn) {
+    : UIComponent(tft_param, bounds_param), band(band_ref), config(config_ref), spr(&(this->tft)),
+      normalColors(defaultNormalColors), bfoColors(defaultBfoColors),
+      currentDisplayFrequency(0), // Kezdetben 0, hogy az első setFrequency biztosan frissítsen
+      bfoModeActiveLastDraw(rtv::bfoOn),
+      redrawOnlyFrequencyDigits(false) { // Fontos: Alapértelmezetten false, hogy az első rajzolás teljes legyen
 
     // Alapértelmezett háttérszín beállítása a globális háttérszínre
     this->colors.background = TFT_COLOR_BACKGROUND;
 
-    // Kezdeti frekvencia beállítása
-    // A BandTable.currFreq-t használjuk, mert az FMScreen::handleOwnLoop is ezt figyeli.
-    setFrequency(band.getCurrentBand().currFreq);
+    // Kezdeti frekvencia beállítása.
+    // Mivel a redrawOnlyFrequencyDigits false-ra van inicializálva,
+    // az első markForRedraw() (amit a setFrequency hívhat, vagy amit itt explicit hívunk)
+    // egy teljes újrarajzolást fog eredményezni.
+    currentDisplayFrequency = band.getCurrentBand().currFreq;
+    // A redrawOnlyFrequencyDigits itt még mindig false.
+    markForRedraw(); // Biztosítjuk, hogy az első rajzolás megtörténjen.
 }
 
 void FreqDisplay::setFrequency(uint16_t freq) {
     if (currentDisplayFrequency != freq) {
         currentDisplayFrequency = freq;
+        // Csak a setFrequency általi (nem a konstruktorbeli első) hívásoknál
+        // engedélyezzük az optimalizált rajzolást.
+        redrawOnlyFrequencyDigits = true;
         markForRedraw();
     }
 }
@@ -86,6 +96,36 @@ uint32_t FreqDisplay::calcFreqSpriteXPosition() const {
     // bounds.x + x_offset_from_left - sprite_szélessége
     // Ezt a drawFrequencyInternal-ban számoljuk ki, itt csak a referencia jobb szélét adjuk vissza.
     return x_offset_from_left;
+}
+
+void FreqDisplay::drawFrequencySpriteOnly(const String &freq_str, const __FlashStringHelper *mask, const FreqSegmentColors &colors) {
+    using namespace FreqDisplayConstants;
+
+    spr.setFreeFont(&DSEG7_Classic_Mini_Regular_34);
+    uint16_t contentWidth = spr.textWidth(mask); // A sprite szélessége a maszk alapján
+
+    // A sprite jobb szélének X pozíciója a komponens bal széléhez képest
+    uint32_t spriteRightEdgeX_relative = calcFreqSpriteXPosition();
+    // A sprite bal szélének abszolút X pozíciója
+    uint16_t spritePushX = bounds.x + spriteRightEdgeX_relative - contentWidth;
+    // A sprite tetejének abszolút Y pozíciója
+    uint16_t spritePushY = bounds.y + SpriteYOffset;
+
+    spr.createSprite(contentWidth, FREQ_7SEGMENT_HEIGHT);
+    spr.fillSprite(this->colors.background); // A komponens háttérszínét használjuk
+    spr.setTextSize(1);
+    spr.setTextPadding(0);
+    spr.setFreeFont(&DSEG7_Classic_Mini_Regular_34);
+    spr.setTextDatum(BR_DATUM); // Bottom Right datum a sprite-on belüli igazításhoz
+
+    if (config.data.tftDigitLigth) {
+        spr.setTextColor(colors.inactive);
+        spr.drawString(mask, contentWidth, FREQ_7SEGMENT_HEIGHT);
+    }
+    spr.setTextColor(colors.active);
+    spr.drawString(freq_str, contentWidth, FREQ_7SEGMENT_HEIGHT);
+    spr.pushSprite(spritePushX, spritePushY);
+    spr.deleteSprite();
 }
 
 void FreqDisplay::drawFrequencyInternal(const String &freq_str, const __FlashStringHelper *mask, const FreqSegmentColors &colors, const __FlashStringHelper *unit) {
@@ -158,14 +198,7 @@ const FreqSegmentColors &FreqDisplay::getSegmentColors() const { return rtv::bfo
 void FreqDisplay::displaySsbCwFrequency(uint16_t currentFrequencyValue, const FreqSegmentColors &colors) {
     using namespace FreqDisplayConstants;
     BandTable &currentBand = band.getCurrentBand();
-    // A BandTable-ben a lastBFO már a varData alatt van
-    uint32_t bfoOffset = currentBand.lastBFO; // Itt a BandTable::lastBFO-t kellene használni, nem a varData.lastBFO-t, ha az a cél
-                                              // De a SevenSegmentFreq a varData.lastBFO-t használta. Maradjunk ennél.
-                                              // Viszont a Band.h-ban a BandTable-nek nincs varData tagja, csak közvetlenül a lastBFO.
-                                              // Feltételezem, hogy a band.getCurrentBand() egy BandTable referenciát ad vissza,
-                                              // és annak van lastBFO tagja.
-                                              // Ha a BandTable-nek van varData tagja, akkor currentBand.varData.lastBFO a helyes.
-                                              // A megadott Band.h alapján a BandTable-nek közvetlenül van lastBFO tagja.
+    uint32_t bfoOffset = currentBand.lastBFO;
     uint32_t displayFreqHz = (uint32_t)currentFrequencyValue * 1000 - bfoOffset;
 
     char s[12];
@@ -257,14 +290,75 @@ void FreqDisplay::displayFmAmFrequency(uint16_t currentFrequencyValue, const Fre
     drawFrequencyInternal(freqStr_val, mask_val, colors, unit_val);
 }
 
+bool FreqDisplay::determineFreqStrAndMaskForOptimizedDraw(uint16_t frequency, String &outFreqStr, const __FlashStringHelper *&outMask) {
+    const uint8_t currDemod = band.getCurrentBand().currMod;
+
+    if (currDemod == LSB || currDemod == USB || currDemod == CW) {
+        if (rtv::bfoOn) { // BFO érték kijelzése
+            outFreqStr = String(config.data.currentBFOmanu);
+            outMask = F("-888");
+        } else { // Normál SSB/CW frekvencia
+            uint32_t bfoOffset = band.getCurrentBand().lastBFO;
+            uint32_t displayFreqHz = (uint32_t)frequency * 1000 - bfoOffset;
+            char s[12];
+            long khz_part = displayFreqHz / 1000;
+            int hz_tens_part = abs((int)(displayFreqHz % 1000)) / 10;
+            sprintf(s, "%ld.%02d", khz_part, hz_tens_part);
+            outFreqStr = String(s);
+            outMask = F("88 888.88");
+        }
+    } else if (currDemod == FM) {
+        outMask = F("188.88");
+        outFreqStr = String(frequency / 100.0f, 2);
+    } else if (currDemod == AM) {
+        uint8_t currentBandType = band.getCurrentBandType();
+        if (currentBandType == MW_BAND_TYPE || currentBandType == LW_BAND_TYPE) {
+            outMask = F("8888");
+            outFreqStr = String(frequency);
+        } else { // SW AM
+            outMask = F("88.888");
+            outFreqStr = String(frequency / 1000.0f, 3);
+        }
+    } else {
+        // Ismeretlen demodulációs mód, nem tudjuk meghatározni a maszkot/stringet
+        return false;
+    }
+    return true;
+}
+
 void FreqDisplay::draw() {
-    // Ha az animáció aktív (bfoTr), akkor mindenképp rajzolunk.
-    // Egyébként csak akkor, ha a needsRedraw flag (UIComponent-ből örökölt) be van állítva.
+    // Ha a BFO állapot megváltozott az utolsó teljes rajzolás óta, vagy BFO animáció van folyamatban,
+    // akkor mindenképpen teljes újrarajzolás szükséges, felülírva az optimalizált kérést.
+    if (bfoModeActiveLastDraw != rtv::bfoOn || rtv::bfoTr) {
+        redrawOnlyFrequencyDigits = false;
+    }
+
     if (!rtv::bfoTr && !needsRedraw) {
         return;
     }
 
-    // Teljes komponens területének törlése a beállított háttérszínnel
+    // Optimalizált útvonal: csak a frekvencia számjegyeinek újrarajzolása
+    if (redrawOnlyFrequencyDigits && !rtv::bfoTr) {
+        String freqStr_val;
+        const __FlashStringHelper *mask_val = nullptr;
+
+        if (determineFreqStrAndMaskForOptimizedDraw(currentDisplayFrequency, freqStr_val, mask_val)) {
+            const FreqSegmentColors &segment_colors = getSegmentColors();
+            drawFrequencySpriteOnly(freqStr_val, mask_val, segment_colors);
+
+            redrawOnlyFrequencyDigits = false; // Optimalizált rajzolás megtörtént, flag törlése
+            needsRedraw = false;               // Komponens újrarajzolva
+            return;                            // Kilépés, nem kell teljes rajzolás
+        } else {
+            // Ha nem sikerült meghatározni a stringet/maszkot (nem várt eset),
+            // akkor inkább teljes újrarajzolást végzünk.
+            redrawOnlyFrequencyDigits = false; // Biztosítjuk, hogy a teljes útvonal fusson le.
+        }
+    }
+
+    // --- Teljes újrarajzolási útvonal ---
+    // Ez akkor fut le, ha nem az optimalizált útvonalat választottuk (redrawOnlyFrequencyDigits == false),
+    // vagy ha az optimalizált útvonal valamiért nem tudott lefutni.
     tft.fillRect(bounds.x, bounds.y, bounds.width, bounds.height, this->colors.background);
 
     const FreqSegmentColors &segment_colors = getSegmentColors();
@@ -279,12 +373,11 @@ void FreqDisplay::draw() {
     // Aláhúzás rajzolása (csak ha nincs BFO és engedélyezve van a komponens)
     drawStepUnderline(segment_colors);
 
-    // BFO mód változásának detektálása a következő rajzoláshoz (nem feltétlenül szükséges itt,
-    // mert a markForRedraw() gondoskodik róla, ha a bfoOn változik)
-    // bfoModeActiveLastDraw = rtv::bfoOn;
+    bfoModeActiveLastDraw = rtv::bfoOn; // Fontos a következő draw() ciklushoz
 
-    tft.setTextDatum(BC_DATUM); // Alapértelmezett text datum visszaállítása a TFT-n
-    needsRedraw = false;        // Rajzolás után töröljük a flag-et
+    tft.setTextDatum(BC_DATUM);        // Alapértelmezett text datum visszaállítása a TFT-n
+    needsRedraw = false;               // Rajzolás után töröljük a flag-et
+    redrawOnlyFrequencyDigits = false; // Biztos, ami biztos, itt is töröljük
 }
 
 bool FreqDisplay::handleTouch(const TouchEvent &event) {
@@ -329,3 +422,4 @@ bool FreqDisplay::handleTouch(const TouchEvent &event) {
     }
     return eventHandled;
 }
+
