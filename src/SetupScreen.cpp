@@ -548,24 +548,68 @@ void SetupScreen::handleCWOffsetDialog(int index) {
 }
 
 /**
- * @brief RTTY frekvenciák beállítása dialógussal (placeholder implementáció)
+ * @brief RTTY frekvenciák beállítása dialógussal
  *
- * Ez a metódus jelenleg placeholder implementációval rendelkezik.
- * A RTTY (Radio Teletype) frekvenciák részletes konfigurációja
- * még nincs implementálva, ezért egy egyszerű tájékoztató üzenetet
- * jelenít meg a felhasználónak.
+ * Megnyitja egy MultiButtonDialog-ot, amely lehetővé teszi az RTTY
+ * (Radio Teletype) frekvencia paramétereinek beállítását:
+ * - "Mark" gomb: RTTY mark frekvencia beállítása (1000-3000 Hz, 5 Hz lépésekkel)
+ * - "Shift" gomb: RTTY shift érték beállítása (50-1000 Hz, 5 Hz lépésekkel)
  *
- * A jövőben itt lehetne beállítani:
- * - RTTY mark frekvenciát (rttyMarkFrequencyHz)
- * - RTTY shift értéket (rttyShiftHz)
+ * Mindkét opció ValueChangeDialog-ot nyit meg a pontos érték megadásához.
+ * A konfiguráció változtatása után a lista automatikusan frissül.
  *
- * @param index A menüpont indexe (jelenleg nem használt)
+ * @param index A menüpont indexe a listában a frissítéshez
  */
 void SetupScreen::handleRTTYFrequenciesDialog(int index) {
-    // RTTY frequencies - ezt még nem implementáltuk a részletekben
-    // Egyelőre csak egy placeholder MessageDialog
-    auto rttyDialog = std::make_shared<MessageDialog>(this, this->tft, Rect(-1, -1, 300, 150), "RTTY Frequencies", "RTTY frequency configuration\nnot yet implemented.",
-                                                      MessageDialog::ButtonsType::Ok);
+    // RTTY frekvenciák beállítása MultiButtonDialog segítségével
+    const char *options[] = {"Mark", "Shift"};
+    auto rttyDialog = std::make_shared<MultiButtonDialog>(
+        this, this->tft, "RTTY Frequencies", "Select frequency to configure:", options, ARRAY_ITEM_COUNT(options),
+        [this, index](int buttonIndex, const char *buttonLabel, MultiButtonDialog *dialog) {
+            if (strcmp(buttonLabel, "Mark") == 0) {
+                // RTTY Mark frekvencia beállítása (1000-3000 Hz)
+                auto markDialog = std::make_shared<ValueChangeDialog>(
+                    this, this->tft, "RTTY Mark Frequency", "Hz (1000-3000):", &config.data.rttyMarkFrequencyHz, 1000.0f, 3000.0f, 5.0f,
+                    [this, index](const std::variant<int, float, bool> &liveNewValue) {
+                        if (std::holds_alternative<float>(liveNewValue)) {
+                            float currentDialogVal = std::get<float>(liveNewValue);
+                            config.data.rttyMarkFrequencyHz = currentDialogVal;
+                            config.checkSave();
+                        }
+                    },
+                    [this, index](UIDialogBase *sender, MessageDialog::DialogResult dialogResult) {
+                        if (dialogResult == MessageDialog::DialogResult::Accepted) {
+                            settingItems[index].value = String(round(config.data.rttyMarkFrequencyHz)) + "/" + String(round(config.data.rttyShiftHz)) + " Hz";
+                            updateListItem(index);
+                        }
+                    },
+                    Rect(-1, -1, 270, 0));
+                this->showDialog(markDialog);
+            } else if (strcmp(buttonLabel, "Shift") == 0) {
+                // RTTY Shift frekvencia beállítása (50-1000 Hz)
+                auto shiftDialog = std::make_shared<ValueChangeDialog>(
+                    this, this->tft, "RTTY Shift", "Hz (50-1000):", &config.data.rttyShiftHz, 50.0f, 1000.0f, 5.0f,
+                    [this, index](const std::variant<int, float, bool> &liveNewValue) {
+                        if (std::holds_alternative<float>(liveNewValue)) {
+                            float currentDialogVal = std::get<float>(liveNewValue);
+                            config.data.rttyShiftHz = currentDialogVal;
+                            config.checkSave();
+                        }
+                    },
+                    [this, index](UIDialogBase *sender, MessageDialog::DialogResult dialogResult) {
+                        if (dialogResult == MessageDialog::DialogResult::Accepted) {
+                            settingItems[index].value = String(round(config.data.rttyMarkFrequencyHz)) + "/" + String(round(config.data.rttyShiftHz)) + " Hz";
+                            updateListItem(index);
+                        }
+                    },
+                    Rect(-1, -1, 270, 0));
+                this->showDialog(shiftDialog);
+            }
+        },
+        true, // Automatikus bezárás
+        -1,   // Nincs alapértelmezett kiválasztás
+        true, // Highlight engedélyezett
+        Rect(-1, -1, 300, 120));
     this->showDialog(rttyDialog);
 }
 
