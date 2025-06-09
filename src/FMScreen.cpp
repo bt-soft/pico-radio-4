@@ -1,4 +1,9 @@
 #include "FMScreen.h"
+#include "FreqDisplay.h" // Új include
+
+// Globális változók elérése (feltételezve, hogy a main.cpp-ben vannak definiálva)
+extern Band band;
+extern Config config;
 
 /**
  * @brief UI komponensek létrehozása és elhelyezése
@@ -65,6 +70,15 @@ void FMScreen::layoutComponents() {
             }
         });
     addChild(setupButton);
+
+    // FreqDisplay komponens
+    uint16_t freqDisplayHeight = 38 + 20 + 10; // Szegmens + unit + aláhúzás + margók (becslés)
+    uint16_t freqDisplayWidth = 240;           // Becsült szélesség
+    uint16_t freqDisplayX = (tft.width() - freqDisplayWidth) / 2;
+    uint16_t freqDisplayY = 60; // Példa Y pozíció (a gombok felett)
+    Rect freqBounds(freqDisplayX, freqDisplayY, freqDisplayWidth, freqDisplayHeight);
+    freqDisplayComp = std::make_shared<FreqDisplay>(tft, freqBounds, band, config);
+    addChild(freqDisplayComp);
 }
 
 /**
@@ -83,9 +97,19 @@ bool FMScreen::handleRotary(const RotaryEvent &event) {
     // Saját rotary logika itt
     if (event.direction == RotaryEvent::Direction::Up) {
         DEBUG("FMScreen: Rotary Up\n");
+        // Példa frekvencia növelésre (SI4735 specifikus kódot ide kellene illeszteni)
+        // uint16_t currentFreq = si4735.getFrequency(); // SI4735 példány kellene itt
+        // uint16_t step = band.getCurrentBand().varData.currStep;
+        // si4735.setFrequency(currentFreq + step);
+        // if (freqDisplayComp) freqDisplayComp->setFrequency(si4735.getFrequency());
         return true;
     } else if (event.direction == RotaryEvent::Direction::Down) {
         DEBUG("FMScreen: Rotary Down\n");
+        // Példa frekvencia csökkentésre
+        // uint16_t currentFreq = si4735.getFrequency();
+        // uint16_t step = band.getCurrentBand().varData.currStep;
+        // si4735.setFrequency(currentFreq - step);
+        // if (freqDisplayComp) freqDisplayComp->setFrequency(si4735.getFrequency());
         return true;
     }
 
@@ -102,7 +126,33 @@ bool FMScreen::handleRotary(const RotaryEvent &event) {
  * animációs vagy egyéb saját logika végrehajtására
  * @note Ez a metódus nem hívja meg a gyerek komponensek loop-ját, csak saját logikát tartalmaz.
  */
-void FMScreen::handleOwnLoop() {}
+void FMScreen::handleOwnLoop() {
+    // Frekvencia frissítése, ha változott
+    // Ezt a logikát a DisplayBase::loop() vagy az FmDisplay::displayLoop() már kezeli
+    // a DisplayBase::frequencyChanged flag alapján.
+    // Itt egy példa, ha közvetlenül a Band objektumot figyeljük:
+    static uint16_t lastDisplayedFreq = 0;
+    uint16_t currentRadioFreq = band.getCurrentBand().currFreq; // Vagy si4735.getFrequency()
+
+    if (currentRadioFreq != lastDisplayedFreq) {
+        if (freqDisplayComp) {
+            freqDisplayComp->setFrequency(currentRadioFreq);
+        }
+        lastDisplayedFreq = currentRadioFreq;
+    }
+
+    // BFO állapot változásának figyelése
+    static bool lastBfoOnState = rtv::bfoOn;
+    if (rtv::bfoOn != lastBfoOnState) {
+        if (freqDisplayComp) {
+            freqDisplayComp->markForRedraw(); // Újrarajzolás kérése a BFO állapot változása miatt
+        }
+        lastBfoOnState = rtv::bfoOn;
+    }
+
+    // TODO: Figyelni kell az rtv::freqstepnr változását is, és ha változik,
+    // akkor freqDisplayComp->markForRedraw() hívása.
+}
 
 /**
  * @brief Kirajzolja a képernyő saját tartalmát

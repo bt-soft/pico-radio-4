@@ -29,6 +29,10 @@ RPI_PICO_Timer rotaryTimer(0); // 0-ás timer használata
 RotaryEncoder rotaryEncoder = RotaryEncoder(PIN_ENCODER_CLK, PIN_ENCODER_DT, PIN_ENCODER_SW, ROTARY_ENCODER_STEPS_PER_NOTCH);
 #define ROTARY_ENCODER_SERVICE_INTERVAL_IN_MSEC 1 // 1msec
 
+//-------------------- Band
+#include "Band.h"
+Band band(si4735, config);
+
 //-------------------- Config
 #include "Config.h"
 #include "StationStore.h"
