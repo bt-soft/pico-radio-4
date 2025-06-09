@@ -24,15 +24,15 @@ constexpr int SAVER_COLOR_FACTOR = 64;
 constexpr int SAVER_ANIMATION_STEP_JUMP = 3;
 
 // Offsets for the animated line relative to saverAnimationX, saverAnimationY
-// Restored original proportional values for proper rectangular border animation
+// Scaled values for 320x240 screen to ensure animation stays within bounds
 constexpr int SAVER_X_OFFSET_1 = 10;  // Left edge of rectangle
 constexpr int SAVER_Y_OFFSET_1 = 5;   // Top edge
-constexpr int SAVER_X_OFFSET_2 = 189; // Right edge
-constexpr int SAVER_Y_OFFSET_2 = 205; // Vertical movement offset for right edge
-constexpr int SAVER_X_OFFSET_3 = 439; // Horizontal movement offset for bottom
-constexpr int SAVER_Y_OFFSET_3 = 44;  // Bottom edge
+constexpr int SAVER_X_OFFSET_2 = 90;  // Right edge (scaled from 189 to fit 320px screen)
+constexpr int SAVER_Y_OFFSET_2 = 100; // Vertical movement offset for right edge (scaled from 205)
+constexpr int SAVER_X_OFFSET_3 = 200; // Horizontal movement offset for bottom (scaled from 439)
+constexpr int SAVER_Y_OFFSET_3 = 44;  // Bottom edge (kept original as it's small)
 constexpr int SAVER_X_OFFSET_4 = 10;  // Left edge again
-constexpr int SAVER_Y_OFFSET_4 = 494; // Vertical movement offset for left edge
+constexpr int SAVER_Y_OFFSET_4 = 220; // Vertical movement offset for left edge (scaled from 494 to fit 240px screen)
 
 // Battery display constants (can be fine-tuned)
 constexpr int BATTERY_RECT_X_OFFSET = 145; // Relative to FreqDisplay's top-left

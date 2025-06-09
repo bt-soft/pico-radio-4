@@ -126,29 +126,66 @@ void ScreenSaverScreen::drawAnimatedBorder() {
     using namespace ScreenSaverConstants;
     uint16_t t = posSaver;
 
+    // Calculate animation offsets based on actual screen size
+    uint16_t screenW = tft.width();
+    uint16_t screenH = tft.height();
+
+    // Calculate safe animation offsets - simple rectangular border around freq display
+    int16_t borderSize = 60; // Fixed border size around frequency display
+
+    // Calculate rectangle bounds around the frequency display
+    int16_t rectLeft = saverAnimationX - (220 / 2) - borderSize / 2;
+    int16_t rectRight = saverAnimationX + (220 / 2) + borderSize / 2;
+    int16_t rectTop = saverAnimationY - (70 / 2) - borderSize / 2;
+    int16_t rectBottom = saverAnimationY + (70 / 2) + borderSize / 2;
+
+    // Ensure rectangle stays within screen bounds
+    if (rectLeft < 0)
+        rectLeft = 0;
+    if (rectRight >= screenW)
+        rectRight = screenW - 1;
+    if (rectTop < 0)
+        rectTop = 0;
+    if (rectBottom >= screenH)
+        rectBottom = screenH - 1;
+
+    int16_t rectWidth = rectRight - rectLeft;
+    int16_t rectHeight = rectBottom - rectTop;
+
     for (uint8_t i = 0; i < SAVER_ANIMATION_LINE_LENGTH; i++) {
         uint8_t c_val = saverLineColors[i];
         uint16_t pixel_color = (c_val * SAVER_COLOR_FACTOR) + c_val;
 
-        // Calculate pixel positions with bounds checking
+        // Calculate pixel positions for rectangular border animation
         int16_t pixelX, pixelY;
 
-        if (t < 200) {
-            pixelX = saverAnimationX - SAVER_X_OFFSET_1 + t;
-            pixelY = saverAnimationY - SAVER_Y_OFFSET_1;
-        } else if (t >= 200 && t < 250) {
-            pixelX = saverAnimationX + SAVER_X_OFFSET_2;
-            pixelY = saverAnimationY - SAVER_Y_OFFSET_2 + t;
-        } else if (t >= 250 && t < 450) {
-            pixelX = saverAnimationX + SAVER_X_OFFSET_3 - t;
-            pixelY = saverAnimationY + SAVER_Y_OFFSET_3;
+        // Total perimeter steps: top + right + bottom + left
+        uint16_t totalSteps = SAVER_ANIMATION_STEPS;
+        uint16_t topSteps = totalSteps / 4;
+        uint16_t rightSteps = totalSteps / 4;
+        uint16_t bottomSteps = totalSteps / 4;
+        uint16_t leftSteps = totalSteps / 4;
+
+        if (t < topSteps) {
+            // Top edge: move from left to right
+            pixelX = rectLeft + (t * rectWidth) / topSteps;
+            pixelY = rectTop;
+        } else if (t < topSteps + rightSteps) {
+            // Right edge: move from top to bottom
+            pixelX = rectRight;
+            pixelY = rectTop + ((t - topSteps) * rectHeight) / rightSteps;
+        } else if (t < topSteps + rightSteps + bottomSteps) {
+            // Bottom edge: move from right to left
+            pixelX = rectRight - ((t - topSteps - rightSteps) * rectWidth) / bottomSteps;
+            pixelY = rectBottom;
         } else {
-            pixelX = saverAnimationX - SAVER_X_OFFSET_4;
-            pixelY = saverAnimationY + SAVER_Y_OFFSET_4 - t;
+            // Left edge: move from bottom to top
+            pixelX = rectLeft;
+            pixelY = rectBottom - ((t - topSteps - rightSteps - bottomSteps) * rectHeight) / leftSteps;
         }
 
         // Only draw pixel if it's within screen bounds
-        if (pixelX >= 0 && pixelX < tft.width() && pixelY >= 0 && pixelY < tft.height()) {
+        if (pixelX >= 0 && pixelX < screenW && pixelY >= 0 && pixelY < screenH) {
             tft.drawPixel(pixelX, pixelY, pixel_color);
         }
 
