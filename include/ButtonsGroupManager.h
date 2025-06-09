@@ -247,8 +247,6 @@ class ButtonsGroupManager {
             }
             int16_t btnHeight = (def.height > 0) ? def.height : defaultButtonHeightRef;
 
-            DEBUG("  Button '%s': width=%d, currentX=%d, currentX+width=%d vs maxRowWidth=%d\n", def.label, btnWidth, currentX_build, currentX_build + btnWidth, maxRowWidth);
-
             if (currentX_build == marginLeft && btnWidth > maxRowWidth) {
 
                 // Ha az előző sorban voltak gombok
@@ -259,13 +257,11 @@ class ButtonsGroupManager {
                     currentBuildingRowMaxH = 0;
                 }
                 currentX_build = marginLeft; // Marad a jelenlegi sor elején a következő gombnak
-                DEBUG("  SKIP: Button too wide for row even at start\n");
                 continue;
             }
 
             // Új sort kell kezdeni
             if (currentX_build + btnWidth > maxRowWidth && currentX_build != marginLeft) {
-                DEBUG("  NEW ROW: currentX=%d + btnWidth=%d > maxRowWidth=%d\n", currentX_build, btnWidth, maxRowWidth);
                 rowsOfButtons.push_back(currentBuildingRowButtons);
                 rowMaxHeightsList.push_back(currentBuildingRowMaxH);
                 currentBuildingRowButtons.clear();
@@ -274,11 +270,10 @@ class ButtonsGroupManager {
 
                 // Ellenőrizzük, hogy az új sort kezdő gomb nem túl széles-e
                 if (btnWidth > maxRowWidth) {
-                    DEBUG("  SKIP: Button too wide for new row\n");
                     continue;
                 }
             }
-            DEBUG("  ADD: Button '%s' to current row\n", def.label);
+
             currentBuildingRowButtons.push_back(def);
             currentBuildingRowMaxH = std::max(currentBuildingRowMaxH, btnHeight);
             currentX_build += btnWidth + buttonGap;
@@ -287,11 +282,6 @@ class ButtonsGroupManager {
         if (!currentBuildingRowButtons.empty()) {
             rowsOfButtons.push_back(currentBuildingRowButtons);
             rowMaxHeightsList.push_back(currentBuildingRowMaxH);
-        }
-
-        DEBUG("  Result: %zu rows created\n", rowsOfButtons.size());
-        for (size_t i = 0; i < rowsOfButtons.size(); i++) {
-            DEBUG("    Row %zu: %zu buttons\n", i, rowsOfButtons[i].size());
         }
 
         if (rowsOfButtons.empty())

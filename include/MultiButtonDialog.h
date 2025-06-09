@@ -40,25 +40,37 @@ class MultiButtonDialog : public UIDialogBase, public ButtonsGroupManager<MultiB
     virtual void layoutDialogContent() override;
     virtual void drawSelf() override;
 
-  public: /**
-           * @brief MultiButtonDialog konstruktor.
-           *
-           * @param parentScreen A szülő UIScreen.
-           * @param tft TFT_eSPI referencia.
-           * @param title A dialógus címe.
-           * @param message Az üzenet szövege.
-           * @param options Gombok feliratainak tömbje.
-           * @param numOptions A gombok száma.
-           * @param buttonClickCb Gomb kattintás callback (opcionális).
-           * @param autoClose Automatikusan bezárja-e a dialógust gomb kattintáskor (alapértelmezett: true).           * @param defaultButtonIndex Az alapértelmezett (jelenlegi)
-           * gomb indexe, amely kiemelve jelenik meg (-1 = nincs, alapértelmezett).
-           * @param disableDefaultButton Ha true, az alapértelmezett gomb le van tiltva; ha false, csak vizuálisan kiemelve (alapértelmezett: true).
-           * @param bounds A dialógus határai (opcionális, automatikus méret és középre igazítás).
-           * @param cs Színséma (opcionális).
-           */
-    MultiButtonDialog(UIScreen *parentScreen, TFT_eSPI &tft, const char *title, const char *message, const char *const *options, uint8_t numOptions,
-                      ButtonClickCallback buttonClickCb = nullptr, bool autoClose = true, int defaultButtonIndex = -1, bool disableDefaultButton = true,
-                      const Rect &bounds = {-1, -1, 0, 0}, const ColorScheme &cs = ColorScheme::defaultScheme());
+  public:
+    /**
+     * @brief MultiButtonDialog konstruktor.
+     *
+     * @param parentScreen A szülő UIScreen.
+     * @param tft TFT_eSPI referencia.
+     * @param title A dialógus címe.
+     * @param message Az üzenet szövege.
+     * @param options Gombok feliratainak tömbje.
+     * @param numOptions A gombok száma.
+     * @param buttonClickCb Gomb kattintás callback (opcionális).
+     * @param autoClose Automatikusan bezárja-e a dialógust gomb kattintáskor (alapértelmezett: true).
+     * @param defaultButtonIndex Az alapértelmezett (jelenlegi) gomb indexe, amely kiemelve jelenik meg (-1 = nincs, alapértelmezett).
+     * @param disableDefaultButton Ha true, az alapértelmezett gomb le van tiltva; ha false, csak vizuálisan kiemelve (alapértelmezett: true).
+     * @param bounds A dialógus határai (opcionális, automatikus méret és középre igazítás).
+     * @param cs Színséma (opcionális).
+     */
+    MultiButtonDialog(                                       //
+        UIScreen *parentScreen,                              // A szülő UIScreen
+        TFT_eSPI &tft,                                       // TFT_eSPI referencia
+        const char *title,                                   // A dialógus címe
+        const char *message,                                 // Az üzenet szövege
+        const char *const *options,                          // Gombok feliratai
+        uint8_t numOptions,                                  // Gombok száma
+        ButtonClickCallback buttonClickCb = nullptr,         //
+        bool autoClose = true,                               // Automatikus bezárás gomb kattintáskor
+        int defaultButtonIndex = -1,                         // Az alapértelmezett gomb indexe (-1 = nincs)
+        bool disableDefaultButton = true,                    // Ha true, az alapértelmezett gomb le van tiltva
+        const Rect &bounds = {-1, -1, 0, 0},                 // A dialógus határai (alapértelmezett: automatikus méret és középre igazítás)
+        const ColorScheme &cs = ColorScheme::defaultScheme() // Színséma (alapértelmezett: alapértelmezett színséma)
+    );
 
     virtual ~MultiButtonDialog() override = default; // Getter metódusok
     int getClickedUserButtonIndex() const { return _clickedUserButtonIndex; }
@@ -76,6 +88,14 @@ class MultiButtonDialog : public UIDialogBase, public ButtonsGroupManager<MultiB
      * @param result A dialógus eredménye
      */
     void closeDialog(DialogResult result = DialogResult::Accepted);
+
+    /**
+     * @brief Visszaadja az összes dialógus gombot (kivéve a bezáró X gombot).
+     * @return A gombok listája shared_ptr-ekben.
+     * @details Felülírja a UIDialogBase virtuális metódusát, hogy visszaadja
+     * az összes MultiButtonDialog gombját a _buttonsList-ből.
+     */
+    virtual std::vector<std::shared_ptr<UIButton>> getButtonsList() const override { return _buttonsList; }
 };
 
 #endif // __MULTI_BUTTON_DIALOG_H

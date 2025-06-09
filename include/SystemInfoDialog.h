@@ -38,14 +38,21 @@ class SystemInfoDialog : public MessageDialog {
            * @param bounds Dialógus területének koordinátái és méretei
            * @param cs Színséma a dialógus megjelenítéséhez (opcionális, alapértelmezett a defaultScheme)
            */
-    SystemInfoDialog(UIScreen *parentScreen, TFT_eSPI &tft, const Rect &bounds, const ColorScheme &cs = ColorScheme::defaultScheme());
+    SystemInfoDialog(UIScreen *parentScreen, TFT_eSPI &tft, const Rect &bounds,
+                     const ColorScheme &cs = ColorScheme::defaultScheme()); /**
+                                                                             * @brief Virtuális destruktor
+                                                                             * @details Az alapértelmezett destruktor elegendő, mivel a shared_ptr automatikusan
+                                                                             * felszabadítja a navigációs gombokat.
+                                                                             */
+    virtual ~SystemInfoDialog() = default;
 
     /**
-     * @brief Virtuális destruktor
-     * @details Az alapértelmezett destruktor elegendő, mivel a shared_ptr automatikusan
-     * felszabadítja a navigációs gombokat.
+     * @brief Visszaadja az összes dialógus gombot (kivéve a bezáró X gombot).
+     * @return A gombok listája shared_ptr-ekben, beleértve a MessageDialog gombokat és a navigációs gombokat is.
+     * @details Felülírja a MessageDialog metódusát, hogy a navigációs gombokat (prevButton, nextButton)
+     * is tartalmazza az eredmény listában.
      */
-    virtual ~SystemInfoDialog() = default;
+    virtual std::vector<std::shared_ptr<UIButton>> getButtonsList() const override;
 
   protected:
     /**

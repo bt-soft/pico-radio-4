@@ -237,7 +237,6 @@ bool SetupScreen::onItemClicked(int index) {
         return false;
 
     const SettingItem &item = settingItems[index];
-    DEBUG("SetupScreen: Item %d ('%s':'%s') clicked, action: %d\n", index, item.label, item.value.c_str(), static_cast<int>(item.action));
 
     // Megfelelő kezelő metódus meghívása az ItemAction alapján
     switch (item.action) {
@@ -454,7 +453,6 @@ void SetupScreen::handleFFTConfigDialog(int index, bool isAM) {
         this, this->tft, title, "Select FFT gain mode:", options, ARRAY_ITEM_COUNT(options),
         // Gomb kattintás callback
         [this, index, isAM, &currentConfig, title](int buttonIndex, const char *buttonLabel, MultiButtonDialog *dialog) {
-            DEBUG("SetupScreen: FFT Config %s button %d ('%s') clicked\n", isAM ? "AM" : "FM", buttonIndex, buttonLabel);
             switch (buttonIndex) {
                 case 0: // Disabled - FFT letiltása
                     currentConfig = -1.0f;
@@ -478,29 +476,26 @@ void SetupScreen::handleFFTConfigDialog(int index, bool isAM) {
 
                     // Ideiglenes float változó a manuális erősítés értékének tárolásához
                     auto tempGainValuePtr = std::make_shared<float>((currentConfig > 0.0f) ? currentConfig : 1.0f);
-                    DEBUG("SetupScreen: Opening manual gain dialog with initial value: %.1f\n", *tempGainValuePtr);
 
                     // Nested ValueChangeDialog a pontos erősítési tényező beállításához
                     auto gainDialog = std::make_shared<ValueChangeDialog>(
-                        this, this->tft, (String(title) + " - Manual Gain").c_str(), "Set gain factor (0.1 - 10.0):", tempGainValuePtr.get(), 0.1f, 10.0f, 0.1f,
-                        // Valós idejű előnézet callback
-                        [this, tempGainValuePtr](const std::variant<int, float, bool> &liveNewValue) {
-                            if (std::holds_alternative<float>(liveNewValue)) {
-                                float currentDialogVal = std::get<float>(liveNewValue);
-                                DEBUG("SetupScreen: Live gain preview: %.1f\n", currentDialogVal);
-                            }
-                        },
+                        this,                                       // Képernyő referencia
+                        this->tft,                                  // TFT_eSPI referencia
+                        (String(title) + " - Manual Gain").c_str(), // Cím
+                        "Set gain factor (0.1 - 10.0):",            // Leírás
+                        tempGainValuePtr.get(), 0.1f, 10.0f, 0.1f,  // Érték, tartomány és lépésköz
+                        nullptr,                                    // Valós idejű előnézet callback
                         // Nested dialógus bezárás callback
                         [this, index, &currentConfig, tempGainValuePtr](UIDialogBase *sender, MessageDialog::DialogResult result) {
                             if (result == MessageDialog::DialogResult::Accepted) {
                                 currentConfig = *tempGainValuePtr;
                                 config.checkSave();
-                                DEBUG("SetupScreen: Manual gain set to %.1f\n", *tempGainValuePtr);
                                 // Teljes menü újrafeltöltése a helyes érték megjelenítéséhez
                                 populateMenuItems();
                             }
                         },
-                        Rect(-1, -1, 300, 0));
+                        Rect(-1, -1, 300, 0) // Dialógus mérete (szélesség, magasság)
+                    );
                     this->showDialog(gainDialog);
                 } break;
             }
@@ -564,52 +559,67 @@ void SetupScreen::handleRTTYFrequenciesDialog(int index) {
     // RTTY frekvenciák beállítása MultiButtonDialog segítségével
     const char *options[] = {"Mark", "Shift"};
     auto rttyDialog = std::make_shared<MultiButtonDialog>(
-        this, this->tft, "RTTY Frequencies", "Select frequency to configure:", options, ARRAY_ITEM_COUNT(options),
+        this, this->tft,                    //
+        "RTTY Frequencies",                 //
+        "Select frequency to configure:",   //
+        options, ARRAY_ITEM_COUNT(options), //
         [this, index](int buttonIndex, const char *buttonLabel, MultiButtonDialog *dialog) {
             if (strcmp(buttonLabel, "Mark") == 0) {
+
                 // RTTY Mark frekvencia beállítása (1000-3000 Hz)
                 auto markDialog = std::make_shared<ValueChangeDialog>(
-                    this, this->tft, "RTTY Mark Frequency", "Hz (1000-3000):", &config.data.rttyMarkFrequencyHz, 1000.0f, 3000.0f, 5.0f,
-                    [this, index](const std::variant<int, float, bool> &liveNewValue) {
+                    this, this->tft,                                                    //
+                    "RTTY Mark Frequency",                                              //
+                    "Hz (1000-3000):",                                                  //
+                    &config.data.rttyMarkFrequencyHz, 1000.0f, 3000.0f, 5.0f,           //
+                    [this, index](const std::variant<int, float, bool> &liveNewValue) { // Valós idejű előnézet callback
                         if (std::holds_alternative<float>(liveNewValue)) {
                             float currentDialogVal = std::get<float>(liveNewValue);
                             config.data.rttyMarkFrequencyHz = currentDialogVal;
                             config.checkSave();
                         }
                     },
-                    [this, index](UIDialogBase *sender, MessageDialog::DialogResult dialogResult) {
+                    [this, index](UIDialogBase *sender, MessageDialog::DialogResult dialogResult) { // Dialógus bezárás callback
                         if (dialogResult == MessageDialog::DialogResult::Accepted) {
                             settingItems[index].value = String(round(config.data.rttyMarkFrequencyHz)) + "/" + String(round(config.data.rttyShiftHz)) + " Hz";
                             updateListItem(index);
                         }
                     },
-                    Rect(-1, -1, 270, 0));
+                    Rect(-1, -1, 270, 0) // Dialógus mérete (szélesség, magasság)
+                );
                 this->showDialog(markDialog);
+
             } else if (strcmp(buttonLabel, "Shift") == 0) {
+
                 // RTTY Shift frekvencia beállítása (50-1000 Hz)
                 auto shiftDialog = std::make_shared<ValueChangeDialog>(
-                    this, this->tft, "RTTY Shift", "Hz (50-1000):", &config.data.rttyShiftHz, 50.0f, 1000.0f, 5.0f,
-                    [this, index](const std::variant<int, float, bool> &liveNewValue) {
+                    this, this->tft,                                                    //
+                    "RTTY Shift",                                                       //
+                    "Hz (50-1000):",                                                    //
+                    &config.data.rttyShiftHz, 50.0f, 1000.0f, 5.0f,                     //
+                    [this, index](const std::variant<int, float, bool> &liveNewValue) { // Valós idejű előnézet callback
                         if (std::holds_alternative<float>(liveNewValue)) {
                             float currentDialogVal = std::get<float>(liveNewValue);
                             config.data.rttyShiftHz = currentDialogVal;
                             config.checkSave();
                         }
                     },
-                    [this, index](UIDialogBase *sender, MessageDialog::DialogResult dialogResult) {
+                    [this, index](UIDialogBase *sender, MessageDialog::DialogResult dialogResult) { // Dialógus bezárás callback
                         if (dialogResult == MessageDialog::DialogResult::Accepted) {
                             settingItems[index].value = String(round(config.data.rttyMarkFrequencyHz)) + "/" + String(round(config.data.rttyShiftHz)) + " Hz";
                             updateListItem(index);
                         }
                     },
-                    Rect(-1, -1, 270, 0));
+                    Rect(-1, -1, 270, 0) // Dialógus mérete (szélesség, magasság)
+                );
                 this->showDialog(shiftDialog);
             }
         },
-        true, // Automatikus bezárás
-        -1,   // Nincs alapértelmezett kiválasztás
-        true, // Highlight engedélyezett
-        Rect(-1, -1, 300, 120));
+        true,                  // Automatikus bezárás
+        -1,                    // Nincs alapértelmezett kiválasztás
+        true,                  // Highlight engedélyezett
+        Rect(-1, -1, 300, 120) // Dialógus mérete (szélesség, magasság)
+    );
     this->showDialog(rttyDialog);
 }
 
@@ -647,14 +657,18 @@ void SetupScreen::handleSystemInfoDialog() {
  */
 void SetupScreen::handleFactoryResetDialog() {
     // Megerősítő dialógus létrehozása Igen/Nem gombokkal
-    auto confirmDialog = std::make_shared<MessageDialog>(this, this->tft, Rect(-1, -1, 300, 0), "Factory Reset", "Are you sure you want to reset all settings to default?",
-                                                         MessageDialog::ButtonsType::YesNo, ColorScheme::defaultScheme(), true);
+    auto confirmDialog = std::make_shared<MessageDialog>(          //
+        this, this->tft,                                           //
+        Rect(-1, -1, 300, 0),                                      // Dialógus mérete
+        "Factory Reset",                                           // Cím
+        "Are you sure you want to reset all settings to default?", // Üzenet
+        MessageDialog::ButtonsType::YesNo                          // Gombok típusa
+    );
 
     // Dialógus callback beállítása
     confirmDialog->setDialogCallback([this](UIDialogBase *sender, MessageDialog::DialogResult result) {
         // Csak elfogadás (Igen) esetén hajtjuk végre a reset műveletet
         if (result == MessageDialog::DialogResult::Accepted) {
-            DEBUG("SetupScreen: Performing factory reset.\n");
             // Gyári alapértékek betöltése
             config.loadDefaults();
             // Azonnali mentés a flash memóriába

@@ -115,6 +115,15 @@ class UIDialogBase : public UIContainerComponent {
      * @param isTop true, ha ez a dialógus a legfelső, false ha nem
      */
     inline void setTopDialog(bool isTop) { topDialog = isTop; }
+
+    /**
+     * @brief Visszaadja az összes dialógus gombot (kivéve a bezáró X gombot).
+     * @return A gombok listája shared_ptr-ekben. Alapértelmezetten üres lista.
+     * @details Ez a virtuális metódus lehetővé teszi, hogy a leszármazott osztályok
+     * egységesen visszaadhassák az összes gombj aikat egy listában.
+     * A closeButton (X gomb) automatikusan ki van zárva.
+     */
+    virtual std::vector<std::shared_ptr<UIButton>> getButtonsList() const { return {}; }
 };
 
 #endif //__UI_DIALOG_BASE_H

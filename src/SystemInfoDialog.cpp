@@ -38,8 +38,29 @@ SystemInfoDialog::SystemInfoDialog(UIScreen *parentScreen, TFT_eSPI &tft, const 
 
     // FONTOS: Explicit layoutDialogContent() hívás szükséges, mert a virtuális hívás
     // a MessageDialog konstruktorban a MessageDialog::layoutDialogContent()-et hívná,
-    // nem a mi felülírt változatunkat
-    layoutDialogContent();
+    // nem a mi felülírt változatunkat    layoutDialogContent();
+}
+
+/**
+ * @brief Visszaadja az összes dialógus gombot (kivéve a bezáró X gombot).
+ * @return A gombok listája, beleértve a MessageDialog gombokat és a navigációs gombokat is.
+ * @details Ez a metódus kombinálja a MessageDialog::getButtonsList() eredményét
+ * a SystemInfoDialog saját navigációs gombjaival (prevButton, nextButton).
+ * A closeButton (X gomb) automatikusan ki van zárva.
+ */
+std::vector<std::shared_ptr<UIButton>> SystemInfoDialog::getButtonsList() const {
+    // Alapértelmezett gombok lekérése a MessageDialog-ból (OK stb.)
+    std::vector<std::shared_ptr<UIButton>> allButtons = MessageDialog::getButtonsList();
+
+    // Navigációs gombok hozzáadása, ha léteznek
+    if (prevButton) {
+        allButtons.push_back(prevButton);
+    }
+    if (nextButton) {
+        allButtons.push_back(nextButton);
+    }
+
+    return allButtons;
 }
 
 /**
