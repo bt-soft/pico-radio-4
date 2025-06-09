@@ -31,10 +31,10 @@ constexpr int ANIMATION_BORDER_WIDTH = 280; // Animált keret szélessége
 constexpr int ANIMATION_BORDER_HEIGHT = 60; // Animált keret magassága (kompaktabb)
 
 // FreqDisplay pozíció a keret bal felső sarkához képest
-constexpr int FREQ_DISPLAY_X_OFFSET = 10; // FreqDisplay X eltolás a kereten belül
-constexpr int FREQ_DISPLAY_Y_OFFSET = 2;  // FreqDisplay Y eltolás a kereten belül (2px gap)
-constexpr int FREQ_DISPLAY_WIDTH = 180;   // FreqDisplay szélessége (kisebb)
-constexpr int FREQ_DISPLAY_HEIGHT = 30;   // FreqDisplay magassága (még kisebb)
+constexpr int FREQ_DISPLAY_X_OFFSET = 10;  // FreqDisplay X eltolás a kereten belül
+constexpr int FREQ_DISPLAY_Y_OFFSET = -18; // FreqDisplay Y eltolás a kereten belül (kompenzálja a belső SpriteYOffset = 20-at hogy 2px gap legyen)
+constexpr int FREQ_DISPLAY_WIDTH = 180;    // FreqDisplay szélessége (kisebb)
+constexpr int FREQ_DISPLAY_HEIGHT = 30;    // FreqDisplay magassága (még kisebb)
 
 // Akkumulátor szimbólum pozíció a keret bal felső sarkához képest (FreqDisplay mellett)
 constexpr int BATTERY_BASE_X_OFFSET = 205; // Akkumulátor alap X pozíció a kereten belül (jobb oldal)
