@@ -57,14 +57,6 @@ class SystemInfoDialog : public MessageDialog {
      */
     virtual ~SystemInfoDialog() = default;
 
-    /**
-     * @brief Visszaadja az összes dialógus gombot (kivéve a bezáró X gombot).
-     * @return A gombok listája shared_ptr-ekben, beleértve a MessageDialog gombokat és a navigációs gombokat is.
-     * @details Felülírja a MessageDialog metódusát, hogy a navigációs gombokat (prevButton, nextButton)
-     * is tartalmazza az eredmény listában.
-     */
-    virtual std::vector<std::shared_ptr<UIButton>> getButtonsList() const override;
-
   protected:
     /**
      * @brief A dialógus teljes újrarajzolása felüldefiniálva
@@ -130,11 +122,11 @@ class SystemInfoDialog : public MessageDialog {
      */
     void updateNavigationButtons();
 
-    /**
-     * @brief Navigációs gombok színsémájának létrehozása
-     * @return ButtonColorScheme objektum a navigációs gombokhoz
-     */
-    ButtonColorScheme createNavigationButtonScheme();
+    // /**
+    //  * @brief Navigációs gombok színsémájának létrehozása
+    //  * @return ButtonColorScheme objektum a navigációs gombokhoz
+    //  */
+    // ButtonColorScheme createNavigationButtonScheme();
 };
 
 #endif // __SYSTEM_INFO_DIALOG_H

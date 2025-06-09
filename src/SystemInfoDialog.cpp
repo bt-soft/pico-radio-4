@@ -35,33 +35,6 @@ SystemInfoDialog::SystemInfoDialog(UIScreen *parentScreen, TFT_eSPI &tft, const 
     // Üres message stringet adunk át, mert saját drawSelf-fel rajzoljuk a tartalmat
     // Lapozós navigáció gombokkal történik
     // A navigációs gombokat a layoutDialogContent()-ben hozzuk létre
-
-    // FONTOS: Explicit layoutDialogContent() hívás szükséges, mert a virtuális hívás
-    // a MessageDialog konstruktorban a MessageDialog::layoutDialogContent()-et hívná,
-    // nem a mi felülírt változatunkat    layoutDialogContent();
-}
-
-/**
- * @brief Visszaadja az összes dialógus gombot (kivéve a bezáró X gombot).
- * @return A gombok listája, beleértve a MessageDialog gombokat és a navigációs gombokat is.
- * @details Ez a metódus kombinálja a MessageDialog::getButtonsList() eredményét
- * a SystemInfoDialog saját navigációs gombjaival (prevButton, nextButton).
- * A closeButton (X gomb) automatikusan ki van zárva.
- */
-std::vector<std::shared_ptr<UIButton>> SystemInfoDialog::getButtonsList() const {
-
-    // Alapértelmezett gombok lekérése a MessageDialog-ból (OK stb.)
-    std::vector<std::shared_ptr<UIButton>> allButtons = MessageDialog::getButtonsList();
-
-    // Navigációs gombok hozzáadása, ha léteznek
-    if (prevButton) {
-        allButtons.push_back(prevButton);
-    }
-    if (nextButton) {
-        allButtons.push_back(nextButton);
-    }
-
-    return allButtons;
 }
 
 /**
@@ -209,9 +182,6 @@ void SystemInfoDialog::layoutDialogContent() {
         nextButton = nullptr;
     }
 
-    // Közös navigációs gomb színséma és callback
-    ButtonColorScheme navButtonScheme = createNavigationButtonScheme();
-
     // Közös lambda az oldalváltáshoz és UI frissítéshez - helyben definiáljuk
     auto updatePageAndUI = [this]() {
         updateNavigationButtons();
@@ -231,9 +201,8 @@ void SystemInfoDialog::layoutDialogContent() {
                 currentPage--;
                 updatePageAndUI();
             }
-        },
-        navButtonScheme // A gomb színsémája
-    );
+        });
+    prevButton->setUseMiniFont(true);
 
     // Next gomb létrehozása (jobb oldal)
     nextButton = std::make_shared<UIButton>(                                                                                       //
@@ -247,9 +216,8 @@ void SystemInfoDialog::layoutDialogContent() {
                 currentPage++;
                 updatePageAndUI();
             }
-        },
-        navButtonScheme // A gomb színsémája
-    );
+        });
+    nextButton->setUseMiniFont(true);
 
     // Navigációs gombok hozzáadása
     addChild(prevButton);
@@ -274,18 +242,18 @@ void SystemInfoDialog::layoutDialogContent() {
     updateNavigationButtons();
 }
 
-/**
- * @brief Navigációs gombok színsémájának létrehozása
- * @return ButtonColorScheme objektum a navigációs gombokhoz
- * @details Egységes színséma a Previous és Next gombokhoz
- */
-ButtonColorScheme SystemInfoDialog::createNavigationButtonScheme() {
-    ButtonColorScheme navButtonScheme = UIColorPalette::createDefaultButtonScheme();
-    navButtonScheme.background = UIColorPalette::BUTTON_DEFAULT_BACKGROUND;
-    navButtonScheme.foreground = UIColorPalette::BUTTON_DEFAULT_TEXT;
-    navButtonScheme.border = UIColorPalette::BUTTON_DEFAULT_BORDER;
-    return navButtonScheme;
-}
+// /**
+//  * @brief Navigációs gombok színsémájának létrehozása
+//  * @return ButtonColorScheme objektum a navigációs gombokhoz
+//  * @details Egységes színséma a Previous és Next gombokhoz
+//  */
+// ButtonColorScheme SystemInfoDialog::createNavigationButtonScheme() {
+//     ButtonColorScheme navButtonScheme = UIColorPalette::createDefaultButtonScheme();
+//     navButtonScheme.background = UIColorPalette::BUTTON_DEFAULT_BACKGROUND;
+//     navButtonScheme.foreground = UIColorPalette::BUTTON_DEFAULT_TEXT;
+//     navButtonScheme.border = UIColorPalette::BUTTON_DEFAULT_BORDER;
+//     return navButtonScheme;
+// }
 
 /**
  * @brief Navigációs gombok állapotának frissítése
@@ -297,6 +265,7 @@ ButtonColorScheme SystemInfoDialog::createNavigationButtonScheme() {
  * megfelelő állapotát a felhasználói interakció szempontjából.
  */
 void SystemInfoDialog::updateNavigationButtons() {
+
     // Previous gomb aktiválása/deaktiválása - csak akkor engedélyezett ha nem az első oldalon vagyunk
     if (prevButton) {
         bool prevEnabled = (currentPage > 0);
