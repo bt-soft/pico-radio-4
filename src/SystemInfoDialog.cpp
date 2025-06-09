@@ -49,6 +49,7 @@ SystemInfoDialog::SystemInfoDialog(UIScreen *parentScreen, TFT_eSPI &tft, const 
  * A closeButton (X gomb) automatikusan ki van zárva.
  */
 std::vector<std::shared_ptr<UIButton>> SystemInfoDialog::getButtonsList() const {
+
     // Alapértelmezett gombok lekérése a MessageDialog-ból (OK stb.)
     std::vector<std::shared_ptr<UIButton>> allButtons = MessageDialog::getButtonsList();
 

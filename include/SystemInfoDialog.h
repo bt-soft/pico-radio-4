@@ -31,19 +31,30 @@
  * - Valós idejű memória állapot lekérés
  */
 class SystemInfoDialog : public MessageDialog {
-  public: /**
-           * @brief SystemInfoDialog konstruktor
-           * @param parentScreen Szülő képernyő, amely ezt a dialógust birtokolja
-           * @param tft TFT kijelző referencia a rajzoláshoz
-           * @param bounds Dialógus területének koordinátái és méretei
-           * @param cs Színséma a dialógus megjelenítéséhez (opcionális, alapértelmezett a defaultScheme)
-           */
-    SystemInfoDialog(UIScreen *parentScreen, TFT_eSPI &tft, const Rect &bounds,
-                     const ColorScheme &cs = ColorScheme::defaultScheme()); /**
-                                                                             * @brief Virtuális destruktor
-                                                                             * @details Az alapértelmezett destruktor elegendő, mivel a shared_ptr automatikusan
-                                                                             * felszabadítja a navigációs gombokat.
-                                                                             */
+
+  public:
+    // Konstansok
+
+    /**
+     * @brief Az összes oldal száma a dialógusban
+     * @details 4 oldal van összesen: Program (0), Memory (1), Hardware (2), Radio (3)
+     */
+    static constexpr int TOTAL_PAGES = 4;
+
+    /**
+     * @brief SystemInfoDialog konstruktor
+     * @param parentScreen Szülő képernyő, amely ezt a dialógust birtokolja
+     * @param tft TFT kijelző referencia a rajzoláshoz
+     * @param bounds Dialógus területének koordinátái és méretei
+     * @param cs Színséma a dialógus megjelenítéséhez (opcionális, alapértelmezett a defaultScheme)
+     */
+    SystemInfoDialog(UIScreen *parentScreen, TFT_eSPI &tft, const Rect &bounds, const ColorScheme &cs = ColorScheme::defaultScheme());
+
+    /**
+     * @brief Virtuális destruktor
+     * @details Az alapértelmezett destruktor elegendő, mivel a shared_ptr automatikusan
+     * felszabadítja a navigációs gombokat.
+     */
     virtual ~SystemInfoDialog() = default;
 
     /**
@@ -73,7 +84,7 @@ class SystemInfoDialog : public MessageDialog {
 
   private:
     // Lapozási állapot és navigáció
-    int currentPage; ///< Aktuális oldal száma (0-3)
+    uint8_t currentPage; ///< Aktuális oldal száma (0-3)
 
     // Navigációs UI gombok
     std::shared_ptr<UIButton> prevButton; ///< "< Prev" gomb az előző oldalra lépéshez
@@ -124,14 +135,6 @@ class SystemInfoDialog : public MessageDialog {
      * @return ButtonColorScheme objektum a navigációs gombokhoz
      */
     ButtonColorScheme createNavigationButtonScheme();
-
-    // Konstansok
-
-    /**
-     * @brief Az összes oldal száma a dialógusban
-     * @details 4 oldal van összesen: Program (0), Memory (1), Hardware (2), Radio (3)
-     */
-    static const int TOTAL_PAGES = 4;
 };
 
 #endif // __SYSTEM_INFO_DIALOG_H

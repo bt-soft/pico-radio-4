@@ -331,12 +331,18 @@ void SetupScreen::handleBrightnessDialog(int index) {
  * @param index A menüpont indexe a lista frissítéséhez
  */
 void SetupScreen::handleSquelchBasisDialog(int index) {
+
     const char *options[] = {"RSSI", "SNR"};
+
     // Jelenlegi beállítás meghatározása az alapértelmezett kiválasztáshoz
     int currentSelection = config.data.squelchUsesRSSI ? 0 : 1;
 
     auto basisDialog = std::make_shared<MultiButtonDialog>(
-        this, this->tft, "Squelch Basis", "Select squelch basis:", options, ARRAY_ITEM_COUNT(options),
+        this,                               //
+        this->tft,                          //
+        "Squelch Basis",                    //
+        "Select squelch basis:",            //
+        options, ARRAY_ITEM_COUNT(options), //
         // Gomb kattintás callback
         [this, index](int buttonIndex, const char *buttonLabel, MultiButtonDialog *dialog) {
             bool newSquelchUsesRSSI = (buttonIndex == 0);
@@ -349,10 +355,11 @@ void SetupScreen::handleSquelchBasisDialog(int index) {
             settingItems[index].value = String(config.data.squelchUsesRSSI ? "RSSI" : "SNR");
             updateListItem(index);
         },
-        true,             // Automatikus bezárás gomb kattintásra
-        currentSelection, // Alapértelmezett kiválasztás
-        true,             // Highlight engedélyezett
-        Rect(-1, -1, 250, 120));
+        true,                  // Automatikus bezárás gomb kattintásra
+        currentSelection,      // Alapértelmezett kiválasztás
+        true,                  // Highlight engedélyezett
+        Rect(-1, -1, 250, 120) // Dialógus mérete
+    );
     this->showDialog(basisDialog);
 }
 
@@ -369,8 +376,13 @@ void SetupScreen::handleSquelchBasisDialog(int index) {
  * @param index A menüpont indexe a lista frissítéséhez
  */
 void SetupScreen::handleSaverTimeoutDialog(int index) {
+
     auto saverDialog = std::make_shared<ValueChangeDialog>(
-        this, this->tft, "Screen Saver", "Timeout (minutes):", &config.data.screenSaverTimeoutMinutes, SCREEN_SAVER_TIMEOUT_MIN, SCREEN_SAVER_TIMEOUT_MAX, 1,
+        this,                 //
+        this->tft,            //
+        "Screen Saver",       //
+        "Timeout (minutes):", //
+        &config.data.screenSaverTimeoutMinutes, SCREEN_SAVER_TIMEOUT_MIN, SCREEN_SAVER_TIMEOUT_MAX, 1,
         // Valós idejű előnézet callback - azonnal menti a konfigurációt
         [this, index](const std::variant<int, float, bool> &liveNewValue) {
             if (std::holds_alternative<int>(liveNewValue)) {
@@ -386,7 +398,9 @@ void SetupScreen::handleSaverTimeoutDialog(int index) {
                 updateListItem(index);
             }
         },
-        Rect(-1, -1, 280, 0));
+        Rect(-1, -1, 280, 0) //
+    );
+
     this->showDialog(saverDialog);
 }
 
@@ -406,6 +420,7 @@ void SetupScreen::handleSaverTimeoutDialog(int index) {
  * @param configValue Referencia a módosítandó boolean konfigurációs értékre
  */
 void SetupScreen::handleToggleItem(int index, bool &configValue) {
+
     // Boolean érték megfordítása
     configValue = !configValue;
     // Konfiguráció mentése
@@ -435,6 +450,7 @@ void SetupScreen::handleToggleItem(int index, bool &configValue) {
  * @param isAM true = AM mód konfigurációja, false = FM mód konfigurációja
  */
 void SetupScreen::handleFFTConfigDialog(int index, bool isAM) {
+
     // Megfelelő konfigurációs változó kiválasztása (AM vagy FM)
     float &currentConfig = isAM ? config.data.miniAudioFftConfigAm : config.data.miniAudioFftConfigFm;
     const char *title = isAM ? "FFT Config AM" : "FFT Config FM";
