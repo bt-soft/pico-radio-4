@@ -36,7 +36,6 @@ class FreqDisplay : public UIComponent {
     void displayFmAmFrequency(uint16_t currentFrequencyValue, const FreqSegmentColors &colors);
     void drawStepUnderline(const FreqSegmentColors &colors);
     uint32_t calcFreqSpriteXPosition() const;
-    void clearPartialDisplayArea(); // Csak a frekvencia és unit területét törli
 
   public:
     FreqDisplay(TFT_eSPI &tft, const Rect &bounds, Band &band_ref, Config &config_ref);

@@ -90,7 +90,6 @@ bool FMScreen::handleRotary(const RotaryEvent &event) {
 
     // Ha van aktív dialógus, akkor a szülő implementációnak adjuk át
     if (isDialogActive()) {
-        DEBUG("FMScreen: Dialog active, forwarding to UIScreen\n");
         return UIScreen::handleRotary(event);
     }
 
@@ -102,6 +101,10 @@ bool FMScreen::handleRotary(const RotaryEvent &event) {
         // uint16_t step = band.getCurrentBand().varData.currStep;
         // si4735.setFrequency(currentFreq + step);
         // if (freqDisplayComp) freqDisplayComp->setFrequency(si4735.getFrequency());
+
+        band.getCurrentBand().currFreq += band.getCurrentBand().currStep; // Frissítjük a band aktuális frekvenciáját
+        freqDisplayComp->setFrequency(band.getCurrentBand().currFreq);
+
         return true;
     } else if (event.direction == RotaryEvent::Direction::Down) {
         DEBUG("FMScreen: Rotary Down\n");
@@ -110,6 +113,10 @@ bool FMScreen::handleRotary(const RotaryEvent &event) {
         // uint16_t step = band.getCurrentBand().varData.currStep;
         // si4735.setFrequency(currentFreq - step);
         // if (freqDisplayComp) freqDisplayComp->setFrequency(si4735.getFrequency());
+
+        band.getCurrentBand().currFreq -= band.getCurrentBand().currStep; // Frissítjük a band aktuális frekvenciáját
+        freqDisplayComp->setFrequency(band.getCurrentBand().currFreq);
+
         return true;
     }
 
