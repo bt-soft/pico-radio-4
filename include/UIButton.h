@@ -528,7 +528,7 @@ class UIButton : public UIComponent {
      * @brief Gomb feliratának lekérdezése
      * @return A gomb felirata (const char*)
      */
-    const char *getText() const { return label; }
+    const char *getLabel() const { return label; }
 
     // Mini font használata
     void setUseMiniFont(bool mini) {
