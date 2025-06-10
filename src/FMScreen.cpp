@@ -100,6 +100,7 @@ bool FMScreen::handleRotary(const RotaryEvent &event) {
         return true;
     }
 
+    // Ha nem kezeltük az eseményt, akkor továbbítjuk a UIScreen-nek, ami továbbítja a lehetséges további a gyerek komponenseknek
     return UIScreen::handleRotary(event);
 }
 
