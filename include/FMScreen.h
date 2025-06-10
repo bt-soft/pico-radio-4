@@ -9,7 +9,7 @@
 /**
  * @file FMScreen.h
  * @brief FM képernyő osztály
- * @details Ez az osztály kezeli az FM rádió vezérlő funkcióit és hibakeresést.
+ * @details Ez az osztály kezeli az FM rádió vezérlő funkcióit
  */
 class FMScreen : public UIScreen {
 
@@ -24,7 +24,7 @@ class FMScreen : public UIScreen {
      * @brief FMScreen konstruktor
      * @param tft TFT display referencia
      */
-    FMScreen(TFT_eSPI &tft, Si4735Manager &si4735Manager) : UIScreen(tft, SCREEN_NAME_FM), si4735Manager(si4735Manager) { layoutComponents(); }
+    FMScreen(TFT_eSPI &tft, Si4735Manager &si4735Manager);
     virtual ~FMScreen() = default;
 
     /**

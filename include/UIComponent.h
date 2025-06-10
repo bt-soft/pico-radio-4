@@ -21,7 +21,8 @@ struct RotaryEvent {
 
     Direction direction;
     ButtonState buttonState;
-    RotaryEvent(Direction dir, ButtonState btnState) : direction(dir), buttonState(btnState) {}
+    int16_t value; // aktuális érték
+    RotaryEvent(Direction dir, ButtonState btnState, int16_t value) : direction(dir), buttonState(btnState), value(value) {}
 };
 
 // Téglalap struktúra

@@ -17,8 +17,7 @@ class Si4735Manager : public Si4735Band {
     Si4735Manager();
 
     /**
-     * @brief Inicializálja a Si4735 eszközt.
-     * @return true ha sikeres, false ha hiba történt.
+     * @brief Inicializáljuk az osztályt, beállítjuk a rádió sávot és hangerőt.
      */
     void init();
 

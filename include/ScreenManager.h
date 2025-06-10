@@ -7,14 +7,12 @@
 #include <queue>  // Tartalmazva volt, de explicit jobb
 #include <vector> // Navigációs stack-hez
 
-#include "IScreenManager.h"
-#include "UIScreen.h"
-// Szükséges include-ok a screen factory-khoz és a config-hoz
-#include "Config.h" // Config &cfg miatt és config.data eléréséhez
 #include "EmptyScreen.h"
 #include "FMScreen.h"
-#include "ScreenSaverScreen.h" // Az új képernyővédő
+#include "IScreenManager.h"
+#include "ScreenSaverScreen.h"
 #include "TestScreen.h"
+#include "UIScreen.h"
 #include "defines.h" // Képernyőnevekhez
 
 // Deferred action struktúra - biztonságos képernyőváltáshoz

@@ -26,23 +26,20 @@ extern AmStationStore amStationStore;
 #include <TFT_eSPI.h>
 TFT_eSPI tft;
 
+//-------------------- Screens
+// Globális képernyőkezelő
+ScreenManager screenManager(tft);
+
+//------------------ SI4735
+#include "Si4735Manager.h"
+Si4735Manager si4735Manager;
+
 //------------------- Rotary Encoder
 #include <RPi_Pico_TimerInterrupt.h>
 RPI_PICO_Timer rotaryTimer(0); // 0-ás timer használata
 #include "RotaryEncoder.h"
 RotaryEncoder rotaryEncoder = RotaryEncoder(PIN_ENCODER_CLK, PIN_ENCODER_DT, PIN_ENCODER_SW, ROTARY_ENCODER_STEPS_PER_NOTCH);
 #define ROTARY_ENCODER_SERVICE_INTERVAL_IN_MSEC 1 // 1msec
-
-//------------------ SI4735
-#include "Si4735Manager.h"
-Si4735Manager si4735Manager;
-
-//-------------------- Screens
-// Globális képernyőkezelő
-ScreenManager screenManager(tft);
-// #include "AMScreen.h"
-#include "FMScreen.h"
-// #include "TestScreen.h"
 
 /**
  * @brief  Hardware timer interrupt service routine a rotaryhoz
@@ -58,6 +55,7 @@ bool rotaryTimerHardwareInterruptHandler(struct repeating_timer *t) {
  * ciklust.
  */
 void setup() {
+    Utils::beepTick();
 #ifdef __DEBUG
     Serial.begin(115200);
 #endif
@@ -184,18 +182,18 @@ void setup() {
     splash.updateProgress(4, 6, "Setting up radio...");
     rtv::freqstep = 1000; // hz
     rtv::freqDec = config.data.currentBFO;
-    si4735Manager.init();
     delay(100);
 
     // Kezdő képernyőtípus beállítása
-    splash.updateProgress(5, 6, "Preparing band...");
+    splash.updateProgress(5, 6, "Preparing display...");
+    const char *startScreeName = si4735Manager.getCurrentBandType() == FM_BAND_TYPE ? SCREEN_NAME_FM : SCREEN_NAME_AM;
     delay(100);
 
     //--------------------------------------------------------------------
 
     // Lépés 6: Finalizálás
     splash.updateProgress(6, 6, "Starting up...");
-    screenManager.switchToScreen(SCREEN_NAME_FM); // A kezdő képernyő az FM képernyő
+    screenManager.switchToScreen(startScreeName); // A kezdő képernyő
     delay(100);                                   // Rövidebb delay
 
     // Splash screen eltűntetése
@@ -283,7 +281,7 @@ void loop() {
         }
 
         // Esemény továbbítása a ScreenManager-nek
-        RotaryEvent rotaryEvent(direction, buttonState);
+        RotaryEvent rotaryEvent(direction, buttonState, encoderState.value);
         screenManager.handleRotary(rotaryEvent);
         // bool handled = screenManager.handleRotary(rotaryEvent);
         // DEBUG("Rotary event handled by screen: %s\n", handled ? "YES" : "NO");

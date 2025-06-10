@@ -1,6 +1,13 @@
 #include "FMScreen.h"
 #include "FreqDisplay.h" // Új include
 
+FMScreen::FMScreen(TFT_eSPI &tft, Si4735Manager &si4735Manager) : UIScreen(tft, SCREEN_NAME_FM), si4735Manager(si4735Manager) {
+
+    //si4735Manager.init(); // Si4735 inicializálása
+
+    layoutComponents();
+}
+
 /**
  * @brief UI komponensek létrehozása és elhelyezése
  */
@@ -84,40 +91,12 @@ void FMScreen::layoutComponents() {
  */
 bool FMScreen::handleRotary(const RotaryEvent &event) {
 
-    // Ha van aktív dialógus, akkor a szülő implementációnak adjuk át
-    if (isDialogActive()) {
-        return UIScreen::handleRotary(event);
-    }
+    // Csak ha nincs aktív dialóg és nem egy rotary klikk hangzott el
+    if (!isDialogActive() && event.buttonState != RotaryEvent::ButtonState::Clicked) {
 
-    // Saját rotary logika itt
-    if (event.direction == RotaryEvent::Direction::Up) {
-        DEBUG("FMScreen: Rotary Up\n");
-        // Példa frekvencia növelésre (SI4735 specifikus kódot ide kellene illeszteni)
-        // uint16_t currentFreq = si4735.getFrequency(); // SI4735 példány kellene itt
-        // uint16_t step = band.getCurrentBand().varData.currStep;
-        // si4735.setFrequency(currentFreq + step);
-        // if (freqDisplayComp) freqDisplayComp->setFrequency(si4735.getFrequency());
+        // Léptetjük (és el is mentjük a bandtable-ba) a frekvenciát a rotary értéke alapján
+        si4735Manager.stepFrequency(event.value);
 
-        si4735Manager.getCurrentBand().currFreq += si4735Manager.getCurrentBand().currStep; // Frissítjük a band aktuális frekvenciáját
-        freqDisplayComp->setFrequency(si4735Manager.getCurrentBand().currFreq);
-
-        return true;
-    } else if (event.direction == RotaryEvent::Direction::Down) {
-        DEBUG("FMScreen: Rotary Down\n");
-        // Példa frekvencia csökkentésre
-        // uint16_t currentFreq = si4735.getFrequency();
-        // uint16_t step = band.getCurrentBand().varData.currStep;
-        // si4735.setFrequency(currentFreq - step);
-        // if (freqDisplayComp) freqDisplayComp->setFrequency(si4735.getFrequency());
-
-        si4735Manager.getCurrentBand().currFreq -= si4735Manager.getCurrentBand().currStep; // Frissítjük a band aktuális frekvenciáját
-        freqDisplayComp->setFrequency(si4735Manager.getCurrentBand().currFreq);
-
-        return true;
-    }
-
-    if (event.buttonState == RotaryEvent::ButtonState::Clicked) {
-        DEBUG("FMScreen: Rotary Clicked\n");
         return true;
     }
 

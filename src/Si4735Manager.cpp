@@ -8,10 +8,12 @@
  */
 Si4735Manager::Si4735Manager() : Si4735Band(), currentBandIdx(-1) {
     setAudioMuteMcuPin(PIN_AUDIO_MUTE); // Audio Mute pin
+    // Audio unmute
+    si4735.setAudioMute(false);
 }
 
 /**
- * @brief Inicializálja a Si4735 eszközt.
+ * @brief Inicializáljuk az osztályt, beállítjuk a rádió sávot és hangerőt.
  */
 void Si4735Manager::init() {
 

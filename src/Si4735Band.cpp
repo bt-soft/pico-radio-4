@@ -86,8 +86,10 @@ void Si4735Band::bandSet(bool useDefaults) {
 
     DEBUG("Si4735Band::bandSet(useDefaults: %s)\n", useDefaults ? "true" : "false");
 
-    // Kikeressük az aktuális Band rekordot
-    BandTable &currentBand = getCurrentBand(); // Demoduláció beállítása
+    // Beállítjuk az aktuális Band rekordot
+    this->currentBand = getCurrentBand();
+
+    // Demoduláció beállítása
     uint8_t currMod = currentBand.currMod;
 
     // A sávhoz preferált demodulációs módot állítunk be?
@@ -108,6 +110,7 @@ void Si4735Band::bandSet(bool useDefaults) {
     }
     useBand();
     setBandWidth();
+
     // Antenna Tunning Capacitor beállítása
     si4735.setTuneFrequencyAntennaCapacitor(currentBand.antCap);
 }
@@ -117,10 +120,6 @@ void Si4735Band::bandSet(bool useDefaults) {
  */
 void Si4735Band::useBand() {
 
-    // Kikeressük az aktuális Band rekordot
-    BandTable &currentBand = getCurrentBand();
-    uint8_t currentBandType = getCurrentBandType();
-
     DEBUG("Si4735Band ::useBand() -> bandName: %s currStep: %d, currentMode: %s\n", getCurrentBandName(), currentBand.currStep, getCurrentBandModeDesc());
 
     //---- CurrentStep beállítása a band rekordban
@@ -129,6 +128,7 @@ void Si4735Band::useBand() {
     uint8_t stepIndex;
 
     // AM esetén 1...1000Khz között bármi lehet - {"1kHz", "5kHz", "9kHz", "10kHz"};
+    uint8_t currentBandType = currentBand.bandType;
     if (currentBandType == MW_BAND_TYPE or currentBandType == LW_BAND_TYPE) {
         // currentBand.currentStep = static_cast<uint8_t>(atoi(Band::stepSizeAM[config.data.ssIdxMW]));
         stepIndex = config.data.ssIdxMW;
@@ -217,9 +217,7 @@ void Si4735Band::setBandWidth() {
 
     DEBUG("Si4735Band::setBandWidth()\n");
 
-    BandTable &currentBand = getCurrentBand();
     uint8_t currMod = currentBand.currMod;
-
     if (currMod == LSB or currMod == USB or currMod == CW) {
         /**
          * @ingroup group17 Patch and SSB support

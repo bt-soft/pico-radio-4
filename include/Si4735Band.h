@@ -10,17 +10,31 @@ class Si4735Band : public Si4735Runtime, public Band {
 
   private:
     // SSB betöltve?
-    bool ssbLoaded = false;
+    bool ssbLoaded;
+
     /**
      * SSB patch betöltése
      */
     void loadSSB();
 
+  protected:
+    BandTable &currentBand;
+
+    /**
+     * @brief Band beállítása
+     */
+    void useBand();
+
+    /**
+     * Sávszélesség beállítása
+     */
+    void setBandWidth();
+
   public:
     /**
      * @brief Si4735Band osztály konstruktora
      */
-    Si4735Band() : Si4735Runtime(), Band() {};
+    Si4735Band() : Si4735Runtime(), Band(), currentBand(getCurrentBand()), ssbLoaded(false) {}
 
     /**
      * @brief band inicializálása
@@ -35,14 +49,36 @@ class Si4735Band : public Si4735Runtime, public Band {
     void bandSet(bool useDefaults = false);
 
     /**
-     * @brief Band beállítása
+     * @brief A jelenlegi band típusának lekérdezése
      */
-    void useBand();
+    inline boolean checkBandBounds(uint16_t newFreq) {
+
+        // Ellenőrizzük, hogy a frekvencia a band határain belül van-e
+        if (newFreq < currentBand.minimumFreq || newFreq > currentBand.maximumFreq) {
+            return false; // A frekvencia kívül esik a band határain
+        }
+        return true; // A frekvencia a band határain belül van
+    }
 
     /**
-     * Sávszélesség beállítása
+     * @brief A frekvencia léptetése a rotary encoder értéke alapján
+     * @param rotaryValue A rotary encoder értéke (növelés/csökkentés)
      */
-    void setBandWidth();
+    inline uint16_t stepFrequency(int16_t rotaryValue) {
+
+        // Kiszámítjuk a frekvencia lépés nagyságát
+        int16_t step = rotaryValue * currentBand.currStep; // A lépés nagysága
+
+        if (checkBandBounds(currentBand.currFreq + step)) {
+            // Beállítjuk a frekvenciát
+            si4735.setFrequency(currentBand.currFreq + step);
+
+            // El is mentjük a band táblába
+            currentBand.currFreq = si4735.getCurrentFrequency();
+        }
+
+        return currentBand.currFreq;
+    };
 
     /**
      * @brief A hangolás a memória állomásra
