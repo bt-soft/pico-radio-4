@@ -3,7 +3,7 @@
 
 FMScreen::FMScreen(TFT_eSPI &tft, Si4735Manager &si4735Manager) : UIScreen(tft, SCREEN_NAME_FM), si4735Manager(si4735Manager) {
 
-    //si4735Manager.init(); // Si4735 inicializálása
+    si4735Manager.init(); // Si4735 inicializálása
 
     layoutComponents();
 }

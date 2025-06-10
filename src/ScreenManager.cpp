@@ -11,14 +11,14 @@
 #include "TestScreen.h"
 
 #include "Si4735Manager.h"
-extern Si4735Manager si4735Manager;
+extern Si4735Manager *si4735Manager;
 
 /**
  * @brief Képernyőkezelő osztály konstruktor
  */
 void ScreenManager::registerDefaultScreenFactories() {
-    registerScreenFactory(SCREEN_NAME_FM, [](TFT_eSPI &tft_param) { return std::make_shared<FMScreen>(tft_param, si4735Manager); });
-    registerScreenFactory(SCREEN_NAME_SCREENSAVER, [](TFT_eSPI &tft_param) { return std::make_shared<ScreenSaverScreen>(tft_param, si4735Manager); });
+    registerScreenFactory(SCREEN_NAME_FM, [](TFT_eSPI &tft_param) { return std::make_shared<FMScreen>(tft_param, *si4735Manager); });
+    registerScreenFactory(SCREEN_NAME_SCREENSAVER, [](TFT_eSPI &tft_param) { return std::make_shared<ScreenSaverScreen>(tft_param, *si4735Manager); });
 
     // setup képernyők regisztrálása
     registerScreenFactory(SCREEN_NAME_SETUP, [](TFT_eSPI &tft_param) { return std::make_shared<SetupScreen>(tft_param); });

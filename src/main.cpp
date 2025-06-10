@@ -27,12 +27,12 @@ extern AmStationStore amStationStore;
 TFT_eSPI tft;
 
 //-------------------- Screens
-// Globális képernyőkezelő
-ScreenManager screenManager(tft);
+// Globális képernyőkezelő pointer - inicializálás a setup()-ban történik
+ScreenManager *screenManager = nullptr;
 
 //------------------ SI4735
 #include "Si4735Manager.h"
-Si4735Manager si4735Manager;
+Si4735Manager *si4735Manager = nullptr; // Si4735Manager: NEM lehet (hardware inicializálás miatt) statikus, mert HW inicializálások is vannak benne
 
 //------------------- Rotary Encoder
 #include <RPi_Pico_TimerInterrupt.h>
@@ -55,7 +55,6 @@ bool rotaryTimerHardwareInterruptHandler(struct repeating_timer *t) {
  * ciklust.
  */
 void setup() {
-    Utils::beepTick();
 #ifdef __DEBUG
     Serial.begin(115200);
 #endif
@@ -146,9 +145,7 @@ void setup() {
     // Splash screen megjelenítése inicializálás közben
     // Most átváltunk a teljes splash screen-re az SI4735 infókkal
     SplashScreen splash(tft);
-    splash.show(true, 6); // Splash screen megjelenítése progress bar-ral
-
-    // Lépés 1: I2C inicializálás
+    splash.show(true, 6); // Splash screen megjelenítése progress bar-ral    // Lépés 1: I2C inicializálás
     splash.updateProgress(1, 6, "Initializing I2C...");
     // Az si473x (Nem a default I2C lábakon [4,5] van!!!)
     Wire.setSDA(PIN_SI4735_I2C_SDA); // I2C for SI4735 SDA
@@ -156,9 +153,15 @@ void setup() {
     Wire.begin();
     delay(300);
 
+    // Si4735Manager inicializálása itt
+    splash.updateProgress(2, 6, "Initializing SI4735 Manager...");
+    if (si4735Manager == nullptr) {
+        si4735Manager = new Si4735Manager();
+    }
+
     // Si4735 inicializálása
-    splash.updateProgress(2, 6, "Detecting SI4735...");
-    int16_t si4735Addr = si4735Manager.getDeviceI2CAddress();
+    splash.updateProgress(3, 6, "Detecting SI4735...");
+    int16_t si4735Addr = si4735Manager->getDeviceI2CAddress();
     if (si4735Addr == 0) {
         tft.fillScreen(TFT_BLACK);
         tft.setTextColor(TFT_RED, TFT_BLACK);
@@ -169,32 +172,41 @@ void setup() {
         Utils::beepError();
         while (true) // nem megyünk tovább
             ;
-    }
-
-    // Lépés 3: SI4735 konfigurálás
-    splash.updateProgress(3, 6, "Configuring SI4735...");
-    si4735Manager.setDeviceI2CAddress(si4735Addr == 0x11 ? 0 : 1); // Sets the I2C Bus Address, erre is szükség van...
-    splash.drawSI4735Info(si4735Manager.getSi4735());
+    } // Lépés 4: SI4735 konfigurálás
+    splash.updateProgress(4, 6, "Configuring SI4735...");
+    si4735Manager->setDeviceI2CAddress(si4735Addr == 0x11 ? 0 : 1); // Sets the I2C Bus Address, erre is szükség van...
+    splash.drawSI4735Info(si4735Manager->getSi4735());
     delay(300);
     //--------------------------------------------------------------------
 
-    // Lépés 4: Frekvencia beállítások
-    splash.updateProgress(4, 6, "Setting up radio...");
+    // Lépés 5: Frekvencia beállítások
+    splash.updateProgress(5, 6, "Setting up radio...");
     rtv::freqstep = 1000; // hz
     rtv::freqDec = config.data.currentBFO;
-    delay(100);
+    delay(100); // Kezdő képernyőtípus beállítása
+    splash.updateProgress(6, 6, "Preparing display...");
+    const char *startScreeName = si4735Manager->getCurrentBandType() == FM_BAND_TYPE ? SCREEN_NAME_FM : SCREEN_NAME_AM;
+    delay(100); //--------------------------------------------------------------------
 
-    // Kezdő képernyőtípus beállítása
-    splash.updateProgress(5, 6, "Preparing display...");
-    const char *startScreeName = si4735Manager.getCurrentBandType() == FM_BAND_TYPE ? SCREEN_NAME_FM : SCREEN_NAME_AM;
-    delay(100);
+    // Lépés 7: Finalizálás
+    splash.updateProgress(7, 7, "Starting up...");
 
-    //--------------------------------------------------------------------
+    Serial.println("Creating ScreenManager...");
+    Serial.flush();
+    // ScreenManager inicializálása itt, amikor minden más már kész
+    if (screenManager == nullptr) {
+        screenManager = new ScreenManager(tft);
+    }
+    Serial.println("ScreenManager created successfully");
+    Serial.flush();
 
-    // Lépés 6: Finalizálás
-    splash.updateProgress(6, 6, "Starting up...");
-    screenManager.switchToScreen(startScreeName); // A kezdő képernyő
-    delay(100);                                   // Rövidebb delay
+    Serial.println("Switching to start screen...");
+    Serial.flush();
+    screenManager->switchToScreen(startScreeName); // A kezdő képernyő
+    Serial.println("Screen switch completed");
+    Serial.flush();
+
+    delay(100); // Rövidebb delay
 
     // Splash screen eltűntetése
     splash.hide();
@@ -240,19 +252,19 @@ void loop() {
 
     static bool lastTouchState = false;
     static uint16_t lastTouchX = 0, lastTouchY = 0;
-    bool touched = touchedRaw && validCoordinates;
-
-    // Touch press event (immediate response)
+    bool touched = touchedRaw && validCoordinates; // Touch press event (immediate response)
     if (touched && !lastTouchState) {
         TouchEvent touchEvent(touchX, touchY, true);
-        screenManager.handleTouch(touchEvent);
+        if (screenManager)
+            screenManager->handleTouch(touchEvent);
         lastTouchX = touchX;
         lastTouchY = touchY;
     }
     // Touch release event (immediate response)
     else if (!touched && lastTouchState) {
         TouchEvent touchEvent(lastTouchX, lastTouchY, false);
-        screenManager.handleTouch(touchEvent);
+        if (screenManager)
+            screenManager->handleTouch(touchEvent);
     }
 
     lastTouchState = touched;
@@ -278,32 +290,39 @@ void loop() {
             buttonState = RotaryEvent::ButtonState::Clicked;
         } else if (encoderState.buttonState == RotaryEncoder::ButtonState::DoubleClicked) {
             buttonState = RotaryEvent::ButtonState::DoubleClicked;
-        }
-
-        // Esemény továbbítása a ScreenManager-nek
+        } // Esemény továbbítása a ScreenManager-nek
         RotaryEvent rotaryEvent(direction, buttonState, encoderState.value);
-        screenManager.handleRotary(rotaryEvent);
-        // bool handled = screenManager.handleRotary(rotaryEvent);
+        if (screenManager)
+            screenManager->handleRotary(rotaryEvent);
+        // bool handled = screenManager->handleRotary(rotaryEvent);
         // DEBUG("Rotary event handled by screen: %s\n", handled ? "YES" : "NO");
     }
 
     // Deferred actions feldolgozása - biztonságos képernyőváltások végrehajtása
-    screenManager.processDeferredActions();
+    if (screenManager) {
+        screenManager->processDeferredActions();
+    }
 
     // Képernyőkezelő loop hívása
-    screenManager.loop();
+    if (screenManager) {
+        screenManager->loop();
+    }
 
     // Képernyő rajzolása (csak szükség esetén, korlátozott gyakorisággal)
     static uint32_t lastDrawTime = 0;
     const uint32_t DRAW_INTERVAL = 50; // Maximum 20 FPS (50ms között rajzolás)
 
     if (millis() - lastDrawTime >= DRAW_INTERVAL) {
-        screenManager.draw();
+        if (screenManager) {
+            screenManager->draw();
+        }
         lastDrawTime = millis();
     }
 
     // SI4735 loop hívása, squelch és hardver némítás kezelése
-    si4735Manager.loop();
+    if (si4735Manager) {
+        si4735Manager->loop();
+    }
 }
 
 /**

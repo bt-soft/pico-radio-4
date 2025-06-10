@@ -68,10 +68,19 @@ class Si4735Band : public Si4735Runtime, public Band {
 
         // Kiszámítjuk a frekvencia lépés nagyságát
         int16_t step = rotaryValue * currentBand.currStep; // A lépés nagysága
+        uint16_t targetFreq = currentBand.currFreq + step;
 
-        if (checkBandBounds(currentBand.currFreq + step)) {
+        // Korlátozás a sáv határaira
+        if (targetFreq < currentBand.minimumFreq) {
+            targetFreq = currentBand.minimumFreq;
+        } else if (targetFreq > currentBand.maximumFreq) {
+            targetFreq = currentBand.maximumFreq;
+        }
+
+        // Csak akkor változtatunk, ha tényleg más a cél frekvencia
+        if (targetFreq != currentBand.currFreq) {
             // Beállítjuk a frekvenciát
-            si4735.setFrequency(currentBand.currFreq + step);
+            si4735.setFrequency(targetFreq);
 
             // El is mentjük a band táblába
             currentBand.currFreq = si4735.getCurrentFrequency();
