@@ -41,11 +41,14 @@ struct Config_t {
     uint8_t currentAGCgain;
 
     //--- TFT
-    uint16_t tftCalibrateData[5];      // TFT touch kalibrációs adatok
-    uint8_t tftBackgroundBrightness;   // TFT Háttérvilágítás
-    bool tftDigitLigth;                // Inaktív szegmens látszódjon?
+    uint16_t tftCalibrateData[5];    // TFT touch kalibrációs adatok
+    uint8_t tftBackgroundBrightness; // TFT Háttérvilágítás
+    bool tftDigitLigth;              // Inaktív szegmens látszódjon?
+
+    //--- System
     uint8_t screenSaverTimeoutMinutes; // Képernyővédő ideje percekben (1-30)
     bool beeperEnabled;                // Hangjelzés engedélyezése
+    bool rotaryAcceleratonEnabled;     // Rotary gyorsítás engedélyezése
 
     // MiniAudioFft módok
     uint8_t miniAudioFftModeAm; // MiniAudioFft módja AM képernyőn

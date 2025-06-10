@@ -70,12 +70,6 @@ void setup() {
     pinMode(PIN_TFT_BACKGROUND_LED, OUTPUT);
     analogWrite(PIN_TFT_BACKGROUND_LED, TFT_BACKGROUND_LED_MAX_BRIGHTNESS);
 
-    // Rotary Encoder beállítása
-    rotaryEncoder.setDoubleClickEnabled(true);
-    rotaryEncoder.setAccelerationEnabled(true);
-    // Pico HW Timer1 beállítása a rotaryhoz
-    rotaryTimer.attachInterruptInterval(ROTARY_ENCODER_SERVICE_INTERVAL_IN_MSEC * 1000, rotaryTimerHardwareInterruptHandler);
-
     // TFT inicializálása
     tft.init();
     tft.setRotation(1);
@@ -129,6 +123,12 @@ void setup() {
         tft.drawString("Loading config...", tft.width() / 2, 180);
         config.load();
     }
+
+    // Rotary Encoder beállítása
+    rotaryEncoder.setDoubleClickEnabled(true);                                  // Dupla kattintás engedélyezése
+    rotaryEncoder.setAccelerationEnabled(config.data.rotaryAcceleratonEnabled); // Gyorsítás engedélyezése a rotary enkóderhez
+    // Pico HW Timer1 beállítása a rotaryhoz
+    rotaryTimer.attachInterruptInterval(ROTARY_ENCODER_SERVICE_INTERVAL_IN_MSEC * 1000, rotaryTimerHardwareInterruptHandler);
 
     // Kell kalibrálni a TFT Touch-t?
     if (Utils::isZeroArray(config.data.tftCalibrateData)) {

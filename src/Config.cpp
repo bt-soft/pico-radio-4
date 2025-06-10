@@ -46,11 +46,16 @@ const Config_t DEFAULT_CONFIG = {
     .tftCalibrateData = {214, 3721, 239, 3606, 7},
     .tftBackgroundBrightness = TFT_BACKGROUND_LED_MAX_BRIGHTNESS, // TFT Háttérvilágítás
     .tftDigitLigth = true,                                        // Inaktív szegmens látszódjon?
-    .screenSaverTimeoutMinutes = SCREEN_SAVER_TIMEOUT,            // Képernyővédő alapértelmezetten 5 perc
-    .beeperEnabled = true,                                        // Hangjelzés engedélyezése    // MiniAudioFft módok
-                                                                  // (kezdetben SpectrumLowRes - 0 érték)
-    .miniAudioFftModeAm = 0,                                      // SpectrumLowRes mode
-    .miniAudioFftModeFm = 0,                                      // SpectrumLowRes mode
+
+    //--- System
+    .screenSaverTimeoutMinutes = SCREEN_SAVER_TIMEOUT, // Képernyővédő alapértelmezetten 5 perc
+    .beeperEnabled = true,                             // Hangjelzés engedélyezése    // MiniAudioFft módok
+                                                       // (kezdetben SpectrumLowRes - 0 érték)
+    .rotaryAcceleratonEnabled = true,                  // Rotary gyorsítás engedélyezése
+
+    // MiniAudioFft módok
+    .miniAudioFftModeAm = 0, // SpectrumLowRes mode
+    .miniAudioFftModeFm = 0, // SpectrumLowRes mode
 
     // MiniAudioFft erősítés
     .miniAudioFftConfigAm = 0.0f,       // Auto Gain

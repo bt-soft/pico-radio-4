@@ -62,6 +62,8 @@ void DebugDataInspector::printConfigData(const Config_t &configData) {
     DEBUG("  tftBackgroundBrightness: %u\n", configData.tftBackgroundBrightness);
     DEBUG("  tftDigitLigth: %s\n", configData.tftDigitLigth ? "true" : "false");
     DEBUG("  screenSaverTimeoutMinutes: %u\n", configData.screenSaverTimeoutMinutes);
+    DEBUG("  beeperEnabled: %s\n", configData.beeperEnabled ? "true" : "false");
+    DEBUG("  rotaryAcceleratonEnabled: %s\n", configData.rotaryAcceleratonEnabled ? "true" : "false");
     DEBUG("  miniAudioFftModeAm: %u\n", configData.miniAudioFftModeAm);
     DEBUG("  miniAudioFftModeFm: %u\n", configData.miniAudioFftModeFm);
     if (configData.miniAudioFftConfigAm == -1.0f) {
@@ -78,6 +80,23 @@ void DebugDataInspector::printConfigData(const Config_t &configData) {
     } else {
         DEBUG("  miniAudioFftConfigFm: Manual Gain %.1fx\n", configData.miniAudioFftConfigFm);
     }
+    if (configData.miniAudioFftConfigAnalyzer == -1.0f) {
+        DEBUG("  miniAudioFftConfigAnalyzer: Disabled\n");
+    } else if (configData.miniAudioFftConfigAnalyzer == 0.0f) {
+        DEBUG("  miniAudioFftConfigAnalyzer: Auto Gain\n");
+    } else {
+        DEBUG("  miniAudioFftConfigAnalyzer: Manual Gain %.1fx\n", configData.miniAudioFftConfigAnalyzer);
+    }
+    if (configData.miniAudioFftConfigRtty == -1.0f) {
+        DEBUG("  miniAudioFftConfigRtty: Disabled\n");
+    } else if (configData.miniAudioFftConfigRtty == 0.0f) {
+        DEBUG("  miniAudioFftConfigRtty: Auto Gain\n");
+    } else {
+        DEBUG("  miniAudioFftConfigRtty: Manual Gain %.1fx\n", configData.miniAudioFftConfigRtty);
+    }
+    DEBUG("  cwReceiverOffsetHz: %u\n", configData.cwReceiverOffsetHz);
+    DEBUG("  rttyMarkFrequencyHz: %.1f\n", configData.rttyMarkFrequencyHz);
+    DEBUG("  rttyShiftHz: %.1f\n", configData.rttyShiftHz);
     DEBUG("====================\n");
 #endif
 }

@@ -1,16 +1,16 @@
 /**
- * @file SetupDisplayScreen.cpp
- * @brief Kijelző beállítások képernyő implementációja
+ * @file SetupSystemScreen.cpp
+ * @brief Rendszer beállítások képernyő implementációja
  *
- * Ez a fájl tartalmazza a SetupDisplayScreen osztály implementációját,
- * amely a kijelző és felhasználói felület beállításait kezeli.
+ * Ez a fájl tartalmazza a SetupSystemScreen osztály implementációját,
+ * amely a rendszer és felhasználói felület beállításait kezeli.
  *
  * @author [Fejlesztő neve]
  * @date 2025.06.10
  * @version 1.0
  */
 
-#include "SetupDisplayScreen.h"
+#include "SetupSystemScreen.h"
 #include "MessageDialog.h"
 #include "MultiButtonDialog.h"
 #include "ValueChangeDialog.h"
@@ -19,18 +19,18 @@
 #include "pins.h"
 
 /**
- * @brief SetupDisplayScreen konstruktor
+ * @brief SetupSystemScreen konstruktor
  *
  * @param tft TFT_eSPI referencia a kijelző kezeléséhez
  */
-SetupDisplayScreen::SetupDisplayScreen(TFT_eSPI &tft) : SetupScreenBase(tft, "SETUP_DISPLAY") { layoutComponents(); }
+SetupSystemScreen::SetupSystemScreen(TFT_eSPI &tft) : SetupScreenBase(tft, "SETUP_SYSTEM") { layoutComponents(); }
 
 /**
  * @brief Képernyő címének visszaadása
  *
  * @return A képernyő címe
  */
-const char *SetupDisplayScreen::getScreenTitle() const { return "Display Settings"; }
+const char *SetupSystemScreen::getScreenTitle() const { return "System Settings"; }
 
 /**
  * @brief Menüpontok feltöltése kijelző specifikus beállításokkal
@@ -38,27 +38,16 @@ const char *SetupDisplayScreen::getScreenTitle() const { return "Display Setting
  * Ez a metódus feltölti a menüpontokat a kijelző aktuális
  * konfigurációs értékeivel.
  */
-void SetupDisplayScreen::populateMenuItems() {
+void SetupSystemScreen::populateMenuItems() {
     // Korábbi menüpontok törlése
     settingItems.clear();
 
-    // Kijelző specifikus beállítások hozzáadása
-    settingItems.push_back(SettingItem("Brightness", String(config.data.tftBackgroundBrightness), static_cast<int>(DisplayItemAction::BRIGHTNESS)));
-
-    settingItems.push_back(SettingItem("Screen Saver", String(config.data.screenSaverTimeoutMinutes) + " min", static_cast<int>(DisplayItemAction::SAVER_TIMEOUT)));
-
-    settingItems.push_back(SettingItem("Inactive Digit Light", String(config.data.tftDigitLigth ? "ON" : "OFF"), static_cast<int>(DisplayItemAction::INACTIVE_DIGIT_LIGHT)));
-
-    settingItems.push_back(SettingItem("Beeper", String(config.data.beeperEnabled ? "ON" : "OFF"), static_cast<int>(DisplayItemAction::BEEPER_ENABLED)));
-
-    // Példa további kijelző beállításokra (ha léteznek a config-ban)
-    // settingItems.push_back(SettingItem("Contrast",
-    //     String(config.data.contrast),
-    //     static_cast<int>(DisplayItemAction::CONTRAST)));
-
-    // settingItems.push_back(SettingItem("Color Scheme",
-    //     String(config.data.colorScheme),
-    //     static_cast<int>(DisplayItemAction::COLOR_SCHEME)));
+    settingItems.push_back(SettingItem("Brightness", String(config.data.tftBackgroundBrightness), static_cast<int>(SystemItemAction::BRIGHTNESS)));
+    settingItems.push_back(SettingItem("Screen Saver", String(config.data.screenSaverTimeoutMinutes) + " min", static_cast<int>(SystemItemAction::SAVER_TIMEOUT)));
+    settingItems.push_back(SettingItem("Inactive Digit Light", String(config.data.tftDigitLigth ? "ON" : "OFF"), static_cast<int>(SystemItemAction::INACTIVE_DIGIT_LIGHT)));
+    settingItems.push_back(SettingItem("Beeper", String(config.data.beeperEnabled ? "ON" : "OFF"), static_cast<int>(SystemItemAction::BEEPER_ENABLED)));
+    settingItems.push_back(
+        SettingItem("Rotary Acceleration", String(config.data.rotaryAcceleratonEnabled ? "ON" : "OFF"), static_cast<int>(SystemItemAction::ROTARY_ACCDELERATION)));
 
     // Lista komponens újrarajzolásának kérése, ha létezik
     if (menuList) {
@@ -74,31 +63,28 @@ void SetupDisplayScreen::populateMenuItems() {
  * @param index A menüpont indexe
  * @param action Az akció azonosító
  */
-void SetupDisplayScreen::handleItemAction(int index, int action) {
-    DisplayItemAction displayAction = static_cast<DisplayItemAction>(action);
+void SetupSystemScreen::handleItemAction(int index, int action) {
+    SystemItemAction systemAction = static_cast<SystemItemAction>(action);
 
-    switch (displayAction) {
-        case DisplayItemAction::BRIGHTNESS:
+    switch (systemAction) {
+        case SystemItemAction::BRIGHTNESS:
             handleBrightnessDialog(index);
             break;
-        case DisplayItemAction::SAVER_TIMEOUT:
+        case SystemItemAction::SAVER_TIMEOUT:
             handleSaverTimeoutDialog(index);
             break;
-        case DisplayItemAction::INACTIVE_DIGIT_LIGHT:
+        case SystemItemAction::INACTIVE_DIGIT_LIGHT:
             handleToggleItem(index, config.data.tftDigitLigth);
             break;
-        case DisplayItemAction::BEEPER_ENABLED:
+        case SystemItemAction::BEEPER_ENABLED:
             handleToggleItem(index, config.data.beeperEnabled);
             break;
-        // case DisplayItemAction::CONTRAST:
-        //     handleContrastDialog(index);
-        //     break;
-        // case DisplayItemAction::COLOR_SCHEME:
-        //     handleColorSchemeDialog(index);
-        //     break;
-        case DisplayItemAction::NONE:
+        case SystemItemAction::ROTARY_ACCDELERATION:
+            handleToggleItem(index, config.data.rotaryAcceleratonEnabled);
+            break;
+        case SystemItemAction::NONE:
         default:
-            DEBUG("SetupDisplayScreen: Unknown action: %d\n", action);
+            DEBUG("SetupSystemScreen: Unknown action: %d\n", action);
             break;
     }
 }
@@ -108,7 +94,7 @@ void SetupDisplayScreen::handleItemAction(int index, int action) {
  *
  * @param index A menüpont indexe a lista frissítéséhez
  */
-void SetupDisplayScreen::handleBrightnessDialog(int index) {
+void SetupSystemScreen::handleBrightnessDialog(int index) {
     auto brightnessDialog = std::make_shared<ValueChangeDialog>(
         this, this->tft, "Brightness", "Adjust TFT Backlight:", &config.data.tftBackgroundBrightness, static_cast<uint8_t>(TFT_BACKGROUND_LED_MIN_BRIGHTNESS),
         static_cast<uint8_t>(TFT_BACKGROUND_LED_MAX_BRIGHTNESS), static_cast<uint8_t>(10),
@@ -117,7 +103,7 @@ void SetupDisplayScreen::handleBrightnessDialog(int index) {
                 int currentDialogVal = std::get<int>(liveNewValue);
                 config.data.tftBackgroundBrightness = static_cast<uint8_t>(currentDialogVal);
                 analogWrite(PIN_TFT_BACKGROUND_LED, config.data.tftBackgroundBrightness);
-                DEBUG("SetupDisplayScreen: Live brightness preview: %u\n", config.data.tftBackgroundBrightness);
+                DEBUG("SetupSystemScreen: Live brightness preview: %u\n", config.data.tftBackgroundBrightness);
             }
         },
         [this, index](UIDialogBase *sender, MessageDialog::DialogResult dialogResult) {
@@ -135,7 +121,7 @@ void SetupDisplayScreen::handleBrightnessDialog(int index) {
  *
  * @param index A menüpont indexe a lista frissítéséhez
  */
-void SetupDisplayScreen::handleSaverTimeoutDialog(int index) {
+void SetupSystemScreen::handleSaverTimeoutDialog(int index) {
     auto saverDialog = std::make_shared<ValueChangeDialog>(
         this, this->tft, "Screen Saver", "Timeout (minutes):", &config.data.screenSaverTimeoutMinutes, SCREEN_SAVER_TIMEOUT_MIN, SCREEN_SAVER_TIMEOUT_MAX, 1,
         [this, index](const std::variant<int, float, bool> &liveNewValue) {
@@ -161,7 +147,7 @@ void SetupDisplayScreen::handleSaverTimeoutDialog(int index) {
  * @param index A menüpont indexe
  * @param configValue Referencia a módosítandó boolean értékre
  */
-void SetupDisplayScreen::handleToggleItem(int index, bool &configValue) {
+void SetupSystemScreen::handleToggleItem(int index, bool &configValue) {
     configValue = !configValue;
     config.checkSave();
 

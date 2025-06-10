@@ -48,7 +48,7 @@ void SetupScreen::populateMenuItems() {
     settingItems.clear();
 
     // Fő setup menü elemek hozzáadása
-    settingItems.push_back(SettingItem("Display Settings", "", static_cast<int>(MainItemAction::DISPLAY_SETTINGS), true, "SETUP_DISPLAY"));
+    settingItems.push_back(SettingItem("System Settings", "", static_cast<int>(MainItemAction::DISPLAY_SETTINGS), true, "SETUP_SYSTEM"));
 
     settingItems.push_back(SettingItem("Si4735 Settings", "", static_cast<int>(MainItemAction::SI4735_SETTINGS), true, "SETUP_SI4735"));
 
