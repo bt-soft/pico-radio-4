@@ -4,11 +4,11 @@
 /**
  * Konstruktor.
  * @param tft Referencia a TFT kijelző objektumra.
- * @param smeterX Az S-Meter komponens bal felső sarkának X koordinátája.
- * @param smeterY Az S-Meter komponens bal felső sarkának Y koordinátája.
+ * @param bounds A komponens területe (pozíció és méret).
+ * @param colors Opcionális színpaletta.
  */
-SMeter::SMeter(TFT_eSPI &tft, uint16_t smeterX, uint16_t smeterY)
-    : tft(tft), smeterX(smeterX), smeterY(smeterY), prev_spoint_bars(SMeterConstants::InitialPrevSpoint), prev_rssi_for_text(0xFF), prev_snr_for_text(0xFF) {
+SMeter::SMeter(TFT_eSPI &tft, const Rect &bounds, const ColorScheme &colors)
+    : UIComponent(tft, bounds, colors), prev_spoint_bars(SMeterConstants::InitialPrevSpoint), prev_rssi_for_text(0xFF), prev_snr_for_text(0xFF) {
     // Inicializáljuk a textLayout struct-ot
     textLayout = {0, 0, 0, 0, 0, 0, 0, 0, false};
 }
@@ -61,13 +61,12 @@ void SMeter::drawMeterBars(uint8_t rssi, bool isFMMode) {
     if (spoint == prev_spoint_bars)
         return; // Optimalizáció: ne rajzoljunk sávokat feleslegesen
     prev_spoint_bars = spoint;
-
     int tik = 0;      // 'tik': aktuálisan rajzolt sáv indexe (S0, S1, ..., S9+10dB, ...)
     int met = spoint; // 'met': hátralévő "jelerősség energia" pixelben, amit még ki kell rajzolni
 
     // Az utolsó színes sáv abszolút X koordinátája a kijelzőn.
     // Kezdetben a piros sáv (S0) elejére mutat. Ha spoint=0, ez marad.
-    int end_of_colored_x_abs = smeterX + MeterBarRedStartX;
+    int end_of_colored_x_abs = bounds.x + MeterBarRedStartX;
 
     // Piros (S0) és narancs (S1-S8) sávok rajzolása
     // Ciklus amíg van 'met' (energia) ÉS még az S-pont tartományon (S0-S8) belül vagyunk.
@@ -75,16 +74,16 @@ void SMeter::drawMeterBars(uint8_t rssi, bool isFMMode) {
         if (tik == 0) {                                            // Első sáv: S0 (piros)
             int draw_width = std::min(met, (int)MeterBarRedWidth); // Max. a sáv szélessége, vagy amennyi 'met' van
             if (draw_width > 0) {
-                tft.fillRect(smeterX + MeterBarRedStartX, smeterY + MeterBarY, draw_width, MeterBarHeight, TFT_RED);
-                end_of_colored_x_abs = smeterX + MeterBarRedStartX + draw_width; // Frissítjük a színes rész végét
+                tft.fillRect(bounds.x + MeterBarRedStartX, bounds.y + MeterBarY, draw_width, MeterBarHeight, TFT_RED);
+                end_of_colored_x_abs = bounds.x + MeterBarRedStartX + draw_width; // Frissítjük a színes rész végét
             }
             met -= MeterBarRedWidth; // Teljes S0 sáv "költségét" levonjuk a 'met'-ből
         } else {                     // Következő sávok: S1-S8 (narancs)
             // X pozíció: MeterBarOrangeStartX + (aktuális narancs sáv indexe) * (narancs sáv szélessége + rés)
-            int current_bar_x = smeterX + MeterBarOrangeStartX + ((tik - 1) * MeterBarOrangeSpacing);
+            int current_bar_x = bounds.x + MeterBarOrangeStartX + ((tik - 1) * MeterBarOrangeSpacing);
             int draw_width = std::min(met, (int)MeterBarOrangeWidth);
             if (draw_width > 0) {
-                tft.fillRect(current_bar_x, smeterY + MeterBarY, draw_width, MeterBarHeight, TFT_ORANGE);
+                tft.fillRect(current_bar_x, bounds.y + MeterBarY, draw_width, MeterBarHeight, TFT_ORANGE);
                 end_of_colored_x_abs = current_bar_x + draw_width;
             }
             met -= MeterBarOrangeWidth; // Teljes narancs sáv "költségét" levonjuk
@@ -96,10 +95,10 @@ void SMeter::drawMeterBars(uint8_t rssi, bool isFMMode) {
     // Ciklus amíg van 'met' ÉS még az S9+dB tartományon belül vagyunk.
     while (met > 0 && tik < MeterBarTotalLimit) {
         // X pozíció: MeterBarGreenStartX + (aktuális zöld sáv indexe az S9+dB tartományon belül) * (zöld sáv szélessége + rés)
-        int current_bar_x = smeterX + MeterBarGreenStartX + ((tik - MeterBarSPointLimit) * MeterBarGreenSpacing);
+        int current_bar_x = bounds.x + MeterBarGreenStartX + ((tik - MeterBarSPointLimit) * MeterBarGreenSpacing);
         int draw_width = std::min(met, (int)MeterBarGreenWidth);
         if (draw_width > 0) {
-            tft.fillRect(current_bar_x, smeterY + MeterBarY, draw_width, MeterBarHeight, TFT_GREEN);
+            tft.fillRect(current_bar_x, bounds.y + MeterBarY, draw_width, MeterBarHeight, TFT_GREEN);
             end_of_colored_x_abs = current_bar_x + draw_width;
         }
         met -= MeterBarGreenWidth; // Teljes zöld sáv "költségét" levonjuk
@@ -111,14 +110,14 @@ void SMeter::drawMeterBars(uint8_t rssi, bool isFMMode) {
     if (tik == MeterBarTotalLimit && met > 0) {
         int draw_width = std::min(met, (int)MeterBarFinalOrangeWidth);
         if (draw_width > 0) {
-            tft.fillRect(smeterX + MeterBarFinalOrangeStartX, smeterY + MeterBarY, draw_width, MeterBarHeight, TFT_ORANGE);
-            end_of_colored_x_abs = smeterX + MeterBarFinalOrangeStartX + draw_width;
+            tft.fillRect(bounds.x + MeterBarFinalOrangeStartX, bounds.y + MeterBarY, draw_width, MeterBarHeight, TFT_ORANGE);
+            end_of_colored_x_abs = bounds.x + MeterBarFinalOrangeStartX + draw_width;
         }
         // met -= MeterBarFinalOrangeWidth; // Itt már nem kell csökkenteni, mert ez az utolsó lehetséges színes sáv.
     }
 
     // A mérősáv teljes definiált végének X koordinátája (ahol a fekete kitöltésnek véget kell érnie).
-    int meter_display_area_end_x_abs = smeterX + MeterBarRedStartX + MeterBarMaxPixelValue;
+    int meter_display_area_end_x_abs = bounds.x + MeterBarRedStartX + MeterBarMaxPixelValue;
 
     // Biztosítjuk, hogy a kirajzolt színes rész ne lógjon túl a definiált maximális értéken.
     if (end_of_colored_x_abs > meter_display_area_end_x_abs) {
@@ -126,13 +125,13 @@ void SMeter::drawMeterBars(uint8_t rssi, bool isFMMode) {
     }
     // Ha spoint=0 volt, akkor semmi sem rajzolódott, end_of_colored_x_abs a skála elején maradt.
     if (spoint == 0) {
-        end_of_colored_x_abs = smeterX + MeterBarRedStartX;
+        end_of_colored_x_abs = bounds.x + MeterBarRedStartX;
     }
 
     // Fekete kitöltés: az utolsó színes sáv végétől a skála definiált végéig.
     // Csak akkor rajzolunk feketét, ha a színes sáv nem érte el a skála végét.
     if (end_of_colored_x_abs < meter_display_area_end_x_abs) {
-        tft.fillRect(end_of_colored_x_abs, smeterY + MeterBarY, meter_display_area_end_x_abs - end_of_colored_x_abs, MeterBarHeight, TFT_BLACK);
+        tft.fillRect(end_of_colored_x_abs, bounds.y + MeterBarY, meter_display_area_end_x_abs - end_of_colored_x_abs, MeterBarHeight, TFT_BLACK);
     }
 }
 
@@ -160,25 +159,25 @@ void SMeter::drawSmeterScale() {
     }
 
     // A skála teljes területének törlése feketével (beleértve a szöveg helyét is)
-    tft.fillRect(smeterX + ScaleStartXOffset, smeterY + ScaleStartYOffset, ScaleWidth, ScaleHeight + 10, TFT_BLACK);
+    tft.fillRect(bounds.x + ScaleStartXOffset, bounds.y + ScaleStartYOffset, ScaleWidth, ScaleHeight + 10, TFT_BLACK);
 
     setupTextTFT(TFT_WHITE, TFT_BLACK); // Szövegszín: fehér, Háttér: fekete
 
     // S-pont skála vonalak és számok (0-9)
     for (int i = 0; i < SPointCount; i++) {
-        tft.fillRect(smeterX + SPointStartX + (i * SPointSpacing), smeterY + SPointY, SPointTickWidth, SPointTickHeight, TFT_WHITE);
+        tft.fillRect(bounds.x + SPointStartX + (i * SPointSpacing), bounds.y + SPointY, SPointTickWidth, SPointTickHeight, TFT_WHITE);
         // setCursor + print használata a konzisztencia érdekében
-        int textX = smeterX + SPointStartX + (i * SPointSpacing) - 3; // Központosítás
-        int textY = smeterY + SPointNumberY;
+        int textX = bounds.x + SPointStartX + (i * SPointSpacing) - 3; // Központosítás
+        int textY = bounds.y + SPointNumberY;
         tft.setCursor(textX, textY);
         tft.print(i);
     }
     // S9+dB skála vonalak és számok (+10, +20, ..., +60)
     for (int i = 1; i <= PlusScaleCount; i++) {
-        tft.fillRect(smeterX + PlusScaleStartX + (i * PlusScaleSpacing), smeterY + PlusScaleY, PlusScaleTickWidth, PlusScaleTickHeight, TFT_RED);
-        if (i % 2 == 0) {                                                       // Csak minden másodiknál írjuk ki a "+számot" (pl. +20, +40, +60)
-            int textX = smeterX + PlusScaleStartX + (i * PlusScaleSpacing) - 8; // Központosítás
-            int textY = smeterY + PlusScaleNumberY;
+        tft.fillRect(bounds.x + PlusScaleStartX + (i * PlusScaleSpacing), bounds.y + PlusScaleY, PlusScaleTickWidth, PlusScaleTickHeight, TFT_RED);
+        if (i % 2 == 0) {                                                        // Csak minden másodiknál írjuk ki a "+számot" (pl. +20, +40, +60)
+            int textX = bounds.x + PlusScaleStartX + (i * PlusScaleSpacing) - 8; // Központosítás
+            int textY = bounds.y + PlusScaleNumberY;
             tft.setCursor(textX, textY);
             tft.print("+");
             tft.print(i * 10);
@@ -186,13 +185,14 @@ void SMeter::drawSmeterScale() {
     }
 
     // Skála alatti vízszintes sávok
-    tft.fillRect(smeterX + SPointStartX, smeterY + SBarY, SBarSPointWidth, SBarHeight, TFT_WHITE); // S0-S9 sáv
-    tft.fillRect(smeterX + SBarPlusStartX, smeterY + SBarY, SBarPlusWidth, SBarHeight,
-                 TFT_RED); // S9+dB sáv    // Statikus RSSI és SNR feliratok kirajzolása - komplett TFT állapot újrabeállítása
-    textLayout.text_y_pos = smeterY + ScaleEndYOffset + 2;
-    uint16_t current_x_calc = smeterX + RssiLabelXOffset; // Teljes TFT állapot tisztítása és újrabeállítása a címkékhez
-    setupTextTFT(TFT_GREEN, TFT_COLOR_BACKGROUND);        // Feliratok színe
-    textLayout.text_h = tft.fontHeight();                 // Szöveg magassága a törléshez
+    tft.fillRect(bounds.x + SPointStartX, bounds.y + SBarY, SBarSPointWidth, SBarHeight, TFT_WHITE); // S0-S9 sáv
+    tft.fillRect(bounds.x + SBarPlusStartX, bounds.y + SBarY, SBarPlusWidth, SBarHeight, TFT_RED);   // S9+dB sáv
+
+    // Statikus RSSI és SNR feliratok kirajzolása - komplett TFT állapot újrabeállítása
+    textLayout.text_y_pos = bounds.y + ScaleEndYOffset + 2;
+    uint16_t current_x_calc = bounds.x + RssiLabelXOffset; // Teljes TFT állapot tisztítása és újrabeállítása a címkékhez
+    setupTextTFT(TFT_GREEN, colors.background);            // Feliratok színe - UIComponent színpaletta használata
+    textLayout.text_h = tft.fontHeight();                  // Szöveg magassága a törléshez
 
     // RSSI Felirat - setCursor + print használata
     const char *rssi_label_text = "RSSI: ";
@@ -221,10 +221,10 @@ void SMeter::drawSmeterScale() {
  * @param snr Aktuális SNR érték (0–127 dB).
  * @param isFMMode Igaz, ha FM módban vagyunk, hamis egyébként (AM/SSB/CW).
  */
-void SMeter::showRSSI(uint8_t rssi, uint8_t snr, bool isFMMode) {
+void SMeter::showRSSI(uint8_t rssi, uint8_t snr, bool isFMMode) { // 1. Dinamikus S-Meter sávok kirajzolása az aktuális RSSI alapján
+    drawMeterBars(rssi, isFMMode);                                // Ez már tartalmazza a prev_spoint_bars optimalizációt
 
-    // 1. Dinamikus S-Meter sávok kirajzolása az aktuális RSSI alapján
-    drawMeterBars(rssi, isFMMode); // Ez már tartalmazza a prev_spoint_bars optimalizációt    // 2. Ellenőrizzük, hogy a pozíciók inicializálva vannak-e
+    // 2. Ellenőrizzük, hogy a pozíciók inicializálva vannak-e
     if (!textLayout.initialized) {
         // Ha a pozíciók még nincsenek beállítva, inicializáljuk a skálát
         drawSmeterScale();
@@ -233,18 +233,17 @@ void SMeter::showRSSI(uint8_t rssi, uint8_t snr, bool isFMMode) {
     // 3. RSSI és SNR értékek szöveges kiírása, csak ha változott az értékük
     bool rssi_changed = (rssi != prev_rssi_for_text);
     bool snr_changed = (snr != prev_snr_for_text);
-
     if (!rssi_changed && !snr_changed)
         return; // Ha semmi sem változott, kilépünk
 
     // Font és egyéb beállítások az értékekhez - setupTextTFT használata
-    setupTextTFT(TFT_WHITE, TFT_COLOR_BACKGROUND); // Értékek színe: fehér, háttér: fekete (felülíráshoz)
+    setupTextTFT(TFT_WHITE, colors.background); // Értékek színe: fehér, háttér: UIComponent színpaletta
 
     if (rssi_changed) {
         char rssi_str_buff[12]; // "XXX dBuV" + null
         snprintf(rssi_str_buff, sizeof(rssi_str_buff), "%3d dBuV", rssi);
         // Régi érték területének törlése
-        tft.fillRect(textLayout.rssi_value_x_pos, textLayout.text_y_pos, textLayout.rssi_value_max_w, textLayout.text_h, TFT_COLOR_BACKGROUND);
+        tft.fillRect(textLayout.rssi_value_x_pos, textLayout.text_y_pos, textLayout.rssi_value_max_w, textLayout.text_h, colors.background);
         // Új érték kirajzolása - setCursor + print használata
         tft.setCursor(textLayout.rssi_value_x_pos, textLayout.text_y_pos);
         tft.print(rssi_str_buff);
@@ -254,7 +253,7 @@ void SMeter::showRSSI(uint8_t rssi, uint8_t snr, bool isFMMode) {
         char snr_str_buff[10]; // "XXX dB" + null
         snprintf(snr_str_buff, sizeof(snr_str_buff), "%3d dB", snr);
         // Régi érték területének törlése
-        tft.fillRect(textLayout.snr_value_x_pos, textLayout.text_y_pos, textLayout.snr_value_max_w, textLayout.text_h, TFT_COLOR_BACKGROUND);
+        tft.fillRect(textLayout.snr_value_x_pos, textLayout.text_y_pos, textLayout.snr_value_max_w, textLayout.text_h, colors.background);
         // Új érték kirajzolása - setCursor + print használata
         tft.setCursor(textLayout.snr_value_x_pos, textLayout.text_y_pos);
         tft.print(snr_str_buff);
@@ -264,8 +263,20 @@ void SMeter::showRSSI(uint8_t rssi, uint8_t snr, bool isFMMode) {
     if (rssi_changed) {
         prev_rssi_for_text = rssi;
     }
-
     if (snr_changed) {
         prev_snr_for_text = snr;
+    }
+}
+
+/**
+ * @brief Rajzolja a komponenst (UIComponent override)
+ *
+ * Ez a metódus implementálja az UIComponent draw() interfészét.
+ * Inicializáláskor rajzolja ki a teljes skálát.
+ */
+void SMeter::draw() {
+    if (needsRedraw) {
+        drawSmeterScale();
+        needsRedraw = false;
     }
 }

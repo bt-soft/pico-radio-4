@@ -1,7 +1,8 @@
 #ifndef __SMETER_H
 #define __SMETER_H
 
-#include "defines.h" // Színekhez (TFT_BLACK, stb.)
+#include "UIComponent.h" // UIComponent alaposztály
+#include "defines.h"     // Színekhez (TFT_BLACK, stb.)
 #include <TFT_eSPI.h>
 #include <algorithm> // std::min miatt
 
@@ -124,16 +125,13 @@ constexpr size_t AM_RSSI_TABLE_SIZE = sizeof(AM_RSSI_TABLE) / sizeof(AM_RSSI_TAB
 } // namespace SMeterConstants
 
 /**
- * SMeter osztály az S-Meter kezelésére
+ * SMeter osztály az S-Meter kezelésére - UIComponent alapon
  */
-class SMeter {
+class SMeter : public UIComponent {
   private:
-    TFT_eSPI &tft;
-    uint16_t smeterX;           // S-Meter komponens bal felső sarkának X koordinátája (240px-re elég uint16_t)
-    uint16_t smeterY;           // S-Meter komponens bal felső sarkának Y koordinátája
     uint8_t prev_spoint_bars;   // Előző S-pont érték a grafikus sávokhoz
     uint8_t prev_rssi_for_text; // Előző RSSI érték a szöveges kiíráshoz
-    uint8_t prev_snr_for_text;  // Előző SNR érték a szöveges kiíráshoz    // Inicializálási flag és pozíciók egyetlen struct-ban
+    uint8_t prev_snr_for_text;  // Előző SNR érték a szöveges kiíráshoz// Inicializálási flag és pozíciók egyetlen struct-ban
     struct TextLayout {
         uint16_t rssi_label_x_pos;
         uint16_t rssi_value_x_pos;
@@ -172,24 +170,34 @@ class SMeter {
     /**
      * Konstruktor.
      * @param tft Referencia a TFT kijelző objektumra.
-     * @param smeterX Az S-Meter komponens bal felső sarkának X koordinátája.
-     * @param smeterY Az S-Meter komponens bal felső sarkának Y koordinátája.
+     * @param bounds A komponens területe (pozíció és méret).
+     * @param colors Opcionális színpaletta (alapértelmezett használata).
      */
-    SMeter(TFT_eSPI &tft, uint16_t smeterX, uint16_t smeterY);
+    SMeter(TFT_eSPI &tft, const Rect &bounds, const ColorScheme &colors = ColorScheme::defaultScheme());
 
     /**
      * S-Meter skála kirajzolása (a statikus részek: vonalak, számok).
      * Ezt általában egyszer kell meghívni a képernyő inicializálásakor.
      */
-    void drawSmeterScale();
+    void drawSmeterScale(); /**
+                             * S-Meter érték és RSSI/SNR szöveg megjelenítése.
+                             * @param rssi Aktuális RSSI érték (0–127 dBμV).
+                             * @param snr Aktuális SNR érték (0–127 dB).
+                             * @param isFMMode Igaz, ha FM módban vagyunk, hamis egyébként (AM/SSB/CW).
+                             */
+    void showRSSI(uint8_t rssi, uint8_t snr, bool isFMMode);
+
+    // === UIComponent felülírt metódusok ===
+    /**
+     * @brief Rajzolja a komponenst (UIComponent override)
+     */
+    virtual void draw() override;
 
     /**
-     * S-Meter érték és RSSI/SNR szöveg megjelenítése.
-     * @param rssi Aktuális RSSI érték (0–127 dBμV).
-     * @param snr Aktuális SNR érték (0–127 dB).
-     * @param isFMMode Igaz, ha FM módban vagyunk, hamis egyébként (AM/SSB/CW).
+     * @brief Nem kezeli az érintést (UIComponent override)
+     * @return false, mert az SMeter nem interaktív
      */
-    void showRSSI(uint8_t rssi, uint8_t snr, bool isFMMode);
+    virtual bool handleTouch(const TouchEvent &event) override { return false; }
 };
 
 #endif
