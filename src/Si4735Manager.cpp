@@ -89,64 +89,6 @@ void Si4735Manager::loop() {
 
     // Hardver némítás kezelése
     manageHardwareAudioMute();
-
     // Signal quality cache frissítése, ha szükséges
-    uint32_t currentTime = millis();
-    if (!signalCache.isValid || (currentTime - signalCache.timestamp) >= CACHE_TIMEOUT_MS) {
-        updateSignalCache();
-    }
+    updateSignalCacheIfNeeded();
 }
-
-/**
- * @brief Frissíti a signal quality cache-t
- */
-void Si4735Manager::updateSignalCache() {
-    signalCache.rssi = si4735.getCurrentRSSI();
-    signalCache.snr = si4735.getCurrentSNR();
-    signalCache.timestamp = millis();
-    signalCache.isValid = true;
-}
-
-/**
- * @brief Lekéri a signal quality adatokat cache-elt módon (max 1mp késleltetés)
- * @return SignalQualityData A cache-elt signal quality adatok
- */
-SignalQualityData Si4735Manager::getSignalQuality() {
-    uint32_t currentTime = millis();
-
-    // Ha nincs cache vagy lejárt, frissítjük
-    if (!signalCache.isValid || (currentTime - signalCache.timestamp) >= CACHE_TIMEOUT_MS) {
-        updateSignalCache();
-    }
-
-    return signalCache;
-}
-
-/**
- * @brief Lekéri a signal quality adatokat valós időben (közvetlen chip lekérdezés)
- * @return SignalQualityData A friss signal quality adatok
- */
-SignalQualityData Si4735Manager::getSignalQualityRealtime() {
-    SignalQualityData realtimeData;
-    realtimeData.rssi = si4735.getCurrentRSSI();
-    realtimeData.snr = si4735.getCurrentSNR();
-    realtimeData.timestamp = millis();
-    realtimeData.isValid = true;
-
-    // Cache is frissítjük az új adatokkal
-    signalCache = realtimeData;
-
-    return realtimeData;
-}
-
-/**
- * @brief Lekéri csak az RSSI értéket cache-elt módon
- * @return uint8_t RSSI érték
- */
-uint8_t Si4735Manager::getRSSI() { return getSignalQuality().rssi; }
-
-/**
- * @brief Lekéri csak az SNR értéket cache-elt módon
- * @return uint8_t SNR érték
- */
-uint8_t Si4735Manager::getSNR() { return getSignalQuality().snr; }

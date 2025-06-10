@@ -5,11 +5,9 @@
  */
 void Si4735Runtime::manageSquelch() {
     if (!rtv::muteStat) { // Csak akkor fusson, ha a globális némítás ki van kapcsolva
-        si4735.getCurrentReceivedSignalQuality();
-        uint8_t rssi = si4735.getCurrentRSSI();
-        uint8_t snr = si4735.getCurrentSNR();
-
-        uint8_t signalQuality = config.data.squelchUsesRSSI ? rssi : snr;
+        // Realtime signal quality adatok a pontos squelch működéshez
+        SignalQualityData signalData = getSignalQualityRealtime();
+        uint8_t signalQuality = config.data.squelchUsesRSSI ? signalData.rssi : signalData.snr;
 
         if (signalQuality >= config.data.currentSquelch) {
             // Jel a küszöb felett -> Némítás kikapcsolása (ha szükséges)
@@ -118,3 +116,63 @@ void Si4735Runtime::hardwareAudioMuteOn() {
     hardwareAudioMuteState = true;
     hardwareAudioMuteElapsed = millis();
 }
+
+/**
+ * @brief Frissíti a signal quality cache-t, ha szükséges
+ */
+void Si4735Runtime::updateSignalCacheIfNeeded() {
+    uint32_t currentTime = millis();
+    if (!signalCache.isValid || (currentTime - signalCache.timestamp) >= CACHE_TIMEOUT_MS) {
+        updateSignalCache();
+    }
+}
+
+/**
+ * @brief Frissíti a signal quality cache-t
+ */
+void Si4735Runtime::updateSignalCache() {
+    signalCache.rssi = si4735.getCurrentRSSI();
+    signalCache.snr = si4735.getCurrentSNR();
+    signalCache.timestamp = millis();
+    signalCache.isValid = true;
+
+    DEBUG("SignalCache updated: RSSI=%u, SNR=%u, timestamp=%u\n", signalCache.rssi, signalCache.snr, signalCache.timestamp);
+}
+
+/**
+ * @brief Lekéri a signal quality adatokat cache-elt módon (max 1mp késleltetés)
+ * @return SignalQualityData A cache-elt signal quality adatok
+ */
+SignalQualityData Si4735Runtime::getSignalQuality() {
+    updateSignalCacheIfNeeded();
+    return signalCache;
+}
+
+/**
+ * @brief Lekéri a signal quality adatokat valós időben (közvetlen chip lekérdezés)
+ * @return SignalQualityData A friss signal quality adatok
+ */
+SignalQualityData Si4735Runtime::getSignalQualityRealtime() {
+    SignalQualityData realtimeData;
+    realtimeData.rssi = si4735.getCurrentRSSI();
+    realtimeData.snr = si4735.getCurrentSNR();
+    realtimeData.timestamp = millis();
+    realtimeData.isValid = true;
+
+    // Cache is frissítjük az új adatokkal
+    signalCache = realtimeData;
+
+    return realtimeData;
+}
+
+/**
+ * @brief Lekéri csak az RSSI értéket cache-elt módon
+ * @return uint8_t RSSI érték
+ */
+uint8_t Si4735Runtime::getRSSI() { return getSignalQuality().rssi; }
+
+/**
+ * @brief Lekéri csak az SNR értéket cache-elt módon
+ * @return uint8_t SNR érték
+ */
+uint8_t Si4735Runtime::getSNR() { return getSignalQuality().snr; }
