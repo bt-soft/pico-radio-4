@@ -1,68 +1,45 @@
 #ifndef __SETUP_SCREEN_H
 #define __SETUP_SCREEN_H
 
-#include "IScrollableListDataSource.h"
-#include "UIButton.h"
-#include "UIScreen.h"
-#include "UIScrollableListComponent.h"
-#include <functional>
-#include <vector>
+#include "SetupScreenBase.h"
 
 // Forward deklarációk
-class MultiButtonDialog;
-class ValueChangeDialog;
 class SystemInfoDialog;
 class MessageDialog;
-class UIDialogBase;
 
 /**
- * @brief Beállítások képernyő.
+ * @brief Főbeállítások képernyő.
  *
- * Ez a képernyő egy görgethető listát használ a különböző beállítási
- * menüpontok megjelenítésére.
+ * Ez a képernyő a fő setup menüt jeleníti meg, amely almenükre vezet:
+ * - Display Settings (kijelző beállítások)
+ * - Si4735 Settings (rádió chip beállítások)
+ * - Decoder Settings (dekóder beállítások)
+ * - System Information
+ * - Factory Reset
  */
-class SetupScreen : public UIScreen, public IScrollableListDataSource {
+class SetupScreen : public SetupScreenBase {
   private:
-    enum class ItemAction {
-        BRIGHTNESS,
-        SQUELCH_BASIS,
-        SAVER_TIMEOUT,
-        INACTIVE_DIGIT_LIGHT,
-        BEEPER_ENABLED,
-        FFT_CONFIG_AM,
-        FFT_CONFIG_FM,
-        CW_RECEIVER_OFFSET,
-        RTTY_FREQUENCIES,
-        INFO,
-        FACTORY_RESET,
-        NONE
+    /**
+     * @brief Főmenü specifikus menüpont akciók
+     */
+    enum class MainItemAction {
+        NONE = 0,
+        DISPLAY_SETTINGS = 400, // Almenü: Display beállítások
+        SI4735_SETTINGS = 401,  // Almenü: Si4735 beállítások
+        DECODER_SETTINGS = 402, // Almenü: Dekóder beállítások
+        INFO = 403,             // System Information dialógus
+        FACTORY_RESET = 404     // Factory Reset dialógus
     };
-
-    struct SettingItem {
-        const char *label;
-        String value;
-        ItemAction action;
-    };
-
-    std::shared_ptr<UIScrollableListComponent> menuList;
-    std::vector<SettingItem> settingItems;
-    std::shared_ptr<UIButton> exitButton;
-
-    // Segédfüggvények
-    void populateMenuItems();
-    void updateListItem(int index);
-    String decodeFFTConfig(float value);
 
     // Dialógus kezelő függvények
-    void handleBrightnessDialog(int index);
-    void handleSquelchBasisDialog(int index);
-    void handleSaverTimeoutDialog(int index);
-    void handleToggleItem(int index, bool &configValue);
-    void handleFFTConfigDialog(int index, bool isAM);
-    void handleCWOffsetDialog(int index);
-    void handleRTTYFrequenciesDialog(int index);
     void handleSystemInfoDialog();
     void handleFactoryResetDialog();
+
+  protected:
+    // SetupScreenBase virtuális metódusok implementációja
+    virtual void populateMenuItems() override;
+    virtual void handleItemAction(int index, int action) override;
+    virtual const char *getScreenTitle() const override;
 
   public:
     /**
@@ -71,16 +48,6 @@ class SetupScreen : public UIScreen, public IScrollableListDataSource {
      */
     SetupScreen(TFT_eSPI &tft);
     virtual ~SetupScreen() = default;
-
-    // UIScreen interface
-    virtual void activate() override;
-    virtual void drawContent() override;
-
-    // IScrollableListDataSource interface
-    virtual int getItemCount() const override;
-    virtual String getItemLabelAt(int index) const override;
-    virtual String getItemValueAt(int index) const override;
-    virtual bool onItemClicked(int index) override;
 };
 
 #endif // __SETUP_SCREEN_H
