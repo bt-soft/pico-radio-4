@@ -72,6 +72,55 @@ constexpr uint8_t SignalLabelYOffsetInFM = 60; // FM módban a felirat Y pozíci
 
 // Kezdeti állapot a prev_spoint-hoz
 constexpr uint8_t InitialPrevSpoint = 0xFF; // Érvénytelen érték, hogy az első frissítés biztosan megtörténjen
+
+// RSSI konverziós optimalizáció - lookup táblák
+// FM mód RSSI -> S-pont konverziós tartományok
+struct RssiRange {
+    uint8_t min_rssi;
+    uint8_t max_rssi;
+    uint8_t base_spoint;
+    uint8_t multiplier;
+};
+
+// FM módhoz optimalizált lookup tábla
+constexpr RssiRange FM_RSSI_TABLE[] = {
+    {0, 0, 36, 0},                      // rssi < 1
+    {1, 2, 60, 0},                      // S6
+    {3, 8, 84, 2},                      // S7: 84 + (rssi-2)*2
+    {9, 14, 96, 2},                     // S8: 96 + (rssi-8)*2
+    {15, 24, 108, 2},                   // S9: 108 + (rssi-14)*2
+    {25, 34, 124, 2},                   // S9+10dB: 124 + (rssi-24)*2
+    {35, 44, 140, 2},                   // S9+20dB: 140 + (rssi-34)*2
+    {45, 54, 156, 2},                   // S9+30dB: 156 + (rssi-44)*2
+    {55, 64, 172, 2},                   // S9+40dB: 172 + (rssi-54)*2
+    {65, 74, 188, 2},                   // S9+50dB: 188 + (rssi-64)*2
+    {75, 76, 204, 0},                   // S9+60dB
+    {77, 255, MeterBarMaxPixelValue, 0} // Max érték
+};
+
+// AM/SSB/CW módhoz optimalizált lookup tábla
+constexpr RssiRange AM_RSSI_TABLE[] = {
+    {0, 1, 12, 0},                      // S0
+    {2, 2, 24, 0},                      // S1
+    {3, 3, 36, 0},                      // S2
+    {4, 4, 48, 0},                      // S3
+    {5, 10, 48, 2},                     // S4: 48 + (rssi-4)*2
+    {11, 16, 60, 2},                    // S5: 60 + (rssi-10)*2
+    {17, 22, 72, 2},                    // S6: 72 + (rssi-16)*2
+    {23, 28, 84, 2},                    // S7: 84 + (rssi-22)*2
+    {29, 34, 96, 2},                    // S8: 96 + (rssi-28)*2
+    {35, 44, 108, 2},                   // S9: 108 + (rssi-34)*2
+    {45, 54, 124, 2},                   // S9+10dB: 124 + (rssi-44)*2
+    {55, 64, 140, 2},                   // S9+20dB: 140 + (rssi-54)*2
+    {65, 74, 156, 2},                   // S9+30dB: 156 + (rssi-64)*2
+    {75, 84, 172, 2},                   // S9+40dB: 172 + (rssi-74)*2
+    {85, 94, 188, 2},                   // S9+50dB: 188 + (rssi-84)*2
+    {95, 95, 204, 0},                   // S9+60dB
+    {96, 255, MeterBarMaxPixelValue, 0} // Max érték
+};
+
+constexpr size_t FM_RSSI_TABLE_SIZE = sizeof(FM_RSSI_TABLE) / sizeof(FM_RSSI_TABLE[0]);
+constexpr size_t AM_RSSI_TABLE_SIZE = sizeof(AM_RSSI_TABLE) / sizeof(AM_RSSI_TABLE[0]);
 } // namespace SMeterConstants
 
 /**
@@ -80,24 +129,25 @@ constexpr uint8_t InitialPrevSpoint = 0xFF; // Érvénytelen érték, hogy az el
 class SMeter {
   private:
     TFT_eSPI &tft;
-    uint32_t smeterX;           // S-Meter komponens bal felső sarkának X koordinátája
-    uint32_t smeterY;           // S-Meter komponens bal felső sarkának Y koordinátája
+    uint16_t smeterX;           // S-Meter komponens bal felső sarkának X koordinátája (240px-re elég uint16_t)
+    uint16_t smeterY;           // S-Meter komponens bal felső sarkának Y koordinátája
     uint8_t prev_spoint_bars;   // Előző S-pont érték a grafikus sávokhoz
     uint8_t prev_rssi_for_text; // Előző RSSI érték a szöveges kiíráshoz
-    uint8_t prev_snr_for_text;  // Előző SNR érték a szöveges kiíráshoz
-
-    // Pozíciók és méretek a szöveges RSSI/SNR értékekhez
-    uint16_t rssi_label_x_pos;
-    uint16_t rssi_value_x_pos;
-    uint16_t rssi_value_max_w;
-    uint16_t snr_label_x_pos;
-    uint16_t snr_value_x_pos;
-    uint16_t snr_value_max_w;
-    uint16_t text_y_pos;
-    uint8_t text_h;
+    uint8_t prev_snr_for_text;  // Előző SNR érték a szöveges kiíráshoz    // Inicializálási flag és pozíciók egyetlen struct-ban
+    struct TextLayout {
+        uint16_t rssi_label_x_pos;
+        uint16_t rssi_value_x_pos;
+        uint16_t rssi_value_max_w;
+        uint16_t snr_label_x_pos;
+        uint16_t snr_value_x_pos;
+        uint16_t snr_value_max_w;
+        uint16_t text_y_pos;
+        uint8_t text_h;
+        bool initialized;
+    } textLayout;
 
     /**
-     * RSSI érték konvertálása S-pont értékre (pixelben).
+     * RSSI érték konvertálása S-pont értékre (pixelben) - optimalizált lookup táblával.
      * @param rssi Bemenő RSSI érték (0-127 dBuV).
      * @param isFMMode Igaz, ha FM módban vagyunk, hamis AM/SSB/CW esetén.
      * @return A jelerősség pixelben (0-MeterBarMaxPixelValue).
@@ -111,6 +161,13 @@ class SMeter {
      */
     void drawMeterBars(uint8_t rssi, bool isFMMode);
 
+    /**
+     * TFT alapállapot beállítása szöveg rajzolásához.
+     * @param color Szöveg színe
+     * @param background Háttér színe
+     */
+    void setupTextTFT(uint16_t color, uint16_t background);
+
   public:
     /**
      * Konstruktor.
@@ -118,7 +175,7 @@ class SMeter {
      * @param smeterX Az S-Meter komponens bal felső sarkának X koordinátája.
      * @param smeterY Az S-Meter komponens bal felső sarkának Y koordinátája.
      */
-    SMeter(TFT_eSPI &tft, uint8_t smeterX, uint8_t smeterY);
+    SMeter(TFT_eSPI &tft, uint16_t smeterX, uint16_t smeterY);
 
     /**
      * S-Meter skála kirajzolása (a statikus részek: vonalak, számok).

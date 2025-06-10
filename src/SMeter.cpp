@@ -7,100 +7,46 @@
  * @param smeterX Az S-Meter komponens bal felső sarkának X koordinátája.
  * @param smeterY Az S-Meter komponens bal felső sarkának Y koordinátája.
  */
-SMeter::SMeter(TFT_eSPI &tft, uint8_t smeterX, uint8_t smeterY)
+SMeter::SMeter(TFT_eSPI &tft, uint16_t smeterX, uint16_t smeterY)
     : tft(tft), smeterX(smeterX), smeterY(smeterY), prev_spoint_bars(SMeterConstants::InitialPrevSpoint), prev_rssi_for_text(0xFF), prev_snr_for_text(0xFF) {
-    // Inicializáljuk a pozíciós változókat, de a tényleges értékeket a drawSmeterScale-ben számoljuk ki
-    rssi_label_x_pos = 0;
-    rssi_value_x_pos = 0;
-    rssi_value_max_w = 0;
-    snr_label_x_pos = 0;
-    snr_value_x_pos = 0;
-    snr_value_max_w = 0;
-    text_y_pos = 0;
-    text_h = 0;
+    // Inicializáljuk a textLayout struct-ot
+    textLayout = {0, 0, 0, 0, 0, 0, 0, 0, false};
 }
 
 /**
- * RSSI érték konvertálása S-pont értékre (pixelben).
+ * RSSI érték konvertálása S-pont értékre (pixelben) - optimalizált lookup táblával.
  * @param rssi Bemenő RSSI érték (0-127 dBuV).
  * @param isFMMode Igaz, ha FM módban vagyunk, hamis AM/SSB/CW esetén.
  * @return A jelerősség pixelben (0-MeterBarMaxPixelValue).
  */
 uint8_t SMeter::rssiConverter(uint8_t rssi, bool isFMMode) {
-    int spoint_calc; // Ideiglenes változó a számításhoz
-    if (isFMMode) {
-        // dBuV to S point konverzió FM módra
-        if (rssi < 1)
-            spoint_calc = 36;
-        else if ((rssi >= 1) and (rssi <= 2))
-            spoint_calc = 60; // S6
-        else if ((rssi > 2) and (rssi <= 8))
-            spoint_calc = 84 + (rssi - 2) * 2; // S7
-        else if ((rssi > 8) and (rssi <= 14))
-            spoint_calc = 96 + (rssi - 8) * 2; // S8
-        else if ((rssi > 14) and (rssi <= 24))
-            spoint_calc = 108 + (rssi - 14) * 2; // S9
-        else if ((rssi > 24) and (rssi <= 34))
-            spoint_calc = 124 + (rssi - 24) * 2; // S9 +10dB
-        else if ((rssi > 34) and (rssi <= 44))
-            spoint_calc = 140 + (rssi - 34) * 2; // S9 +20dB
-        else if ((rssi > 44) and (rssi <= 54))
-            spoint_calc = 156 + (rssi - 44) * 2; // S9 +30dB
-        else if ((rssi > 54) and (rssi <= 64))
-            spoint_calc = 172 + (rssi - 54) * 2; // S9 +40dB
-        else if ((rssi > 64) and (rssi <= 74))
-            spoint_calc = 188 + (rssi - 64) * 2; // S9 +50dB
-        else if (rssi > 74 && rssi <= 76)
-            spoint_calc = 204; // S9 +60dB
-        else if (rssi > 76)
-            spoint_calc = SMeterConstants::MeterBarMaxPixelValue; // Max érték
-        else
-            spoint_calc = 36; // Alapértelmezett minimum FM-re, ha egyik tartomány sem illik
-    } else {                  // AM/SSB/CW
-        // dBuV to S point konverzió AM/SSB/CW módra
-        if ((rssi >= 0) and (rssi <= 1))
-            spoint_calc = 12; // S0
-        else if ((rssi > 1) and (rssi <= 2))
-            spoint_calc = 24; // S1
-        else if ((rssi > 2) and (rssi <= 3))
-            spoint_calc = 36; // S2
-        else if ((rssi > 3) and (rssi <= 4))
-            spoint_calc = 48; // S3
-        else if ((rssi > 4) and (rssi <= 10))
-            spoint_calc = 48 + (rssi - 4) * 2; // S4
-        else if ((rssi > 10) and (rssi <= 16))
-            spoint_calc = 60 + (rssi - 10) * 2; // S5
-        else if ((rssi > 16) and (rssi <= 22))
-            spoint_calc = 72 + (rssi - 16) * 2; // S6
-        else if ((rssi > 22) and (rssi <= 28))
-            spoint_calc = 84 + (rssi - 22) * 2; // S7
-        else if ((rssi > 28) and (rssi <= 34))
-            spoint_calc = 96 + (rssi - 28) * 2; // S8
-        else if ((rssi > 34) and (rssi <= 44))
-            spoint_calc = 108 + (rssi - 34) * 2; // S9
-        else if ((rssi > 44) and (rssi <= 54))
-            spoint_calc = 124 + (rssi - 44) * 2; // S9 +10dB
-        else if ((rssi > 54) and (rssi <= 64))
-            spoint_calc = 140 + (rssi - 54) * 2; // S9 +20dB
-        else if ((rssi > 64) and (rssi <= 74))
-            spoint_calc = 156 + (rssi - 64) * 2; // S9 +30dB
-        else if ((rssi > 74) and (rssi <= 84))
-            spoint_calc = 172 + (rssi - 74) * 2; // S9 +40dB
-        else if ((rssi > 84) and (rssi <= 94))
-            spoint_calc = 188 + (rssi - 84) * 2; // S9 +50dB
-        else if (rssi > 94 && rssi <= 95)
-            spoint_calc = 204; // S9 +60dB
-        else if (rssi > 95)
-            spoint_calc = SMeterConstants::MeterBarMaxPixelValue; // Max érték
-        else
-            spoint_calc = 0; // Alapértelmezett minimum AM/SSB/CW-re
+    using namespace SMeterConstants;
+
+    // Válasszuk ki a megfelelő lookup táblát
+    const RssiRange *table = isFMMode ? FM_RSSI_TABLE : AM_RSSI_TABLE;
+    const size_t table_size = isFMMode ? FM_RSSI_TABLE_SIZE : AM_RSSI_TABLE_SIZE;
+
+    // Keresés a lookup táblában
+    for (size_t i = 0; i < table_size; i++) {
+        if (rssi >= table[i].min_rssi && rssi <= table[i].max_rssi) {
+            // Számítás: base_spoint + (rssi - min_rssi) * multiplier
+            int spoint_calc = table[i].base_spoint;
+            if (table[i].multiplier > 0) {
+                spoint_calc += (rssi - table[i].min_rssi) * table[i].multiplier;
+            }
+
+            // Biztosítjuk, hogy az érték a megengedett tartományban maradjon
+            if (spoint_calc < 0)
+                spoint_calc = 0;
+            if (spoint_calc > MeterBarMaxPixelValue)
+                spoint_calc = MeterBarMaxPixelValue;
+
+            return static_cast<uint8_t>(spoint_calc);
+        }
     }
-    // Biztosítjuk, hogy az érték a megengedett tartományban maradjon
-    if (spoint_calc < 0)
-        spoint_calc = 0;
-    if (spoint_calc > SMeterConstants::MeterBarMaxPixelValue)
-        spoint_calc = SMeterConstants::MeterBarMaxPixelValue;
-    return static_cast<uint8_t>(spoint_calc);
+
+    // Alapértelmezett érték, ha nem találtunk egyezést
+    return isFMMode ? 36 : 0;
 }
 
 /**
@@ -191,6 +137,17 @@ void SMeter::drawMeterBars(uint8_t rssi, bool isFMMode) {
 }
 
 /**
+ * TFT alapállapot beállítása szöveg rajzolásához.
+ * @param color Szöveg színe
+ * @param background Háttér színe
+ */
+void SMeter::setupTextTFT(uint16_t color, uint16_t background) {
+    tft.setFreeFont();
+    tft.setTextSize(1);
+    tft.setTextColor(color, background);
+}
+
+/**
  * S-Meter skála kirajzolása (a statikus részek: vonalak, számok).
  * Ezt általában egyszer kell meghívni a képernyő inicializálásakor.
  */
@@ -198,17 +155,14 @@ void SMeter::drawSmeterScale() {
     using namespace SMeterConstants;
 
     // Ha már inicializáltuk a pozíciókat, ne rajzoljuk újra (opcionális optimalizáció)
-    static bool scale_initialized = false;
-    if (scale_initialized && rssi_value_x_pos != 0) {
+    if (textLayout.initialized) {
         return; // Már inicializált, nem kell újra kirajzolni
     }
 
-    tft.setFreeFont();  // Alapértelmezett font használata
-    tft.setTextSize(1); // A skála teljes területének törlése feketével (beleértve a szöveg helyét is)
+    // A skála teljes területének törlése feketével (beleértve a szöveg helyét is)
     tft.fillRect(smeterX + ScaleStartXOffset, smeterY + ScaleStartYOffset, ScaleWidth, ScaleHeight + 10, TFT_BLACK);
-    tft.setFreeFont(); // Alapértelmezett font használata
-    tft.setTextSize(1);
-    tft.setTextColor(TFT_WHITE, TFT_BLACK); // Szövegszín: fehér, Háttér: fekete
+
+    setupTextTFT(TFT_WHITE, TFT_BLACK); // Szövegszín: fehér, Háttér: fekete
 
     // S-pont skála vonalak és számok (0-9)
     for (int i = 0; i < SPointCount; i++) {
@@ -233,33 +187,32 @@ void SMeter::drawSmeterScale() {
 
     // Skála alatti vízszintes sávok
     tft.fillRect(smeterX + SPointStartX, smeterY + SBarY, SBarSPointWidth, SBarHeight, TFT_WHITE); // S0-S9 sáv
-    tft.fillRect(smeterX + SBarPlusStartX, smeterY + SBarY, SBarPlusWidth, SBarHeight, TFT_RED);   // S9+dB sáv
-
-    // Statikus RSSI és SNR feliratok kirajzolása - komplett TFT állapot újrabeállítása
-    text_y_pos = smeterY + ScaleEndYOffset + 2;
+    tft.fillRect(smeterX + SBarPlusStartX, smeterY + SBarY, SBarPlusWidth, SBarHeight,
+                 TFT_RED); // S9+dB sáv    // Statikus RSSI és SNR feliratok kirajzolása - komplett TFT állapot újrabeállítása
+    textLayout.text_y_pos = smeterY + ScaleEndYOffset + 2;
     uint16_t current_x_calc = smeterX + RssiLabelXOffset; // Teljes TFT állapot tisztítása és újrabeállítása a címkékhez
-    tft.setFreeFont();                                    // Alapértelmezett font
-    tft.setTextSize(1);
-    tft.setTextColor(TFT_GREEN, TFT_COLOR_BACKGROUND); // Feliratok színe
-    text_h = tft.fontHeight();                         // Szöveg magassága a törléshez
+    setupTextTFT(TFT_GREEN, TFT_COLOR_BACKGROUND);        // Feliratok színe
+    textLayout.text_h = tft.fontHeight();                 // Szöveg magassága a törléshez
 
     // RSSI Felirat - setCursor + print használata
     const char *rssi_label_text = "RSSI: ";
-    tft.setCursor(current_x_calc, text_y_pos);
+    tft.setCursor(current_x_calc, textLayout.text_y_pos);
     tft.print(rssi_label_text);
-    rssi_label_x_pos = current_x_calc;
-    rssi_value_x_pos = current_x_calc + tft.textWidth(rssi_label_text);
-    rssi_value_max_w = tft.textWidth("XXX dBuV");              // Max lehetséges szélesség
-    current_x_calc = rssi_value_x_pos + rssi_value_max_w + 10; // 10px rés    // SNR Felirat - setCursor + print használata
+    textLayout.rssi_label_x_pos = current_x_calc;
+    textLayout.rssi_value_x_pos = current_x_calc + tft.textWidth(rssi_label_text);
+    textLayout.rssi_value_max_w = tft.textWidth("XXX dBuV");                         // Max lehetséges szélesség
+    current_x_calc = textLayout.rssi_value_x_pos + textLayout.rssi_value_max_w + 10; // 10px rés
+
+    // SNR Felirat - setCursor + print használata
     const char *snr_label_text = "SNR: ";
-    tft.setCursor(current_x_calc, text_y_pos);
+    tft.setCursor(current_x_calc, textLayout.text_y_pos);
     tft.print(snr_label_text);
-    snr_label_x_pos = current_x_calc;
-    snr_value_x_pos = current_x_calc + tft.textWidth(snr_label_text);
-    snr_value_max_w = tft.textWidth("XXX dB"); // Max lehetséges szélesség
+    textLayout.snr_label_x_pos = current_x_calc;
+    textLayout.snr_value_x_pos = current_x_calc + tft.textWidth(snr_label_text);
+    textLayout.snr_value_max_w = tft.textWidth("XXX dB"); // Max lehetséges szélesség
 
     // Jelöljük, hogy a skála már inicializálva van
-    scale_initialized = true;
+    textLayout.initialized = true;
 }
 
 /**
@@ -271,10 +224,8 @@ void SMeter::drawSmeterScale() {
 void SMeter::showRSSI(uint8_t rssi, uint8_t snr, bool isFMMode) {
 
     // 1. Dinamikus S-Meter sávok kirajzolása az aktuális RSSI alapján
-    drawMeterBars(rssi, isFMMode); // Ez már tartalmazza a prev_spoint_bars optimalizációt
-
-    // 2. Ellenőrizzük, hogy a pozíciók inicializálva vannak-e
-    if (rssi_value_x_pos == 0 && snr_value_x_pos == 0) {
+    drawMeterBars(rssi, isFMMode); // Ez már tartalmazza a prev_spoint_bars optimalizációt    // 2. Ellenőrizzük, hogy a pozíciók inicializálva vannak-e
+    if (!textLayout.initialized) {
         // Ha a pozíciók még nincsenek beállítva, inicializáljuk a skálát
         drawSmeterScale();
     }
@@ -284,18 +235,18 @@ void SMeter::showRSSI(uint8_t rssi, uint8_t snr, bool isFMMode) {
     bool snr_changed = (snr != prev_snr_for_text);
 
     if (!rssi_changed && !snr_changed)
-        return; // Ha semmi sem változott, kilépünk// Font és egyéb beállítások az értékekhez - teljes TFT állapot újrabeállítása
-    tft.setFreeFont();
-    tft.setTextSize(1);
-    tft.setTextColor(TFT_WHITE, TFT_COLOR_BACKGROUND); // Értékek színe: fehér, háttér: fekete (felülíráshoz)
+        return; // Ha semmi sem változott, kilépünk
+
+    // Font és egyéb beállítások az értékekhez - setupTextTFT használata
+    setupTextTFT(TFT_WHITE, TFT_COLOR_BACKGROUND); // Értékek színe: fehér, háttér: fekete (felülíráshoz)
 
     if (rssi_changed) {
         char rssi_str_buff[12]; // "XXX dBuV" + null
         snprintf(rssi_str_buff, sizeof(rssi_str_buff), "%3d dBuV", rssi);
         // Régi érték területének törlése
-        tft.fillRect(rssi_value_x_pos, text_y_pos, rssi_value_max_w, text_h, TFT_COLOR_BACKGROUND);
+        tft.fillRect(textLayout.rssi_value_x_pos, textLayout.text_y_pos, textLayout.rssi_value_max_w, textLayout.text_h, TFT_COLOR_BACKGROUND);
         // Új érték kirajzolása - setCursor + print használata
-        tft.setCursor(rssi_value_x_pos, text_y_pos);
+        tft.setCursor(textLayout.rssi_value_x_pos, textLayout.text_y_pos);
         tft.print(rssi_str_buff);
     }
 
@@ -303,9 +254,9 @@ void SMeter::showRSSI(uint8_t rssi, uint8_t snr, bool isFMMode) {
         char snr_str_buff[10]; // "XXX dB" + null
         snprintf(snr_str_buff, sizeof(snr_str_buff), "%3d dB", snr);
         // Régi érték területének törlése
-        tft.fillRect(snr_value_x_pos, text_y_pos, snr_value_max_w, text_h, TFT_COLOR_BACKGROUND);
+        tft.fillRect(textLayout.snr_value_x_pos, textLayout.text_y_pos, textLayout.snr_value_max_w, textLayout.text_h, TFT_COLOR_BACKGROUND);
         // Új érték kirajzolása - setCursor + print használata
-        tft.setCursor(snr_value_x_pos, text_y_pos);
+        tft.setCursor(textLayout.snr_value_x_pos, textLayout.text_y_pos);
         tft.print(snr_str_buff);
     }
 
