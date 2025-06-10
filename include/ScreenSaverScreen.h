@@ -1,17 +1,13 @@
 #ifndef __SCREEN_SAVER_SCREEN_H
 #define __SCREEN_SAVER_SCREEN_H
 
-#include "Band.h"        // For Band&
-#include "Config.h"      // For Config&
-#include "FreqDisplay.h" // For frequency display
+#include "Band.h"
+#include "Config.h"
+#include "FreqDisplay.h"
 #include "IScreenManager.h"
 #include "UIScreen.h"
-#include "defines.h" // SCREEN_NAME_SCREENSAVER miatt
-#include "rtVars.h"  // For rtv::
-
-// Forward declaration for Band and Config if not fully included
-// class Band;
-// class Config;
+#include "defines.h"
+#include "rtVars.h"
 
 /**
  * @brief Képernyővédő konstansok namespace
@@ -85,11 +81,13 @@ class ScreenSaverScreen : public UIScreen {
      * @brief Animált keret rajzolása
      * @details Frekvencia kijelző körül mozgó téglalap keret rajzolása
      */
-    void drawAnimatedBorder(); /**
-                                * @brief Akkumulátor információ rajzolása
-                                * @details Akkumulátor szimbólum és töltöttségi szöveg kirajzolása
-                                * Az animált keret pozíciójához relatívan pozícionálva
-                                */
+    void drawAnimatedBorder();
+
+    /**
+     * @brief Akkumulátor információ rajzolása
+     * @details Akkumulátor szimbólum és töltöttségi szöveg kirajzolása
+     * Az animált keret pozíciójához relatívan pozícionálva
+     */
     void drawBatteryInfo();
 
     /**

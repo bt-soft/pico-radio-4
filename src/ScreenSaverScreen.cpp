@@ -271,7 +271,6 @@ void ScreenSaverScreen::drawBatteryInfo() {
  */
 bool ScreenSaverScreen::handleTouch(const TouchEvent &event) {
     if (event.pressed) {
-        DEBUG("ScreenSaverScreen: Touch event, waking up.\n");
         if (getManager()) {
             getManager()->goBack(); // Visszatérés az előző képernyőre
         }
@@ -288,7 +287,6 @@ bool ScreenSaverScreen::handleTouch(const TouchEvent &event) {
  */
 bool ScreenSaverScreen::handleRotary(const RotaryEvent &event) {
     // Bármilyen forgó encoder esemény (forgatás vagy kattintás) ébresztő hatású
-    DEBUG("ScreenSaverScreen: Rotary event, waking up.\n");
     if (getManager()) {
         getManager()->goBack(); // Visszatérés az előző képernyőre
     }
