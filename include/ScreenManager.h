@@ -3,8 +3,9 @@
 
 #include <TFT_eSPI.h>
 #include <functional>
-#include <map>   // Tartalmazva volt, de explicit jobb
-#include <queue> // Tartalmazva volt, de explicit jobb
+#include <map>    // Tartalmazva volt, de explicit jobb
+#include <queue>  // Tartalmazva volt, de explicit jobb
+#include <vector> // Navigációs stack-hez
 
 #include "IScreenManager.h"
 #include "UIScreen.h"
@@ -39,6 +40,9 @@ class ScreenManager : public IScreenManager {
     std::shared_ptr<UIScreen> currentScreen;
     const char *previousScreenName;
     uint32_t lastActivityTime;
+
+    // Navigációs stack - többszintű back navigációhoz
+    std::vector<String> navigationStack;
 
     // Deferred action queue - biztonságos képernyőváltáshoz
     std::queue<DeferredAction> deferredActions;
@@ -95,10 +99,8 @@ class ScreenManager : public IScreenManager {
             // Biztonságos - azonnali váltás
             return immediateSwitch(screenName, params);
         }
-    }
-
-    // Azonnali képernyő váltás - csak biztonságos kontextusban hívható
-    bool immediateSwitch(const char *screenName, void *params = nullptr) {
+    } // Azonnali képernyő váltás - csak biztonságos kontextusban hívható
+    bool immediateSwitch(const char *screenName, void *params = nullptr, bool isBackNavigation = false) {
 
         // Ha már ez a képernyő aktív, nem csinálunk semmit
         if (currentScreen && STREQ(currentScreen->getName(), screenName)) {
@@ -110,6 +112,25 @@ class ScreenManager : public IScreenManager {
         if (it == screenFactories.end()) {
             DEBUG("ScreenManager: Screen factory not found for '%s'\n", screenName);
             return false;
+        }
+
+        // Navigációs stack kezelése KÉPERNYŐVÁLTÁS ELŐTT - csak forward navigációnál
+        if (currentScreen && !isBackNavigation) {
+            const char *currentName = currentScreen->getName();
+
+            // Ha nem képernyővédőről váltunk (képernyővédő nem kerül a stackre)
+            if (!STREQ(currentName, SCREEN_NAME_SCREENSAVER)) {
+                // És nem képernyővédőre váltunk (képernyővédő nem kerül a stackre)
+                if (!STREQ(screenName, SCREEN_NAME_SCREENSAVER)) {
+                    // Normál forward navigáció - jelenlegi képernyő hozzáadása a stackhez
+                    navigationStack.push_back(String(currentName));
+                    DEBUG("ScreenManager: Added '%s' to navigation stack (size: %d)\n", currentName, navigationStack.size());
+                }
+                // Ha képernyővédőre váltunk, ne módosítsuk a stacket
+            }
+            // Ha képernyővédőről váltunk vissza, ne módosítsuk a stacket
+        } else if (isBackNavigation) {
+            DEBUG("ScreenManager: Back navigation - not adding to stack\n");
         }
 
         // Jelenlegi képernyő törlése
@@ -155,13 +176,23 @@ class ScreenManager : public IScreenManager {
             // Biztonságos - azonnali váltás
             return immediateGoBack();
         }
-    }
-
-    // Azonnali visszaváltás - csak biztonságos kontextusban hívható
+    } // Azonnali visszaváltás - csak biztonságos kontextusban hívható
     bool immediateGoBack() {
-        if (previousScreenName != nullptr) {
-            return immediateSwitch(previousScreenName);
+        // Navigációs stack használata a többszintű back navigációhoz
+        if (!navigationStack.empty()) {
+            String previousScreen = navigationStack.back();
+            navigationStack.pop_back();
+            DEBUG("ScreenManager: Going back to '%s' from stack (remaining: %d)\n", previousScreen.c_str(), navigationStack.size());
+            return immediateSwitch(previousScreen.c_str(), nullptr, true); // isBackNavigation = true
         }
+
+        // Fallback - régi egyszintű viselkedés
+        if (previousScreenName != nullptr) {
+            DEBUG("ScreenManager: Fallback to old previousScreenName: '%s'\n", previousScreenName);
+            return immediateSwitch(previousScreenName, nullptr, true); // isBackNavigation = true
+        }
+
+        DEBUG("ScreenManager: No screen to go back to\n");
         return false;
     }
 

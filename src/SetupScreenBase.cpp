@@ -56,14 +56,12 @@ void SetupScreenBase::createCommonUI(const char *title) {
     // Görgethető lista komponens létrehozása és hozzáadása a gyermek komponensekhez
     Rect listBounds(margin, listTopMargin, screenW - (2 * margin), screenH - listTopMargin - listBottomPadding);
     menuList = std::make_shared<UIScrollableListComponent>(tft, listBounds, this);
-    addChild(menuList);
-
-    // Exit gomb létrehozása a képernyő jobb alsó sarkában
+    addChild(menuList); // Exit gomb létrehozása a képernyő jobb alsó sarkában
     constexpr int8_t exitButtonWidth = UIButton::DEFAULT_BUTTON_WIDTH;
     Rect exitButtonBounds(screenW - exitButtonWidth - margin, screenH - buttonHeight - margin, exitButtonWidth, buttonHeight);
     exitButton =
-        std::make_shared<UIButton>(tft, 0, exitButtonBounds, "Exit", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, [this](const UIButton::ButtonEvent &event) {
-            // Lambda callback: Exit gomb megnyomásakor visszatérés az előző képernyőre
+        std::make_shared<UIButton>(tft, 0, exitButtonBounds, "Back", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, [this](const UIButton::ButtonEvent &event) {
+            // Lambda callback: Back gomb megnyomásakor visszatérés az előző képernyőre
             if (event.state == UIButton::EventButtonState::Clicked && getManager()) {
                 getManager()->goBack();
             }
@@ -190,6 +188,4 @@ void SetupScreenBase::updateListItem(int index) {
  * Ez a metódus hívja meg a createCommonUI-t a leszármazott konstruktor után,
  * hogy biztosítsa a getScreenTitle() virtuális metódus megfelelő működését.
  */
-void SetupScreenBase::layoutComponents() {
-    createCommonUI(getScreenTitle());
-}
+void SetupScreenBase::layoutComponents() { createCommonUI(getScreenTitle()); }
