@@ -141,13 +141,11 @@ void FMScreen::handleOwnLoop() {
             freqDisplayComp->markForRedraw();
         }
         lastBfoOnState = rtv::bfoOn;
-    }
-
-    // S-Meter frissítése
+    } // S-Meter frissítése
     if (smeterComp) {
-        // Si4735-től lekérjük az RSSI és SNR értékeket
-        uint8_t rssi = si4735Manager.getSi4735().getCurrentRSSI();
-        uint8_t snr = si4735Manager.getSi4735().getCurrentSNR();
+        // Si4735Manager-től lekérjük az RSSI és SNR értékeket cache-elt módon
+        uint8_t rssi = si4735Manager.getRSSI();
+        uint8_t snr = si4735Manager.getSNR();
         bool isFMMode = (si4735Manager.getCurrentBandType() == FM_BAND_TYPE);
 
         smeterComp->showRSSI(rssi, snr, isFMMode);

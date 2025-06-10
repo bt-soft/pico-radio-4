@@ -4,10 +4,31 @@
 #include "Config.h"
 #include "Si4735Band.h"
 
+/**
+ * @brief Struktúra a rádió jel minőségi adatainak tárolására
+ */
+struct SignalQualityData {
+    uint8_t rssi;       // RSSI érték (0-127)
+    uint8_t snr;        // SNR érték (0-127)
+    uint32_t timestamp; // Utolsó frissítés időbélyege (millis())
+    bool isValid;       // Adatok érvényességi flag
+
+    SignalQualityData() : rssi(0), snr(0), timestamp(0), isValid(false) {}
+};
+
 class Si4735Manager : public Si4735Band {
 
   private:
     int8_t currentBandIdx = -1; // Kezdetben az 1-es band index van beállítva
+
+    // Signal quality cache
+    SignalQualityData signalCache;
+    static const uint32_t CACHE_TIMEOUT_MS = 1000; // 1 másodperc cache timeout
+
+    /**
+     * @brief Frissíti a signal quality cache-t
+     */
+    void updateSignalCache();
 
   public:
     /**
@@ -39,6 +60,30 @@ class Si4735Manager : public Si4735Band {
      * Ez a függvény folyamatosan figyeli a squelch állapotát és kezeli a hardver némítást.
      */
     void loop();
+
+    /**
+     * @brief Lekéri a signal quality adatokat cache-elt módon (max 1mp késleltetés)
+     * @return SignalQualityData A cache-elt signal quality adatok
+     */
+    SignalQualityData getSignalQuality();
+
+    /**
+     * @brief Lekéri a signal quality adatokat valós időben (közvetlen chip lekérdezés)
+     * @return SignalQualityData A friss signal quality adatok
+     */
+    SignalQualityData getSignalQualityRealtime();
+
+    /**
+     * @brief Lekéri csak az RSSI értéket cache-elt módon
+     * @return uint8_t RSSI érték
+     */
+    uint8_t getRSSI();
+
+    /**
+     * @brief Lekéri csak az SNR értéket cache-elt módon
+     * @return uint8_t SNR érték
+     */
+    uint8_t getSNR();
 };
 
 #endif // __Si4735_MANAGER_H
