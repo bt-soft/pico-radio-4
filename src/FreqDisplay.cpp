@@ -92,12 +92,13 @@ FreqDisplay::FreqDisplay(TFT_eSPI &tft_param, const Rect &bounds_param, Si4735Ma
       hideUnderline(false) {                                               // Alapértelmezetten megjelenik az aláhúzás
 
     // Alapértelmezett háttérszín beállítása a globális háttérszínre
-    this->colors.background = TFT_COLOR_BACKGROUND;
-
-    // Kezdeti frekvencia beállítása a jelenlegi sáv frekvenciájára
+    this->colors.background = TFT_COLOR_BACKGROUND; // Kezdeti frekvencia beállítása a jelenlegi sáv frekvenciájára
     // Mivel a redrawOnlyFrequencyDigits false-ra van inicializálva,
     // az első markForRedraw() egy teljes újrarajzolást fog eredményezni
-    currentDisplayFrequency = si4735Manager.getCurrentBand().currFreq;
+
+    // JAVÍTÁS: A Si4735 chipből olvassuk ki a tényleges frekvenciát a Band tábla helyett
+    // Ez biztosítja a szinkronizációt a chip és a kijelző között
+    currentDisplayFrequency = si4735Manager.getSi4735().getCurrentFrequency();
 
     // Explicit újrarajzolás kérése az első megjelenítéshez
     markForRedraw(); // Biztosítjuk, hogy az első rajzolás megtörténjen
