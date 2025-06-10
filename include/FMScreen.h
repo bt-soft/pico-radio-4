@@ -2,6 +2,7 @@
 #define __FM_SCREEN_H
 
 #include "FreqDisplay.h"
+#include "Si4735Manager.h"
 #include "UIButton.h"
 #include "UIScreen.h"
 
@@ -13,6 +14,8 @@
 class FMScreen : public UIScreen {
 
   private:
+    Si4735Manager &si4735Manager;
+
     // Frekvencia kijelző komponens
     std::shared_ptr<FreqDisplay> freqDisplayComp;
 
@@ -21,7 +24,7 @@ class FMScreen : public UIScreen {
      * @brief FMScreen konstruktor
      * @param tft TFT display referencia
      */
-    FMScreen(TFT_eSPI &tft) : UIScreen(tft, SCREEN_NAME_FM) { layoutComponents(); }
+    FMScreen(TFT_eSPI &tft, Si4735Manager &si4735Manager) : UIScreen(tft, SCREEN_NAME_FM), si4735Manager(si4735Manager) { layoutComponents(); }
     virtual ~FMScreen() = default;
 
     /**

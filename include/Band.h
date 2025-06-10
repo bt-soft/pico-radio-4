@@ -1,8 +1,6 @@
 #ifndef __BAND_H
 #define __BAND_H
 
-#include <SI4735.h>
-
 #include "Config.h"
 #include "defines.h"
 #include "rtVars.h"
@@ -56,18 +54,6 @@ struct FrequencyStep {
  * Band class
  */
 class Band {
-  private:
-    // Si4735 referencia
-    SI4735 &si4735;
-
-    // Config referencia
-    Config &configRef;
-
-    // SSB betöltve?
-    bool ssbLoaded = false;
-
-    void setBandWidth();
-    void loadSSB();
 
   public:
     // BandMode description
@@ -84,20 +70,8 @@ class Band {
 
     static const FrequencyStep stepSizeBFO[4];
 
-    Band(SI4735 &si4735, Config &configRef);
+    Band();
     virtual ~Band() = default;
-
-    /**
-     * @brief band inicializálása
-     * @details A band inicializálása, beállítja az alapértelmezett értékeket és a sávszélességet.
-     */
-    void bandInit(bool sysStart = false);
-
-    /**
-     * @brief Band beállítása
-     * @param useDefaults default adatok betültése?
-     */
-    void bandSet(bool useDefaults = false);
 
     /**
      * @brief A Default Antenna Tuning Capacitor értékének lekérdezése
@@ -108,21 +82,16 @@ class Band {
         // Kikeressük az aktuális Band rekordot
         switch (getCurrentBandType()) {
 
-        case SW_BAND_TYPE:
-            return 1; // SW band esetén antenna tuning capacitor szükséges
+            case SW_BAND_TYPE:
+                return 1; // SW band esetén antenna tuning capacitor szükséges
 
-        case FM_BAND_TYPE:
-        case MW_BAND_TYPE:
-        case LW_BAND_TYPE:
-        default:
-            return 0; // FM és sima AM esetén nem kell antenna tuning capacitor
+            case FM_BAND_TYPE:
+            case MW_BAND_TYPE:
+            case LW_BAND_TYPE:
+            default:
+                return 0; // FM és sima AM esetén nem kell antenna tuning capacitor
         }
     }
-
-    /**
-     * @brief Band beállítása
-     */
-    void useBand();
 
     /**
      * @brief A Band egy rekordjának elkérése az index alapján
@@ -135,7 +104,7 @@ class Band {
      * @brief A jelenlegi BandType lekérdezése
      * @return A jelenlegi BandType (FM, MW, SW, LW)
      */
-    inline BandTable &getCurrentBand() { return getBandByIdx(configRef.data.bandIdx); }
+    inline BandTable &getCurrentBand() { return getBandByIdx(config.data.bandIdx); }
 
     /**
      * @brief A Band indexének elkérése a bandName alapján
@@ -173,11 +142,11 @@ class Band {
         const char *p;
         uint8_t currMod = getCurrentBand().currMod;
         if (currMod == AM)
-            p = getCurrentBandWidthLabelByIndex(bandWidthAM, configRef.data.bwIdxAM);
+            p = getCurrentBandWidthLabelByIndex(bandWidthAM, config.data.bwIdxAM);
         if (currMod == LSB or currMod == USB or currMod == CW)
-            p = getCurrentBandWidthLabelByIndex(bandWidthSSB, configRef.data.bwIdxSSB);
+            p = getCurrentBandWidthLabelByIndex(bandWidthSSB, config.data.bwIdxSSB);
         if (currMod == FM)
-            p = getCurrentBandWidthLabelByIndex(bandWidthFM, configRef.data.bwIdxFM);
+            p = getCurrentBandWidthLabelByIndex(bandWidthFM, config.data.bwIdxFM);
 
         return p;
     }
@@ -281,7 +250,7 @@ class Band {
 
         // BFO esetén az érték az érték :')
         if (rtv::bfoOn) {
-            snprintf(formattedStepStr, sizeof(formattedStepStr), "%dHz", configRef.data.currentBFOStep);
+            snprintf(formattedStepStr, sizeof(formattedStepStr), "%dHz", config.data.currentBFOStep);
             return formattedStepStr; // Visszaadjuk a buffer pointerét
         }
         const char *currentStepStr = nullptr;
@@ -289,28 +258,28 @@ class Band {
         uint8_t currentBandType = currentBand.bandType; // Kikeressük az aktuális Band típust
 
         if (currentBandType == FM_BAND_TYPE) {
-            currentStepStr = getStepSizeLabelByIndex(Band::stepSizeFM, configRef.data.ssIdxFM);
+            currentStepStr = getStepSizeLabelByIndex(Band::stepSizeFM, config.data.ssIdxFM);
 
         } else { // Nem FM
 
             // Ha SSB vagy CW, akkor a lépésköz a BFO-val van megoldva
             if (currentBand.currMod == LSB or currentBand.currMod == USB or currentBand.currMod == CW) {
                 switch (rtv::freqstepnr) {
-                default:
-                case 0:
-                    currentStepStr = "1kHz";
-                    break;
-                case 1:
-                    currentStepStr = "100Hz";
-                    break;
-                case 2:
-                    currentStepStr = "10Hz";
-                    break;
+                    default:
+                    case 0:
+                        currentStepStr = "1kHz";
+                        break;
+                    case 1:
+                        currentStepStr = "100Hz";
+                        break;
+                    case 2:
+                        currentStepStr = "10Hz";
+                        break;
                 }
 
             } else { // AM/LW/MW
 
-                uint8_t index = (currentBandType == MW_BAND_TYPE or currentBandType == LW_BAND_TYPE) ? configRef.data.ssIdxMW : configRef.data.ssIdxAM;
+                uint8_t index = (currentBandType == MW_BAND_TYPE or currentBandType == LW_BAND_TYPE) ? config.data.ssIdxMW : config.data.ssIdxAM;
                 currentStepStr = getStepSizeLabelByIndex(Band::stepSizeAM, index);
             }
         }
@@ -337,16 +306,6 @@ class Band {
      * @brief Band nevek lekérdezése
      */
     const char **getBandNames(uint8_t &count, bool isHamFilter);
-
-    /**
-     * @brief A hangolás a memória állomásra
-     * @param frequency A hangolási frekvencia
-     * @param bfoOffset A BFO eltolás (ha van)
-     * @param bandIndex A band indexe (FM, MW, SW, LW)
-     * @param demodModIndex A demodulációs mód indexe (FM, AM, LSB, USB, CW)
-     * @param bandwidthIndex A sávszélesség indexe
-     */
-    void tuneMemoryStation(uint16_t frequency, int16_t bfoOffset, uint8_t bandIndex, uint8_t demodModIndex, uint8_t bandwidthIndex);
 };
 
 #endif // __BAND_H

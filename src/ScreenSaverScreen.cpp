@@ -16,19 +16,20 @@
  * @param config_ref Konfiguráció objektum referencia
  * @details Inicializálja az animációs színeket és a frekvencia kijelző komponenst
  */
-ScreenSaverScreen::ScreenSaverScreen(TFT_eSPI &tft_ref, Band &band_ref, Config &config_ref)
+ScreenSaverScreen::ScreenSaverScreen(TFT_eSPI &tft_ref, Si4735Manager &si4735Manager)
     : UIScreen(tft_ref, SCREEN_NAME_SCREENSAVER), activationTime(0), lastAnimationUpdateTime(0), animationBorderX(0), animationBorderY(0), currentFrequencyValue(0), posSaver(0),
-      band(band_ref), config(config_ref), lastFullUpdateSaverTime(0) {
+      si4735Manager(si4735Manager), lastFullUpdateSaverTime(0) {
 
     // Animációs vonal színeinek előszámítása
     for (uint8_t i = 0; i < ScreenSaverConstants::SAVER_ANIMATION_LINE_LENGTH; i++) {
         // A képlet (31 - abs(i - 31)) értékeket generál 0-tól 31-ig és vissza 0-ig.
         saverLineColors[i] = (ScreenSaverConstants::SAVER_LINE_CENTER - std::abs(static_cast<int>(i) - ScreenSaverConstants::SAVER_LINE_CENTER));
-    } // FreqDisplay inicializálása
+    }
+    // FreqDisplay inicializálása
     // A kezdeti határok helyőrzők, frissítésre kerülnek az updateFrequencyAndBatteryDisplay-ben
     using namespace ScreenSaverConstants;
     Rect initialFreqBounds(0, 0, FREQ_DISPLAY_WIDTH, FREQ_DISPLAY_HEIGHT); // Helyőrző
-    freqDisplayComp = std::make_shared<FreqDisplay>(tft, initialFreqBounds, band, config);
+    freqDisplayComp = std::make_shared<FreqDisplay>(tft, initialFreqBounds, si4735Manager);
     addChild(freqDisplayComp);
 }
 
@@ -135,7 +136,7 @@ void ScreenSaverScreen::updateFrequencyAndBatteryDisplay() {
     uint16_t freqDisplayY = animationBorderY + FREQ_DISPLAY_Y_OFFSET;
 
     // Aktuális frekvencia beállítása és FreqDisplay frissítése
-    currentFrequencyValue = band.getCurrentBand().currFreq;
+    currentFrequencyValue = si4735Manager.getCurrentBand().currFreq;
     if (freqDisplayComp) {
         freqDisplayComp->setBounds(Rect(freqDisplayX, freqDisplayY, FREQ_DISPLAY_WIDTH, FREQ_DISPLAY_HEIGHT));
         freqDisplayComp->setFrequency(currentFrequencyValue);

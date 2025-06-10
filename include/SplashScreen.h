@@ -13,7 +13,6 @@
 class SplashScreen {
   private:
     TFT_eSPI &tft;
-    ;
 
     // Színek
     static const uint16_t BACKGROUND_COLOR = TFT_BLACK;

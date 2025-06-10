@@ -1,10 +1,10 @@
 #ifndef __SCREEN_SAVER_SCREEN_H
 #define __SCREEN_SAVER_SCREEN_H
 
-#include "Band.h"
 #include "Config.h"
 #include "FreqDisplay.h"
 #include "IScreenManager.h"
+#include "Si4735Manager.h"
 #include "UIScreen.h"
 #include "defines.h"
 #include "rtVars.h"
@@ -72,10 +72,8 @@ class ScreenSaverScreen : public UIScreen {
 
     // UI komponensek és referenciák
     std::shared_ptr<FreqDisplay> freqDisplayComp; // Frekvencia kijelző komponens
-    Band &band;                                   // Sáv referencia
-    Config &config;                               // Konfiguráció referencia
-
-    uint32_t lastFullUpdateSaverTime; // Utolsó teljes frissítés időpontja
+    uint32_t lastFullUpdateSaverTime;             // Utolsó teljes frissítés időpontja
+    Si4735Manager &si4735Manager;                 // Si4735Manager objektum
 
     /**
      * @brief Animált keret rajzolása
@@ -103,7 +101,7 @@ class ScreenSaverScreen : public UIScreen {
      * @param band_ref Sáv objektum referencia
      * @param config_ref Konfiguráció objektum referencia
      */
-    ScreenSaverScreen(TFT_eSPI &tft, Band &band_ref, Config &config_ref);
+    ScreenSaverScreen(TFT_eSPI &tft, Si4735Manager &si4735Manager);
 
     /**
      * @brief Destruktor

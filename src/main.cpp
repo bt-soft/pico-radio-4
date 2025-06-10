@@ -14,9 +14,13 @@
 #include "pins.h"
 #include "utils.h"
 
-//------------------- si4735
-#include <SI4735.h>
-SI4735 si4735;
+//-------------------- Config
+#include "Config.h"
+#include "StationStore.h"
+#include "StoreEepromBase.h"
+extern Config config;
+extern FmStationStore fmStationStore;
+extern AmStationStore amStationStore;
 
 //------------------ TFT
 #include <TFT_eSPI.h>
@@ -29,21 +33,13 @@ RPI_PICO_Timer rotaryTimer(0); // 0-ás timer használata
 RotaryEncoder rotaryEncoder = RotaryEncoder(PIN_ENCODER_CLK, PIN_ENCODER_DT, PIN_ENCODER_SW, ROTARY_ENCODER_STEPS_PER_NOTCH);
 #define ROTARY_ENCODER_SERVICE_INTERVAL_IN_MSEC 1 // 1msec
 
-//-------------------- Band
-#include "Band.h"
-Band band(si4735, config);
-
-//-------------------- Config
-#include "Config.h"
-#include "StationStore.h"
-#include "StoreEepromBase.h"
-extern Config config;
-extern FmStationStore fmStationStore;
-extern AmStationStore amStationStore;
+//------------------ SI4735
+#include "Si4735Manager.h"
+Si4735Manager si4735Manager;
 
 //-------------------- Screens
 // Globális képernyőkezelő
-ScreenManager screenManager(tft, config);
+ScreenManager screenManager(tft);
 // #include "AMScreen.h"
 #include "FMScreen.h"
 // #include "TestScreen.h"
@@ -93,8 +89,6 @@ void setup() {
 #endif
 
     // Csak az általános információkat jelenítjük meg először (SI4735 nélkül)
-    tft.fillScreen(TFT_BLACK);
-
     // Program cím és build info megjelenítése
     tft.setFreeFont();
     tft.setTextSize(2);
@@ -166,7 +160,7 @@ void setup() {
 
     // Si4735 inicializálása
     splash.updateProgress(2, 6, "Detecting SI4735...");
-    int16_t si4735Addr = si4735.getDeviceI2CAddress(PIN_SI4735_RESET);
+    int16_t si4735Addr = si4735Manager.getDeviceI2CAddress();
     if (si4735Addr == 0) {
         tft.fillScreen(TFT_BLACK);
         tft.setTextColor(TFT_RED, TFT_BLACK);
@@ -181,20 +175,20 @@ void setup() {
 
     // Lépés 3: SI4735 konfigurálás
     splash.updateProgress(3, 6, "Configuring SI4735...");
-    si4735.setDeviceI2CAddress(si4735Addr == 0x11 ? 0 : 1); // Sets the I2C Bus Address, erre is szükség van...
-    splash.drawSI4735Info(si4735);
-    si4735.setAudioMuteMcuPin(PIN_AUDIO_MUTE); // Audio Mute pin
+    si4735Manager.setDeviceI2CAddress(si4735Addr == 0x11 ? 0 : 1); // Sets the I2C Bus Address, erre is szükség van...
+    splash.drawSI4735Info(si4735Manager.getSi4735());
     delay(300);
     //--------------------------------------------------------------------
 
     // Lépés 4: Frekvencia beállítások
-    splash.updateProgress(4, 6, "Setting up frequency...");
+    splash.updateProgress(4, 6, "Setting up radio...");
     rtv::freqstep = 1000; // hz
     rtv::freqDec = config.data.currentBFO;
+    si4735Manager.init();
     delay(100);
 
     // Kezdő képernyőtípus beállítása
-    splash.updateProgress(5, 6, "Preparing display...");
+    splash.updateProgress(5, 6, "Preparing band...");
     delay(100);
 
     //--------------------------------------------------------------------
@@ -309,6 +303,9 @@ void loop() {
         screenManager.draw();
         lastDrawTime = millis();
     }
+
+    // SI4735 loop hívása, squelch és hardver némítás kezelése
+    si4735Manager.loop();
 }
 
 /**

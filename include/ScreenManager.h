@@ -9,7 +9,7 @@
 #include "IScreenManager.h"
 #include "UIScreen.h"
 // Szükséges include-ok a screen factory-khoz és a config-hoz
-#include "Config.h" // Config &cfg miatt és configRef.data eléréséhez
+#include "Config.h" // Config &cfg miatt és config.data eléréséhez
 #include "EmptyScreen.h"
 #include "FMScreen.h"
 #include "ScreenSaverScreen.h" // Az új képernyővédő
@@ -40,8 +40,6 @@ class ScreenManager : public IScreenManager {
     const char *previousScreenName;
     uint32_t lastActivityTime;
 
-    Config &configRef; // Referencia a globális config objektumra
-
     // Deferred action queue - biztonságos képernyőváltáshoz
     std::queue<DeferredAction> deferredActions;
     bool processingEvents = false;
@@ -53,7 +51,7 @@ class ScreenManager : public IScreenManager {
     String getPreviousScreenName() const { return previousScreenName; }
 
   public:
-    ScreenManager(TFT_eSPI &tft, Config &cfg) : tft(tft), configRef(cfg), previousScreenName(nullptr), lastActivityTime(millis()) { registerDefaultScreenFactories(); }
+    ScreenManager(TFT_eSPI &tft) : tft(tft), previousScreenName(nullptr), lastActivityTime(millis()) { registerDefaultScreenFactories(); }
 
     // Képernyő factory regisztrálása
     void registerScreenFactory(const char *screenName, ScreenFactory factory) { screenFactories[screenName] = factory; }
@@ -202,14 +200,13 @@ class ScreenManager : public IScreenManager {
 
         if (currentScreen) {
             // Képernyővédő időzítő ellenőrzése
-            uint32_t screenSaverTimeoutMs = configRef.data.screenSaverTimeoutMinutes * 60000UL;
+            uint32_t screenSaverTimeoutMs = config.data.screenSaverTimeoutMinutes * 60000UL;
 
             if (screenSaverTimeoutMs > 0 &&                                  // Ha a képernyővédő engedélyezve van (idő > 0)
                 !STREQ(currentScreen->getName(), SCREEN_NAME_SCREENSAVER) && // És nem vagyunk már a képernyővédőn
                 lastActivityTime != 0 &&                                     // És volt már aktivitás
                 (millis() - lastActivityTime > screenSaverTimeoutMs)) {      // És lejárt az idő
 
-                DEBUG("ScreenManager: Screen saver timeout. Switching to %s\n", SCREEN_NAME_SCREENSAVER);
                 switchToScreen(SCREEN_NAME_SCREENSAVER);
                 // lastActivityTime frissül, amikor a felhasználó újra interakcióba lép a képernyővédőn,
                 // és visszaváltáskor az immediateSwitch-ben.

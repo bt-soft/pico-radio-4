@@ -84,8 +84,8 @@ const FreqSegmentColors defaultBfoColors = UIColorPalette::createBfoFreqColors()
  * @param band_ref Sávkezelő objektum referencia
  * @param config_ref Konfiguráció objektum referencia
  */
-FreqDisplay::FreqDisplay(TFT_eSPI &tft_param, const Rect &bounds_param, Band &band_ref, Config &config_ref)
-    : UIComponent(tft_param, bounds_param), band(band_ref), config(config_ref), spr(&(this->tft)), normalColors(defaultNormalColors), bfoColors(defaultBfoColors),
+FreqDisplay::FreqDisplay(TFT_eSPI &tft_param, const Rect &bounds_param, Si4735Manager &si4735Manager)
+    : UIComponent(tft_param, bounds_param), si4735Manager(si4735Manager), spr(&(this->tft)), normalColors(defaultNormalColors), bfoColors(defaultBfoColors),
       customColors(defaultNormalColors), useCustomColors(false),           // Egyedi színek inicializálása
       currentDisplayFrequency(0),                                          // Kezdetben 0, hogy az első setFrequency biztosan frissítsen
       bfoModeActiveLastDraw(rtv::bfoOn), redrawOnlyFrequencyDigits(false), // Alapértelmezetten false, hogy az első rajzolás teljes legyen
@@ -97,7 +97,7 @@ FreqDisplay::FreqDisplay(TFT_eSPI &tft_param, const Rect &bounds_param, Band &ba
     // Kezdeti frekvencia beállítása a jelenlegi sáv frekvenciájára
     // Mivel a redrawOnlyFrequencyDigits false-ra van inicializálva,
     // az első markForRedraw() egy teljes újrarajzolást fog eredményezni
-    currentDisplayFrequency = band.getCurrentBand().currFreq;
+    currentDisplayFrequency = si4735Manager.getCurrentBand().currFreq;
 
     // Explicit újrarajzolás kérése az első megjelenítéshez
     markForRedraw(); // Biztosítjuk, hogy az első rajzolás megtörténjen
@@ -160,7 +160,7 @@ void FreqDisplay::setHideUnderline(bool hide) {
  */
 uint32_t FreqDisplay::calcFreqSpriteXPosition() const {
     using namespace FreqDisplayConstants;
-    uint8_t currentDemod = band.getCurrentBand().currMod;
+    uint8_t currentDemod = si4735Manager.getCurrentBand().currMod;
 
     // Alapértelmezett pozíció (normál SSB/CW mód)
     uint32_t x_offset_from_left = RefXDefault;
@@ -365,7 +365,7 @@ void FreqDisplay::displaySsbCwFrequency(uint16_t currentFrequencyValue, const Fr
  * @return Formázott frekvencia string (pl. "14205.50")
  */
 String FreqDisplay::formatSsbCwFrequency(uint16_t currentFrequencyValue) {
-    BandTable &currentBand = band.getCurrentBand();
+    BandTable &currentBand = si4735Manager.getCurrentBand();
     uint32_t bfoOffset = currentBand.lastBFO;
     uint32_t displayFreqHz = (uint32_t)currentFrequencyValue * 1000 - bfoOffset;
 
@@ -530,8 +530,8 @@ void FreqDisplay::displayFmAmFrequency(uint16_t currentFrequencyValue, const Fre
  */
 FreqDisplay::FrequencyDisplayData FreqDisplay::prepareFrequencyDisplayData(uint16_t frequency) {
     FrequencyDisplayData data;
-    uint8_t demodMode = band.getCurrentBand().currMod;
-    uint8_t bandType = band.getCurrentBandType();
+    uint8_t demodMode = si4735Manager.getCurrentBand().currMod;
+    uint8_t bandType = si4735Manager.getCurrentBandType();
 
     if (demodMode == FM) {
         data = prepareFmDisplayData(frequency);
@@ -602,14 +602,15 @@ FreqDisplay::FrequencyDisplayData FreqDisplay::prepareAmDisplayData(uint16_t fre
  * @return true ha sikeresen meghatározta a formátumot, false egyébként
  */
 bool FreqDisplay::determineFreqStrAndMaskForOptimizedDraw(uint16_t frequency, String &outFreqStr, const __FlashStringHelper *&outMask) {
-    const uint8_t currDemod = band.getCurrentBand().currMod;
+
+    const uint8_t currDemod = si4735Manager.getCurrentBand().currMod;
 
     if (currDemod == LSB || currDemod == USB || currDemod == CW) {
         if (rtv::bfoOn) { // BFO érték kijelzése
             outFreqStr = String(config.data.currentBFOmanu);
             outMask = F("-888");
         } else { // Normál SSB/CW frekvencia
-            uint32_t bfoOffset = band.getCurrentBand().lastBFO;
+            uint32_t bfoOffset = si4735Manager.getCurrentBand().lastBFO;
             uint32_t displayFreqHz = (uint32_t)frequency * 1000 - bfoOffset;
             char s[12];
             long khz_part = displayFreqHz / 1000;
@@ -622,7 +623,7 @@ bool FreqDisplay::determineFreqStrAndMaskForOptimizedDraw(uint16_t frequency, St
         outMask = F("188.88");
         outFreqStr = String(frequency / 100.0f, 2);
     } else if (currDemod == AM) {
-        uint8_t currentBandType = band.getCurrentBandType();
+        uint8_t currentBandType = si4735Manager.getCurrentBandType();
         if (currentBandType == MW_BAND_TYPE || currentBandType == LW_BAND_TYPE) {
             outMask = F("8888");
             outFreqStr = String(frequency);
@@ -716,7 +717,7 @@ void FreqDisplay::performFullDraw() {
     clearBackground();
 
     const FreqSegmentColors &colors = getSegmentColors();
-    const uint8_t demodMode = band.getCurrentBand().currMod;
+    const uint8_t demodMode = si4735Manager.getCurrentBand().currMod;
 
     if (isSsbCwMode(demodMode)) {
         displaySsbCwFrequency(currentDisplayFrequency, colors);

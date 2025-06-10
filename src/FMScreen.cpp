@@ -1,10 +1,6 @@
 #include "FMScreen.h"
 #include "FreqDisplay.h" // Új include
 
-// Globális változók elérése (feltételezve, hogy a main.cpp-ben vannak definiálva)
-extern Band band;
-extern Config config;
-
 /**
  * @brief UI komponensek létrehozása és elhelyezése
  */
@@ -77,7 +73,7 @@ void FMScreen::layoutComponents() {
     uint16_t freqDisplayX = (tft.width() - freqDisplayWidth) / 2;
     uint16_t freqDisplayY = 60; // Példa Y pozíció (a gombok felett)
     Rect freqBounds(freqDisplayX, freqDisplayY, freqDisplayWidth, freqDisplayHeight);
-    freqDisplayComp = std::make_shared<FreqDisplay>(tft, freqBounds, band, config);
+    freqDisplayComp = std::make_shared<FreqDisplay>(tft, freqBounds, si4735Manager);
     addChild(freqDisplayComp);
 }
 
@@ -102,8 +98,8 @@ bool FMScreen::handleRotary(const RotaryEvent &event) {
         // si4735.setFrequency(currentFreq + step);
         // if (freqDisplayComp) freqDisplayComp->setFrequency(si4735.getFrequency());
 
-        band.getCurrentBand().currFreq += band.getCurrentBand().currStep; // Frissítjük a band aktuális frekvenciáját
-        freqDisplayComp->setFrequency(band.getCurrentBand().currFreq);
+        si4735Manager.getCurrentBand().currFreq += si4735Manager.getCurrentBand().currStep; // Frissítjük a band aktuális frekvenciáját
+        freqDisplayComp->setFrequency(si4735Manager.getCurrentBand().currFreq);
 
         return true;
     } else if (event.direction == RotaryEvent::Direction::Down) {
@@ -114,8 +110,8 @@ bool FMScreen::handleRotary(const RotaryEvent &event) {
         // si4735.setFrequency(currentFreq - step);
         // if (freqDisplayComp) freqDisplayComp->setFrequency(si4735.getFrequency());
 
-        band.getCurrentBand().currFreq -= band.getCurrentBand().currStep; // Frissítjük a band aktuális frekvenciáját
-        freqDisplayComp->setFrequency(band.getCurrentBand().currFreq);
+        si4735Manager.getCurrentBand().currFreq -= si4735Manager.getCurrentBand().currStep; // Frissítjük a band aktuális frekvenciáját
+        freqDisplayComp->setFrequency(si4735Manager.getCurrentBand().currFreq);
 
         return true;
     }
@@ -139,7 +135,7 @@ void FMScreen::handleOwnLoop() {
     // a DisplayBase::frequencyChanged flag alapján.
     // Itt egy példa, ha közvetlenül a Band objektumot figyeljük:
     static uint16_t lastDisplayedFreq = 0;
-    uint16_t currentRadioFreq = band.getCurrentBand().currFreq; // Vagy si4735.getFrequency()
+    uint16_t currentRadioFreq = si4735Manager.getCurrentBand().currFreq; // Vagy si4735.getFrequency()
 
     if (currentRadioFreq != lastDisplayedFreq) {
         if (freqDisplayComp) {

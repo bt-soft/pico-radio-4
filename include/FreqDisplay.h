@@ -12,8 +12,8 @@
 #ifndef __FREQDISPLAY_H
 #define __FREQDISPLAY_H
 
-#include "Band.h"
 #include "Config.h"
+#include "Si4735Manager.h"
 #include "UIColorPalette.h"
 #include "UIComponent.h"
 #include "rtVars.h"
@@ -38,8 +38,7 @@ struct FreqSegmentColors {
 class FreqDisplay : public UIComponent {
   private:
     // === Referenciák és alapobjektumok ===
-    Band &band;                     ///< Referencia a sávkezelő objektumra
-    Config &config;                 ///< Referencia a konfigurációs objektumra
+    Si4735Manager &si4735Manager;   ///< Referencia a sávkezelő objektumra
     TFT_eSprite spr;                ///< Sprite objektum a 7-szegmenses rajzolásához    // === Színkonfigurációk ===
     FreqSegmentColors normalColors; ///< Színek normál módban
     FreqSegmentColors bfoColors;    ///< Színek BFO módban
@@ -291,10 +290,9 @@ class FreqDisplay : public UIComponent {
      * @brief Konstruktor - inicializálja a frekvencia kijelző komponenst
      * @param tft A TFT kijelző referencia
      * @param bounds A komponens területe
-     * @param band_ref A sávkezelő referencia
-     * @param config_ref A konfiguráció referencia
+     * @param si4735Manager A Si4735 sávkezelő referencia
      */
-    FreqDisplay(TFT_eSPI &tft, const Rect &bounds, Band &band_ref, Config &config_ref);
+    FreqDisplay(TFT_eSPI &tft, const Rect &bounds, Si4735Manager &si4735Manager);
 
     /**
      * @brief Virtuális destruktor
