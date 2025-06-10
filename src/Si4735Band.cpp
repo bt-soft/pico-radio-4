@@ -313,8 +313,10 @@ void Si4735Band::tuneMemoryStation(uint16_t frequency, int16_t bfoOffset, uint8_
         config.data.bwIdxSSB = savedBwIndex;
     } // 4. Újra beállítjuk a sávot az új móddal (false -> ne a preferált adatokat töltse be)
     this->bandSet(false); // 5. Explicit módon állítsd be a frekvenciát és a módot a chipen
-    currentBand.currFreq = frequency;
-    si4735.setFrequency(currentBand.currFreq);
+    si4735.setFrequency(frequency);
+
+    // A tényleges frekvenciát olvassuk vissza a chip-ből (lehet, hogy nem pontosan azt állította be, amit kértünk)
+    currentBand.currFreq = si4735.getCurrentFrequency();
 
     // Mentjük a frekvenciát a konfigurációba is a perzisztencia érdekében
     config.data.currentFrequency = currentBand.currFreq;
