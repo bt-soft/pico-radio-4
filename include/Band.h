@@ -98,13 +98,11 @@ class Band {
      * @param bandIdx a band indexe
      * @return A BandTable rekord referenciája, vagy egy üres rekord, ha nem található
      */
-    BandTable &getBandByIdx(uint8_t bandIdx);
-
-    /**
-     * @brief A jelenlegi BandType lekérdezése
-     * @return A jelenlegi BandType (FM, MW, SW, LW)
-     */
-    inline BandTable &getCurrentBand() { return getBandByIdx(config.data.bandIdx); }
+    BandTable &getBandByIdx(uint8_t bandIdx); /**
+                                               * @brief A jelenlegi BandType lekérdezése
+                                               * @return A jelenlegi BandType (FM, MW, SW, LW)
+                                               */
+    inline BandTable &getCurrentBand() { return getBandByIdx(config.data.currentBandIdx); }
 
     /**
      * @brief A Band indexének elkérése a bandName alapján

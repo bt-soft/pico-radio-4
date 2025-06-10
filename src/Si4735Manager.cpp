@@ -15,21 +15,17 @@ Si4735Manager::Si4735Manager() : Si4735Band(), currentBandIdx(-1) {
 /**
  * @brief Inicializáljuk az osztályt, beállítjuk a rádió sávot és hangerőt.
  */
-void Si4735Manager::init() {
-
-    // Band init, ha változott az épp használt band
-    if (currentBandIdx != config.data.bandIdx) {
+void Si4735Manager::init() { // Band init, ha változott az épp használt band
+    if (currentBandIdx != config.data.currentBandIdx) {
 
         // A Band  visszaállítása a konfigból
         bandInit(currentBandIdx == -1); // Rendszer induláskor -1 a currentBandIdx változást figyelő flag
 
         // A sávra preferált demodulációs mód betöltése
-        bandSet(true);
-
-        // Hangerő beállítása
+        bandSet(true); // Hangerő beállítása
         si4735.setVolume(config.data.currVolume);
 
-        currentBandIdx = config.data.bandIdx;
+        currentBandIdx = config.data.currentBandIdx;
     }
 
     // Rögtön be is állítjuk az AGC-t

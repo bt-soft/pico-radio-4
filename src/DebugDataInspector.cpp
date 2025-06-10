@@ -40,7 +40,7 @@ void DebugDataInspector::printAmStationData(const AmStationList_t &amData) {
 void DebugDataInspector::printConfigData(const Config_t &configData) {
 #ifdef __DEBUG
     DEBUG("=== DebugDataInspector -> Config Data ===\n");
-    DEBUG("  bandIdx: %u\n", configData.bandIdx);
+    DEBUG("  currentBandIdx: %u\n", configData.currentBandIdx);
     DEBUG("  bwIdxAM: %u\n", configData.bwIdxAM);
     DEBUG("  bwIdxFM: %u\n", configData.bwIdxFM);
     DEBUG("  bwIdxMW: %u\n", configData.bwIdxMW);

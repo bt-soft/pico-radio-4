@@ -7,8 +7,8 @@
 
 // Konfig struktúra típusdefiníció
 struct Config_t {
-    //-- Band
-    uint8_t bandIdx;
+    uint8_t currentBandIdx;    // Aktuális sáv indexe
+    uint32_t currentFrequency; // Aktuális frekvencia (Hz-ben)
 
     // BandWidht
     uint8_t bwIdxAM;

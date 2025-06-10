@@ -6,9 +6,9 @@
  * Alapértelmezett readonly konfigurációs adatok
  */
 const Config_t DEFAULT_CONFIG = {
-
     //-- Band
-    .bandIdx = 0, // Default band, FM
+    .currentBandIdx = 0,      // Default band, FM
+    .currentFrequency = 9390, // Alapértelmezett frekvencia (93.90 MHz FM)
 
     // BandWidht
     .bwIdxAM = 0,  // BandWidth AM - Band::bandWidthAM index szerint -> "6.0" kHz

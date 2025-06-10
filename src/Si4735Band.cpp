@@ -10,7 +10,7 @@
  */
 void Si4735Band::bandInit(bool sysStart) {
 
-    DEBUG("Si4735Band::BandInit() ->bandIdx: %d\n", config.data.bandIdx);
+    DEBUG("Si4735Band::BandInit() ->currentBandIdx: %d\n", config.data.currentBandIdx);
     BandTable &curretBand = getCurrentBand();
 
     if (getCurrentBandType() == FM_BAND_TYPE) {
@@ -31,15 +31,13 @@ void Si4735Band::bandInit(bool sysStart) {
         // Seek beállítások
         si4735.setSeekAmRssiThreshold(50); // 50dB RSSI threshold
         si4735.setSeekAmSrnThreshold(20);  // 20dB SNR threshold
-    }
-
-    // Rendszer indítás van?
+    } // Rendszer indítás van?
     if (sysStart) { // rtv::freqstep = 1000;  // 1kHz
         rtv::freqDec = config.data.currentBFO;
         curretBand.lastBFO = config.data.currentBFO;
         // curretBand.prefMod = config.data.currentMode;
-        // curretBand.currFreq = config.data.currentFreq;
-        si4735.setVolume(config.data.currVolume); // Hangerő
+        curretBand.currFreq = config.data.currentFrequency; // Frekvencia visszaállítása a konfigból
+        si4735.setVolume(config.data.currVolume);           // Hangerő
     }
 }
 
@@ -294,10 +292,8 @@ void Si4735Band::setBandWidth() {
 /**
  *
  */
-void Si4735Band::tuneMemoryStation(uint16_t frequency, int16_t bfoOffset, uint8_t bandIndex, uint8_t demodModIndex, uint8_t bandwidthIndex) {
-
-    // 1. Elkérjük a Band táblát
-    config.data.bandIdx = bandIndex;                 // Band index beállítása
+void Si4735Band::tuneMemoryStation(uint16_t frequency, int16_t bfoOffset, uint8_t bandIndex, uint8_t demodModIndex, uint8_t bandwidthIndex) { // 1. Elkérjük a Band táblát
+    config.data.currentBandIdx = bandIndex;                                                                                                   // Band index beállítása
     BandTable &currentBand = this->getCurrentBand(); // 2. Demodulátor beállítása a chipen.  Ha CW módra váltunk, akkor nullázzuk a finomhangolási BFO-t
     uint8_t savedMod = demodModIndex;                // A demodulációs mód kiemelése
     if (savedMod != CW and rtv::CWShift == true) {
@@ -315,12 +311,13 @@ void Si4735Band::tuneMemoryStation(uint16_t frequency, int16_t bfoOffset, uint8_
         config.data.bwIdxAM = savedBwIndex;
     } else { // LSB, USB, CW
         config.data.bwIdxSSB = savedBwIndex;
-    }
-
-    // 4. Újra beállítjuk a sávot az új móddal (false -> ne a preferált adatokat töltse be)
+    } // 4. Újra beállítjuk a sávot az új móddal (false -> ne a preferált adatokat töltse be)
     this->bandSet(false); // 5. Explicit módon állítsd be a frekvenciát és a módot a chipen
     currentBand.currFreq = frequency;
     si4735.setFrequency(currentBand.currFreq);
+
+    // Mentjük a frekvenciát a konfigurációba is a perzisztencia érdekében
+    config.data.currentFrequency = currentBand.currFreq;
 
     // BFO eltolás visszaállítása SSB/CW esetén ---
     if (demodModIndex == LSB || demodModIndex == USB || demodModIndex == CW) {

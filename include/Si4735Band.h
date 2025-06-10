@@ -75,15 +75,16 @@ class Si4735Band : public Si4735Runtime, public Band {
             targetFreq = currentBand.minimumFreq;
         } else if (targetFreq > currentBand.maximumFreq) {
             targetFreq = currentBand.maximumFreq;
-        }
-
-        // Csak akkor változtatunk, ha tényleg más a cél frekvencia
+        } // Csak akkor változtatunk, ha tényleg más a cél frekvencia
         if (targetFreq != currentBand.currFreq) {
             // Beállítjuk a frekvenciát
             si4735.setFrequency(targetFreq);
 
             // El is mentjük a band táblába
             currentBand.currFreq = si4735.getCurrentFrequency();
+
+            // Mentjük a frekvenciát a konfigurációba is a perzisztencia érdekében
+            config.data.currentFrequency = currentBand.currFreq;
         }
 
         return currentBand.currFreq;
