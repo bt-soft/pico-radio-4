@@ -2,6 +2,7 @@
 #define __FM_SCREEN_H
 
 #include "FreqDisplay.h"
+#include "SMeter.h"
 #include "Si4735Manager.h"
 #include "UIButton.h"
 #include "UIScreen.h"
@@ -12,12 +13,14 @@
  * @details Ez az osztály kezeli az FM rádió vezérlő funkcióit
  */
 class FMScreen : public UIScreen {
-
   private:
     Si4735Manager &si4735Manager;
 
     // Frekvencia kijelző komponens
     std::shared_ptr<FreqDisplay> freqDisplayComp;
+
+    // S-Meter komponens
+    std::shared_ptr<SMeter> smeterComp;
 
   public:
     /**

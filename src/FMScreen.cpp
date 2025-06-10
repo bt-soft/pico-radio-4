@@ -1,5 +1,6 @@
 #include "FMScreen.h"
 #include "FreqDisplay.h" // Új include
+#include "SMeter.h"
 
 FMScreen::FMScreen(TFT_eSPI &tft, Si4735Manager &si4735Manager) : UIScreen(tft, SCREEN_NAME_FM), si4735Manager(si4735Manager) {
 
@@ -82,6 +83,12 @@ void FMScreen::layoutComponents() {
     Rect freqBounds(freqDisplayX, freqDisplayY, freqDisplayWidth, freqDisplayHeight);
     freqDisplayComp = std::make_shared<FreqDisplay>(tft, freqBounds, si4735Manager);
     addChild(freqDisplayComp);
+
+    // S-Meter komponens - a frekvencia kijelző alatt
+    uint16_t smeterX = 2;                                     // Kis margó balról
+    uint16_t smeterY = freqDisplayY + freqDisplayHeight + 10; // FreqDisplay alatt 10px réssel
+    smeterComp = std::make_shared<SMeter>(tft, smeterX, smeterY);
+    // Az SMeter nem UIComponent, ezért nem adjuk hozzá addChild-al
 }
 
 /**
@@ -111,11 +118,8 @@ bool FMScreen::handleRotary(const RotaryEvent &event) {
  */
 void FMScreen::handleOwnLoop() {
     // Frekvencia frissítése, ha változott
-    // Ezt a logikát a DisplayBase::loop() vagy az FmDisplay::displayLoop() már kezeli
-    // a DisplayBase::frequencyChanged flag alapján.
-    // Itt egy példa, ha közvetlenül a Band objektumot figyeljük:
     static uint16_t lastDisplayedFreq = 0;
-    uint16_t currentRadioFreq = si4735Manager.getCurrentBand().currFreq; // Vagy si4735.getFrequency()
+    uint16_t currentRadioFreq = si4735Manager.getCurrentBand().currFreq;
 
     if (currentRadioFreq != lastDisplayedFreq) {
         if (freqDisplayComp) {
@@ -128,29 +132,28 @@ void FMScreen::handleOwnLoop() {
     static bool lastBfoOnState = rtv::bfoOn;
     if (rtv::bfoOn != lastBfoOnState) {
         if (freqDisplayComp) {
-            freqDisplayComp->markForRedraw(); // Újrarajzolás kérése a BFO állapot változása miatt
+            freqDisplayComp->markForRedraw();
         }
         lastBfoOnState = rtv::bfoOn;
     }
 
-    // TODO: Figyelni kell az rtv::freqstepnr változását is, és ha változik,
-    // akkor freqDisplayComp->markForRedraw() hívása.
+    // S-Meter frissítése
+    if (smeterComp) {
+        // Si4735-től lekérjük az RSSI és SNR értékeket
+        uint8_t rssi = si4735Manager.getSi4735().getCurrentRSSI();
+        uint8_t snr = si4735Manager.getSi4735().getCurrentSNR();
+        bool isFMMode = (si4735Manager.getCurrentBandType() == FM_BAND_TYPE);
+
+        smeterComp->showRSSI(rssi, snr, isFMMode);
+    }
 }
 
 /**
  * @brief Kirajzolja a képernyő saját tartalmát
  */
 void FMScreen::drawContent() {
-    // Szöveg középre igazítása
-    tft.setTextDatum(MC_DATUM);
-    tft.setTextColor(TFT_WHITE, TFT_COLOR_BACKGROUND);
-    tft.setFreeFont();
-    tft.setTextSize(3);
-
-    // Képernyő cím kirajzolása
-    tft.drawString(SCREEN_NAME_FM, tft.width() / 2, tft.height() / 2 - 20);
-
-    // Információs szöveg
-    tft.setTextSize(1);
-    tft.drawString("FM Radio Control functions and debugging", tft.width() / 2, tft.height() / 2 + 20);
+    // S-Meter skála kirajzolása (statikus rész)
+    if (smeterComp) {
+        smeterComp->drawSmeterScale();
+    }
 }
