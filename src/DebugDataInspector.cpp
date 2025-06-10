@@ -41,6 +41,7 @@ void DebugDataInspector::printConfigData(const Config_t &configData) {
 #ifdef __DEBUG
     DEBUG("=== DebugDataInspector -> Config Data ===\n");
     DEBUG("  currentBandIdx: %u\n", configData.currentBandIdx);
+    DEBUG("  currentFrequency: %u\n", configData.currentFrequency);
     DEBUG("  bwIdxAM: %u\n", configData.bwIdxAM);
     DEBUG("  bwIdxFM: %u\n", configData.bwIdxFM);
     DEBUG("  bwIdxMW: %u\n", configData.bwIdxMW);
