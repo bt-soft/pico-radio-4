@@ -140,10 +140,17 @@ void AMScreen::layoutComponents() {
  * @brief Függőleges gombsor létrehozása - az FMScreen mintájára
  */
 void AMScreen::createVerticalButtonBar() {
-    // Gombsor bounds beállítása (jobb oldal)
-    Rect buttonBarBounds = {240, 10, 70, 200}; // x, y, width, height
+    // ===================================================================
+    // Gombsor pozicionálás - Jobb felső sarok, teljes magasság (dinamikus)
+    // ===================================================================
+    const uint16_t buttonBarWidth = 65;                       // Optimális gombméret + margók  (FMScreen-hez igazítva)
+    const uint16_t buttonBarX = tft.width() - buttonBarWidth; // Pontosan a jobb szélhez igazítva (dinamikus)
+    const uint16_t buttonBarY = 0;                            // Legfelső pixeltől kezdve
+    const uint16_t buttonBarHeight = tft.height();            // Teljes képernyő magasság kihasználása (dinamikus)
 
-    // Gomb konfigurációk - az FMScreen mintájára ButtonConfig struktúrával
+    // ===================================================================
+    // Gomb konfigurációk - Event-driven eseménykezelőkkel
+    // ===================================================================
     std::vector<UIVerticalButtonBar::ButtonConfig> configs = {
         {AMScreenButtonIDs::MUTE, "Mute", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off, [this](const UIButton::ButtonEvent &e) { handleMuteButton(e); }},
         {AMScreenButtonIDs::VOLUME, "Vol", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, [this](const UIButton::ButtonEvent &e) { handleVolumeButton(e); }},
@@ -152,9 +159,16 @@ void AMScreen::createVerticalButtonBar() {
         {AMScreenButtonIDs::SQUELCH, "Sql", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, [this](const UIButton::ButtonEvent &e) { handleSquelchButton(e); }},
         {AMScreenButtonIDs::FREQ, "Freq", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, [this](const UIButton::ButtonEvent &e) { handleFreqButton(e); }},
         {AMScreenButtonIDs::SETUP, "Setup", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, [this](const UIButton::ButtonEvent &e) { handleSetupButtonVertical(e); }},
-        {AMScreenButtonIDs::MEMO, "Memo", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
-         [this](const UIButton::ButtonEvent &e) { handleMemoButton(e); }}}; // Függőleges gombsor létrehozása a megfelelő konstruktorral
-    verticalButtonBar = std::make_shared<UIVerticalButtonBar>(tft, buttonBarBounds, configs);
+        {AMScreenButtonIDs::MEMO, "Memo", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, [this](const UIButton::ButtonEvent &e) { handleMemoButton(e); }}};
+
+    // ===================================================================
+    // UIVerticalButtonBar objektum létrehozása és konfiguráció
+    // ===================================================================
+    verticalButtonBar = std::make_shared<UIVerticalButtonBar>(tft, Rect(buttonBarX, buttonBarY, buttonBarWidth, buttonBarHeight), configs,
+                                                              60, // Egyedi gomb szélessége (pixel)
+                                                              32, // Egyedi gomb magassága (pixel)
+                                                              4   // Gombok közötti távolság (pixel)
+    );
 
     // Komponens hozzáadása a képernyőhöz
     addChild(verticalButtonBar);
@@ -164,17 +178,32 @@ void AMScreen::createVerticalButtonBar() {
  * @brief Vízszintes gombsor létrehozása - az FMScreen mintájára
  */
 void AMScreen::createHorizontalButtonBar() {
-    // Gombsor bounds beállítása (alsó sor)
-    Rect buttonBarBounds = {10, 210, 220, 25}; // x, y, width, height
+    // ===================================================================
+    // Gombsor pozicionálás - Bal alsó sarok (dinamikus)
+    // ===================================================================
+    const uint16_t buttonBarHeight = 35;                        // Optimális gombmagasság (FMScreen-hez igazítva)
+    const uint16_t buttonBarX = 0;                              // Bal szélhez igazítva
+    const uint16_t buttonBarY = tft.height() - buttonBarHeight; // Alsó szélhez igazítva (dinamikus)
+    const uint16_t buttonBarWidth = 220;                        // 3 gomb + margók optimális szélessége
 
-    // Gomb konfigurációk
+    // ===================================================================
+    // Gomb konfigurációk - Navigációs események
+    // ===================================================================
     std::vector<UIHorizontalButtonBar::ButtonConfig> configs = {
         {AMScreenHorizontalButtonIDs::FM_BUTTON, "FM", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, [this](const UIButton::ButtonEvent &e) { handleFMButton(e); }},
         {AMScreenHorizontalButtonIDs::TEST_BUTTON, "Test", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
          [this](const UIButton::ButtonEvent &e) { handleTestButton(e); }},
         {AMScreenHorizontalButtonIDs::SETUP_BUTTON, "Setup", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
-         [this](const UIButton::ButtonEvent &e) { handleSetupButtonHorizontal(e); }}}; // Vízszintes gombsor létrehozása
-    horizontalButtonBar = std::make_shared<UIHorizontalButtonBar>(tft, buttonBarBounds, configs);
+         [this](const UIButton::ButtonEvent &e) { handleSetupButtonHorizontal(e); }}};
+
+    // ===================================================================
+    // UIHorizontalButtonBar objektum létrehozása
+    // ===================================================================
+    horizontalButtonBar = std::make_shared<UIHorizontalButtonBar>(tft, Rect(buttonBarX, buttonBarY, buttonBarWidth, buttonBarHeight), configs,
+                                                                  70, // Egyedi gomb szélessége (pixel)
+                                                                  30, // Egyedi gomb magassága (pixel)
+                                                                  3   // Gombok közötti távolság (pixel)
+    );
 
     // Komponens hozzáadása a képernyőhöz
     addChild(horizontalButtonBar);
