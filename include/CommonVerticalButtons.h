@@ -28,6 +28,31 @@
 #include "rtVars.h"
 #include "utils.h"
 
+// ===================================================================
+// UNIVERZÁLIS GOMB AZONOSÍTÓK - Egységes ID rendszer
+// ===================================================================
+
+/**
+ * @brief Univerzális függőleges gomb azonosítók
+ * @details Egyetlen ID készlet minden képernyő típushoz (FM, AM, SSB stb.)
+ *
+ * **Előnyök:**
+ * - Nincs duplikációs probléma
+ * - Egyszerű factory metódus hívás
+ * - Könnyű karbantartás
+ * - Nincs template bonyolultság
+ */
+namespace VerticalButtonIDs {
+static constexpr uint8_t MUTE = 10;    ///< Némítás gomb (univerzális)
+static constexpr uint8_t VOLUME = 11;  ///< Hangerő beállítás gomb (univerzális)
+static constexpr uint8_t AGC = 12;     ///< Automatikus erősítés szabályozás (univerzális)
+static constexpr uint8_t ATT = 13;     ///< Csillapító (univerzális)
+static constexpr uint8_t SQUELCH = 14; ///< Zajzár beállítás (univerzális)
+static constexpr uint8_t FREQ = 15;    ///< Frekvencia input (univerzális)
+static constexpr uint8_t SETUP = 16;   ///< Beállítások képernyő (univerzális)
+static constexpr uint8_t MEMO = 17;    ///< Memória funkciók (univerzális)
+} // namespace VerticalButtonIDs
+
 /**
  * @brief Közös függőleges gombsor osztály
  * @details Statikus metódusok gyűjteménye a teljes gombsor létrehozásához és kezeléshez
@@ -38,28 +63,26 @@
  * - Egy helyen karbantartható a logika
  * - Band-független implementáció
  * - Si4735Manager automatikusan kezeli a chip állapotokat
+ * - Univerzális gomb ID-k - nincs template szükséglet
  */
 class CommonVerticalButtons {
-  public:
-    // =====================================================================
-    // Gombsor factory metódus - teljes gombsor létrehozás
+  public: // =====================================================================
+    // TELJES GOMBSOR FACTORY METÓDUS - Egyszerűsített verzió
     // =====================================================================
 
     /**
-     * @brief Közös függőleges gombsor létrehozása
+     * @brief Közös függőleges gombsor létrehozása - Univerzális ID-kkal
      * @param tft TFT display referencia
      * @param screen Képernyő referencia (lambda capturehez)
      * @param si4735Manager Si4735 manager referencia
      * @param screenManager Screen manager referencia
-     * @param buttonIds Gomb ID struktúra (template paraméter)
      * @return Létrehozott UIVerticalButtonBar smart pointer
      *
      * @details Ez a metódus teljes mértékben kiváltja a createVerticalButtonBar()
-     * metódusokat az AM és FM képernyőkben. Minden gombsor konfiguráció itt található.
+     * metódusokat az AM és FM képernyőkben. Univerzális gomb ID-k használatával
+     * nincs szükség template parameterre vagy buttonIds struktúrára.
      */
-    template <typename ButtonIDStruct>
-    static std::shared_ptr<UIVerticalButtonBar> createVerticalButtonBar(TFT_eSPI &tft, UIScreen *screen, Si4735Manager *si4735Manager, IScreenManager *screenManager,
-                                                                        const ButtonIDStruct &buttonIds) {
+    static std::shared_ptr<UIVerticalButtonBar> createVerticalButtonBar(TFT_eSPI &tft, UIScreen *screen, Si4735Manager *si4735Manager, IScreenManager *screenManager) {
         // ===================================================================
         // Gombsor pozicionálás - Egységes minden képernyőre
         // ===================================================================
@@ -69,40 +92,40 @@ class CommonVerticalButtons {
         const uint16_t buttonBarHeight = tft.height();            // Teljes képernyő magasság kihasználása (dinamikus)
 
         // ===================================================================
-        // Gomb konfigurációk - Minden képernyőre azonos logika
+        // Gomb konfigurációk - Univerzális ID-k minden képernyőre
         // ===================================================================
         std::vector<UIVerticalButtonBar::ButtonConfig> configs = {
 
-            // 1. MUTE - Toggleable gomb (BE/KI állapottal)
-            {buttonIds.MUTE, "Mute", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off,
+            // 1. NÉMÍTÁS - Kapcsolható gomb (BE/KI állapottal)
+            {VerticalButtonIDs::MUTE, "Mute", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off,
              [screen, si4735Manager](const UIButton::ButtonEvent &e) { CommonVerticalButtons::handleMuteButton(e, si4735Manager); }},
 
-            // 2. VOLUME - Pushable gomb (dialógus megnyitás)
-            {buttonIds.VOLUME, "Vol", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
+            // 2. HANGERŐ - Nyomógomb (dialógus megnyitás)
+            {VerticalButtonIDs::VOLUME, "Vol", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
              [screen, si4735Manager](const UIButton::ButtonEvent &e) { CommonVerticalButtons::handleVolumeButton(e, si4735Manager); }},
 
-            // 3. AGC - Toggleable gomb (Automatikus erősítésszabályozás)
-            {buttonIds.AGC, "AGC", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off,
+            // 3. AGC - Kapcsolható gomb (Automatikus erősítésszabályozás)
+            {VerticalButtonIDs::AGC, "AGC", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off,
              [screen, si4735Manager](const UIButton::ButtonEvent &e) { CommonVerticalButtons::handleAGCButton(e, si4735Manager); }},
 
-            // 4. ATTENUATOR - Toggleable gomb (Jel csillapítás)
-            {buttonIds.ATT, "Att", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off,
+            // 4. CSILLAPÍTÓ - Kapcsolható gomb (Jel csillapítás)
+            {VerticalButtonIDs::ATT, "Att", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off,
              [screen, si4735Manager](const UIButton::ButtonEvent &e) { CommonVerticalButtons::handleAttenuatorButton(e, si4735Manager); }},
 
-            // 5. SQUELCH - Pushable gomb (Zajzár beállító dialógus)
-            {buttonIds.SQUELCH, "Sql", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
+            // 5. ZAJZÁR - Nyomógomb (Zajzár beállító dialógus)
+            {VerticalButtonIDs::SQUELCH, "Sql", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
              [screen, si4735Manager](const UIButton::ButtonEvent &e) { CommonVerticalButtons::handleSquelchButton(e, si4735Manager); }},
 
-            // 6. FREQUENCY - Pushable gomb (Frekvencia input dialógus)
-            {buttonIds.FREQ, "Freq", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
+            // 6. FREKVENCIA - Nyomógomb (Frekvencia input dialógus)
+            {VerticalButtonIDs::FREQ, "Freq", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
              [screen, si4735Manager](const UIButton::ButtonEvent &e) { CommonVerticalButtons::handleFrequencyButton(e, si4735Manager); }},
 
-            // 7. SETUP - Pushable gomb (Beállítások képernyőre váltás)
-            {buttonIds.SETUP, "Setup", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
+            // 7. BEÁLLÍTÁSOK - Nyomógomb (Beállítások képernyőre váltás)
+            {VerticalButtonIDs::SETUP, "Setup", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
              [screen, screenManager](const UIButton::ButtonEvent &e) { CommonVerticalButtons::handleSetupButton(e, screenManager); }},
 
-            // 8. MEMORY - Pushable gomb (Memória funkciók dialógus)
-            {buttonIds.MEMO, "Memo", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
+            // 8. MEMÓRIA - Nyomógomb (Memória funkciók dialógus)
+            {VerticalButtonIDs::MEMO, "Memo", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
              [screen, si4735Manager](const UIButton::ButtonEvent &e) { CommonVerticalButtons::handleMemoryButton(e, si4735Manager); }}};
 
         // ===================================================================
@@ -252,75 +275,68 @@ class CommonVerticalButtons {
             //     showAMSquelchDialog(si4735Manager);
             // }
         }
-    }
-
-    // =====================================================================
-    // Gombállapot szinkronizáló metódusok
+    } // =====================================================================
+    // Gombállapot szinkronizáló metódusok - Univerzális ID-kkal
     // =====================================================================
 
     /**
-     * @brief Mute gomb állapot szinkronizálás
+     * @brief Némítás gomb állapot szinkronizálás
      * @param buttonBar Gombsor referencia
-     * @param muteButtonId Mute gomb ID
      */
-    static void updateMuteButtonState(UIVerticalButtonBar *buttonBar, uint8_t muteButtonId) {
+    static void updateMuteButtonState(UIVerticalButtonBar *buttonBar) {
         if (buttonBar) {
-            buttonBar->setButtonState(muteButtonId, rtv::muteStat ? UIButton::ButtonState::On : UIButton::ButtonState::Off);
+            buttonBar->setButtonState(VerticalButtonIDs::MUTE, rtv::muteStat ? UIButton::ButtonState::On : UIButton::ButtonState::Off);
         }
     }
 
     /**
      * @brief AGC gomb állapot szinkronizálás
      * @param buttonBar Gombsor referencia
-     * @param agcButtonId AGC gomb ID
      * @param si4735Manager Si4735 manager referencia
      */
-    static void updateAGCButtonState(UIVerticalButtonBar *buttonBar, uint8_t agcButtonId, Si4735Manager *si4735Manager) {
+    static void updateAGCButtonState(UIVerticalButtonBar *buttonBar, Si4735Manager *si4735Manager) {
         if (buttonBar) {
             // TODO: Si4735Manager AGC állapot lekérdezés
             // bool agcEnabled = si4735Manager->isAGCEnabled();
-            // buttonBar->setButtonState(agcButtonId, agcEnabled ? UIButton::ButtonState::On : UIButton::ButtonState::Off);
+            // buttonBar->setButtonState(VerticalButtonIDs::AGC, agcEnabled ? UIButton::ButtonState::On : UIButton::ButtonState::Off);
         }
     }
 
     /**
-     * @brief Attenuator gomb állapot szinkronizálás
+     * @brief Csillapító gomb állapot szinkronizálás
      * @param buttonBar Gombsor referencia
-     * @param attButtonId Attenuator gomb ID
      * @param si4735Manager Si4735 manager referencia
      */
-    static void updateAttenuatorButtonState(UIVerticalButtonBar *buttonBar, uint8_t attButtonId, Si4735Manager *si4735Manager) {
+    static void updateAttenuatorButtonState(UIVerticalButtonBar *buttonBar, Si4735Manager *si4735Manager) {
         if (buttonBar) {
-            // TODO: Si4735Manager attenuator állapot lekérdezés
+            // TODO: Si4735Manager csillapító állapot lekérdezés
             // bool attEnabled = si4735Manager->isAttenuatorEnabled();
-            // buttonBar->setButtonState(attButtonId, attEnabled ? UIButton::ButtonState::On : UIButton::ButtonState::Off);
+            // buttonBar->setButtonState(VerticalButtonIDs::ATT, attEnabled ? UIButton::ButtonState::On : UIButton::ButtonState::Off);
         }
     }
 
     // =====================================================================
-    // Helper metódusok
+    // Teljes gombsor állapot szinkronizálás - Egyszerűsített verzió
     // =====================================================================
 
     /**
      * @brief Teljes gombsor állapot szinkronizálás
      * @param buttonBar Gombsor referencia
-     * @param buttonIds Gomb ID-k struktúra
      * @param si4735Manager Si4735 manager referencia
      * @param screenManager Screen manager referencia
      */
-    template <typename ButtonIDStruct>
-    static void updateAllButtonStates(UIVerticalButtonBar *buttonBar, const ButtonIDStruct &buttonIds, Si4735Manager *si4735Manager, IScreenManager *screenManager) {
+    static void updateAllButtonStates(UIVerticalButtonBar *buttonBar, Si4735Manager *si4735Manager, IScreenManager *screenManager) {
         if (!buttonBar)
             return;
 
-        // Mute állapot szinkronizálás
-        updateMuteButtonState(buttonBar, buttonIds.MUTE);
+        // Némítás állapot szinkronizálás
+        updateMuteButtonState(buttonBar);
 
         // AGC állapot szinkronizálás
-        updateAGCButtonState(buttonBar, buttonIds.AGC, si4735Manager);
+        updateAGCButtonState(buttonBar, si4735Manager);
 
-        // Attenuator állapot szinkronizálás
-        updateAttenuatorButtonState(buttonBar, buttonIds.ATT, si4735Manager);
+        // Csillapító állapot szinkronizálás
+        updateAttenuatorButtonState(buttonBar, si4735Manager);
 
         // További állapotok szükség szerint...
     }

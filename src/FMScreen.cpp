@@ -26,35 +26,9 @@
 // Gomb azonosítók - Event-driven architektúrához
 // ===================================================================
 
-/**
- * @brief Függőleges gombsor gomb azonosítók
- * @details Jobb oldali gombsor - 8 funkcionális gomb
- */
-namespace FMScreenButtonIDs {
-static constexpr uint8_t MUTE = 10;    ///< Némítás gomb (toggleable)
-static constexpr uint8_t VOLUME = 11;  ///< Hangerő beállítás gomb (pushable)
-static constexpr uint8_t AGC = 12;     ///< Automatikus erősítés szabályozás (toggleable)
-static constexpr uint8_t ATT = 13;     ///< Csillapító (toggleable)
-static constexpr uint8_t SQUELCH = 14; ///< Zajzár beállítás (pushable)
-static constexpr uint8_t FREQ = 15;    ///< Frekvencia input (pushable)
-static constexpr uint8_t SETUP = 16;   ///< Beállítások képernyő (pushable)
-static constexpr uint8_t MEMO = 17;    ///< Memória funkciók (pushable)
-} // namespace FMScreenButtonIDs
-
-/**
- * @brief Button ID struct for factory template compatibility
- * @details Struct wrapper for namespace constants to work with template
- */
-struct FMScreenButtonIDStruct {
-    static constexpr uint8_t MUTE = FMScreenButtonIDs::MUTE;
-    static constexpr uint8_t VOLUME = FMScreenButtonIDs::VOLUME;
-    static constexpr uint8_t AGC = FMScreenButtonIDs::AGC;
-    static constexpr uint8_t ATT = FMScreenButtonIDs::ATT;
-    static constexpr uint8_t SQUELCH = FMScreenButtonIDs::SQUELCH;
-    static constexpr uint8_t FREQ = FMScreenButtonIDs::FREQ;
-    static constexpr uint8_t SETUP = FMScreenButtonIDs::SETUP;
-    static constexpr uint8_t MEMO = FMScreenButtonIDs::MEMO;
-};
+// ===================================================================
+// Horizontal button IDs - Navigációs gombok
+// ===================================================================
 
 /**
  * @brief Vízszintes gombsor gomb azonosítók
@@ -268,13 +242,12 @@ void FMScreen::activate() {
  */
 void FMScreen::createVerticalButtonBar() {
     // ===================================================================
-    // Közös factory metódus használata - Nincs kód duplikáció!
+    // Új univerzális factory metódus használata - Nincs template szükséglet!
     // ===================================================================
-    verticalButtonBar = CommonVerticalButtons::createVerticalButtonBar(tft,                     // TFT display referencia
-                                                                       this,                    // Screen referencia (lambda capture)
-                                                                       pSi4735Manager,          // Si4735 manager referencia
-                                                                       getManager(),            // Screen manager referencia
-                                                                       FMScreenButtonIDStruct{} // FM specifikus gomb ID-k
+    verticalButtonBar = CommonVerticalButtons::createVerticalButtonBar(tft,            // TFT display referencia
+                                                                       this,           // Screen referencia (lambda capture)
+                                                                       pSi4735Manager, // Si4735 manager referencia
+                                                                       getManager()    // Screen manager referencia
     );
 
     // Komponens hozzáadása a képernyőhöz
@@ -309,27 +282,9 @@ void FMScreen::updateVerticalButtonStates() {
     }
 
     // ===================================================================
-    // MUTE gomb állapot szinkronizálása - Common handler használata
+    // Új univerzális állapot szinkronizáló - Egyszerűsített verzió
     // ===================================================================
-    CommonVerticalButtons::updateMuteButtonState(verticalButtonBar.get(), FMScreenButtonIDs::MUTE);
-
-    // ===================================================================
-    // AGC gomb állapot szinkronizálása (TODO: implementálásra vár)
-    // ===================================================================
-    // TODO: Si4735Manager AGC állapot lekérdezés implementálása
-    // bool agcEnabled = pSi4735Manager->isAGCEnabled();
-    // verticalButtonBar->setButtonState(FMScreenButtonIDs::AGC,
-    //                                  agcEnabled ? UIButton::ButtonState::On : UIButton::ButtonState::Off);
-
-    // ===================================================================
-    // ATTENUATOR gomb állapot szinkronizálása (TODO: implementálásra vár)
-    // ===================================================================
-    // TODO: Si4735Manager Attenuator állapot lekérdezés implementálása
-    // bool attEnabled = pSi4735Manager->isAttenuatorEnabled();
-    // verticalButtonBar->setButtonState(FMScreenButtonIDs::ATT,
-    //                                  attEnabled ? UIButton::ButtonState::On : UIButton::ButtonState::Off);
-
-    // További gombállapotok szinkronizálása szükség szerint...
+    CommonVerticalButtons::updateAllButtonStates(verticalButtonBar.get(), pSi4735Manager, getManager());
 }
 
 // ===================================================================

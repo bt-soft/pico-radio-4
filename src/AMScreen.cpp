@@ -27,38 +27,8 @@
 #include <algorithm>
 
 // ===================================================================
-// Gomb azonosítók - Event-driven architektúrához (FMScreen mintájára)
+// Horizontal button IDs - Navigációs gombok
 // ===================================================================
-
-/**
- * @brief Függőleges gombsor gomb azonosítók
- * @details Jobb oldali gombsor - 8 funkcionális gomb
- */
-namespace AMScreenButtonIDs {
-static constexpr uint8_t MUTE = 30;    ///< Némítás gomb (toggleable)
-static constexpr uint8_t VOLUME = 31;  ///< Hangerő beállítás gomb (pushable)
-static constexpr uint8_t AGC = 32;     ///< Automatikus erősítés szabályozás (toggleable)
-static constexpr uint8_t ATT = 33;     ///< Csillapító (toggleable)
-static constexpr uint8_t SQUELCH = 34; ///< Zajzár beállítás (pushable)
-static constexpr uint8_t FREQ = 35;    ///< Frekvencia input (pushable)
-static constexpr uint8_t SETUP = 36;   ///< Beállítások képernyő (pushable)
-static constexpr uint8_t MEMO = 37;    ///< Memória funkciók (pushable)
-} // namespace AMScreenButtonIDs
-
-/**
- * @brief Button ID struct for factory template compatibility
- * @details Struct wrapper for namespace constants to work with template
- */
-struct AMScreenButtonIDStruct {
-    static constexpr uint8_t MUTE = AMScreenButtonIDs::MUTE;
-    static constexpr uint8_t VOLUME = AMScreenButtonIDs::VOLUME;
-    static constexpr uint8_t AGC = AMScreenButtonIDs::AGC;
-    static constexpr uint8_t ATT = AMScreenButtonIDs::ATT;
-    static constexpr uint8_t SQUELCH = AMScreenButtonIDs::SQUELCH;
-    static constexpr uint8_t FREQ = AMScreenButtonIDs::FREQ;
-    static constexpr uint8_t SETUP = AMScreenButtonIDs::SETUP;
-    static constexpr uint8_t MEMO = AMScreenButtonIDs::MEMO;
-};
 
 /**
  * @brief Vízszintes gombsor gomb azonosítók
@@ -159,13 +129,12 @@ void AMScreen::layoutComponents() {
  */
 void AMScreen::createVerticalButtonBar() {
     // ===================================================================
-    // Közös factory metódus használata - Nincs kód duplikáció!
+    // Új univerzális factory metódus használata - Nincs template szükséglet!
     // ===================================================================
-    verticalButtonBar = CommonVerticalButtons::createVerticalButtonBar(tft,                     // TFT display referencia
-                                                                       this,                    // Screen referencia (lambda capture)
-                                                                       pSi4735Manager,          // Si4735 manager referencia
-                                                                       getManager(),            // Screen manager referencia
-                                                                       AMScreenButtonIDStruct{} // AM specifikus gomb ID-k
+    verticalButtonBar = CommonVerticalButtons::createVerticalButtonBar(tft,            // TFT display referencia
+                                                                       this,           // Screen referencia (lambda capture)
+                                                                       pSi4735Manager, // Si4735 manager referencia
+                                                                       getManager()    // Screen manager referencia
     );
 
     // Komponens hozzáadása a képernyőhöz
@@ -216,10 +185,12 @@ void AMScreen::createHorizontalButtonBar() {
  */
 void AMScreen::updateVerticalButtonStates() {
     if (!verticalButtonBar)
-        return;                                                                                     // ✅ KÖZÖS KEZELŐ HASZNÁLATA - Nincs kód duplikáció!
-    CommonVerticalButtons::updateMuteButtonState(verticalButtonBar.get(), AMScreenButtonIDs::MUTE); // TODO: További közös állapot szinkronizálók hozzáadása
-    // CommonVerticalButtons::updateAGCButtonState(verticalButtonBar.get(), AMScreenButtonIDs::AGC, pSi4735Manager);
-    // CommonVerticalButtons::updateAttenuatorButtonState(verticalButtonBar.get(), AMScreenButtonIDs::ATT, pSi4735Manager);
+        return;
+
+    // ===================================================================
+    // Új univerzális állapot szinkronizáló - Egyszerűsített verzió
+    // ===================================================================
+    CommonVerticalButtons::updateAllButtonStates(verticalButtonBar.get(), pSi4735Manager, getManager());
 }
 
 /**
