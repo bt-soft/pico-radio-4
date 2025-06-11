@@ -166,7 +166,7 @@ class FMScreen : public UIScreen {
     void updateHorizontalButtonStates();
 
     // ===================================================================
-    // Vízszintes gomb eseménykezelők - 3 navigációs gomb
+    // Vízszintes gomb eseménykezelők
     // ===================================================================
 
     /**

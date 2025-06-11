@@ -175,13 +175,10 @@ class AMScreen : public UIScreen {
      * Szinkronizált állapotok:
      * - FM gomb ↔ aktuális band típus (AM vs FM)
      */
-    void updateHorizontalButtonStates(); // ===================================================================
-    // REFAKTORÁLÁS: Függőleges gomb handler deklarációk eltávolítva!
-    // Most a CommonVerticalButtons osztály statikus metódusait használjuk
-    // ===================================================================
+    void updateHorizontalButtonStates();
 
     // ===================================================================
-    // Vízszintes gomb eseménykezelők - 3 navigációs gomb
+    // Vízszintes gomb eseménykezelők
     // ===================================================================
 
     /**
