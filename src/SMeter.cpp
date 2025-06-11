@@ -221,7 +221,9 @@ void SMeter::drawSmeterScale() {
  * @param snr Aktuális SNR érték (0–127 dB).
  * @param isFMMode Igaz, ha FM módban vagyunk, hamis egyébként (AM/SSB/CW).
  */
-void SMeter::showRSSI(uint8_t rssi, uint8_t snr, bool isFMMode) { // 1. Dinamikus S-Meter sávok kirajzolása az aktuális RSSI alapján
+void SMeter::showRSSI(uint8_t rssi, uint8_t snr, bool isFMMode) { 
+    
+    // 1. Dinamikus S-Meter sávok kirajzolása az aktuális RSSI alapján
     drawMeterBars(rssi, isFMMode);                                // Ez már tartalmazza a prev_spoint_bars optimalizációt
 
     // 2. Ellenőrizzük, hogy a pozíciók inicializálva vannak-e

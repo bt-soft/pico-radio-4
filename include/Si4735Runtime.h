@@ -31,7 +31,7 @@ class Si4735Runtime : public Si4735Base {
 
     // Signal quality cache
     SignalQualityData signalCache;
-    static const uint32_t CACHE_TIMEOUT_MS = 1000; // 1 másodperc cache timeout
+    const uint16_t CACHE_TIMEOUT_MS = 1 * 1000; // 1 másodperc cache timeout
 
   protected:
     void manageHardwareAudioMute();

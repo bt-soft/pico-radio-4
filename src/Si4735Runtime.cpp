@@ -4,7 +4,14 @@
  * Manage Squelch
  */
 void Si4735Runtime::manageSquelch() {
-    if (!rtv::muteStat) { // Csak akkor fusson, ha a globális némítás ki van kapcsolva
+
+    // Ha nem katív a squelch, akkor nem csinálunk semmit
+    if (config.data.currentSquelch <= 0) {
+        return;
+    }
+
+    // Csak akkor fusson, ha a globális némítás ki van kapcsolva
+    if (!rtv::muteStat) {
         // Realtime signal quality adatok a pontos squelch működéshez
         SignalQualityData signalData = getSignalQualityRealtime();
         uint8_t signalQuality = config.data.squelchUsesRSSI ? signalData.rssi : signalData.snr;
@@ -118,25 +125,35 @@ void Si4735Runtime::hardwareAudioMuteOn() {
 }
 
 /**
- * @brief Frissíti a signal quality cache-t, ha szükséges
- */
-void Si4735Runtime::updateSignalCacheIfNeeded() {
-    uint32_t currentTime = millis();
-    if (!signalCache.isValid || (currentTime - signalCache.timestamp) >= CACHE_TIMEOUT_MS) {
-        updateSignalCache();
-    }
-}
-
-/**
  * @brief Frissíti a signal quality cache-t
  */
 void Si4735Runtime::updateSignalCache() {
-    signalCache.rssi = si4735.getCurrentRSSI();
-    signalCache.snr = si4735.getCurrentSNR();
+
+    // Először frissítsük a chip állapotát
+    si4735.getCurrentReceivedSignalQuality();
+
+    uint8_t newRssi = si4735.getCurrentRSSI();
+    uint8_t newSnr = si4735.getCurrentSNR();
+
+    signalCache.rssi = newRssi;
+    signalCache.snr = newSnr;
     signalCache.timestamp = millis();
     signalCache.isValid = true;
+}
 
-    DEBUG("SignalCache updated: RSSI=%u, SNR=%u, timestamp=%u\n", signalCache.rssi, signalCache.snr, signalCache.timestamp);
+/**
+ * @brief Frissíti a signal quality cache-t, ha szükséges
+ */
+void Si4735Runtime::updateSignalCacheIfNeeded() {
+    unsigned long currentTime = millis();
+    unsigned long timeDiff = currentTime - signalCache.timestamp;
+
+    // Overflow védelem: ha a currentTime kisebb mint timestamp (overflow történt)
+    bool timeoutExpired = (currentTime < signalCache.timestamp) || (timeDiff >= CACHE_TIMEOUT_MS);
+
+    if (!signalCache.isValid || timeoutExpired) {
+        updateSignalCache();
+    }
 }
 
 /**
@@ -153,15 +170,15 @@ SignalQualityData Si4735Runtime::getSignalQuality() {
  * @return SignalQualityData A friss signal quality adatok
  */
 SignalQualityData Si4735Runtime::getSignalQualityRealtime() {
+
+    // Frissítsük a chip állapotát
+    si4735.getCurrentReceivedSignalQuality();
+
     SignalQualityData realtimeData;
     realtimeData.rssi = si4735.getCurrentRSSI();
     realtimeData.snr = si4735.getCurrentSNR();
     realtimeData.timestamp = millis();
     realtimeData.isValid = true;
-
-    // Cache is frissítjük az új adatokkal
-    signalCache = realtimeData;
-
     return realtimeData;
 }
 

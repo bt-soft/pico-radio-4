@@ -134,21 +134,15 @@ void FMScreen::handleOwnLoop() {
         lastDisplayedFreq = currentRadioFreq;
     }
 
-    // BFO állapot változásának figyelése
-    static bool lastBfoOnState = rtv::bfoOn;
-    if (rtv::bfoOn != lastBfoOnState) {
-        if (freqDisplayComp) {
-            freqDisplayComp->markForRedraw();
-        }
-        lastBfoOnState = rtv::bfoOn;
-    } // S-Meter frissítése
+    // S-Meter frissítése
     if (smeterComp) {
-        // Si4735Manager-től lekérjük az RSSI és SNR értékeket cache-elt módon
-        uint8_t rssi = si4735Manager.getRSSI();
-        uint8_t snr = si4735Manager.getSNR();
-        bool isFMMode = (si4735Manager.getCurrentBandType() == FM_BAND_TYPE);
 
-        smeterComp->showRSSI(rssi, snr, isFMMode);
+        // Si4735Manager-től lekérjük az RSSI és SNR értékeket cache-elt módon
+        SignalQualityData signalCache = si4735Manager.getSignalQuality();
+
+        if (signalCache.isValid) {
+            smeterComp->showRSSI(signalCache.rssi, signalCache.snr, true /* fm mód*/);
+        }
     }
 }
 
