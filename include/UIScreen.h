@@ -33,6 +33,7 @@ class UIScreen : public UIContainerComponent {
     std::shared_ptr<UIDialogBase> currentDialog;
 
   protected:
+    // Si4735Manager pointer
     Si4735Manager *pSi4735Manager;
 
     // Állapotsor komponens
