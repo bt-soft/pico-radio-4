@@ -20,6 +20,7 @@
  */
 
 #include "AMScreen.h"
+#include "CommonRadioButtonHandlers.h"
 #include "defines.h"
 #include "rtVars.h"
 #include "utils.h"
@@ -149,17 +150,31 @@ void AMScreen::createVerticalButtonBar() {
     const uint16_t buttonBarHeight = tft.height();            // Teljes képernyő magasság kihasználása (dinamikus)
 
     // ===================================================================
-    // Gomb konfigurációk - Event-driven eseménykezelőkkel
+    // Gomb konfigurációk - Event-driven eseménykezelőkkel (REFACTORED)
     // ===================================================================
-    std::vector<UIVerticalButtonBar::ButtonConfig> configs = {
-        {AMScreenButtonIDs::MUTE, "Mute", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off, [this](const UIButton::ButtonEvent &e) { handleMuteButton(e); }},
-        {AMScreenButtonIDs::VOLUME, "Vol", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, [this](const UIButton::ButtonEvent &e) { handleVolumeButton(e); }},
-        {AMScreenButtonIDs::AGC, "AGC", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off, [this](const UIButton::ButtonEvent &e) { handleAGCButton(e); }},
-        {AMScreenButtonIDs::ATT, "Att", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off, [this](const UIButton::ButtonEvent &e) { handleAttButton(e); }},
-        {AMScreenButtonIDs::SQUELCH, "Sql", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, [this](const UIButton::ButtonEvent &e) { handleSquelchButton(e); }},
-        {AMScreenButtonIDs::FREQ, "Freq", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, [this](const UIButton::ButtonEvent &e) { handleFreqButton(e); }},
-        {AMScreenButtonIDs::SETUP, "Setup", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, [this](const UIButton::ButtonEvent &e) { handleSetupButtonVertical(e); }},
-        {AMScreenButtonIDs::MEMO, "Memo", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, [this](const UIButton::ButtonEvent &e) { handleMemoButton(e); }}};
+    std::vector<UIVerticalButtonBar::ButtonConfig> configs = {{AMScreenButtonIDs::MUTE, "Mute", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off,
+                                                               [this](const UIButton::ButtonEvent &e) { CommonRadioButtonHandlers::handleMuteButton(e, pSi4735Manager); }},
+
+                                                              {AMScreenButtonIDs::VOLUME, "Vol", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
+                                                               [this](const UIButton::ButtonEvent &e) { CommonRadioButtonHandlers::handleVolumeButton(e, pSi4735Manager); }},
+
+                                                              {AMScreenButtonIDs::AGC, "AGC", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off,
+                                                               [this](const UIButton::ButtonEvent &e) { CommonRadioButtonHandlers::handleAGCButton(e, pSi4735Manager); }},
+
+                                                              {AMScreenButtonIDs::ATT, "Att", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off,
+                                                               [this](const UIButton::ButtonEvent &e) { CommonRadioButtonHandlers::handleAttenuatorButton(e, pSi4735Manager); }},
+
+                                                              {AMScreenButtonIDs::SQUELCH, "Sql", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
+                                                               [this](const UIButton::ButtonEvent &e) { CommonRadioButtonHandlers::handleSquelchButton(e, pSi4735Manager); }},
+
+                                                              {AMScreenButtonIDs::FREQ, "Freq", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
+                                                               [this](const UIButton::ButtonEvent &e) { CommonRadioButtonHandlers::handleFrequencyButton(e, pSi4735Manager); }},
+
+                                                              {AMScreenButtonIDs::SETUP, "Setup", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
+                                                               [this](const UIButton::ButtonEvent &e) { CommonRadioButtonHandlers::handleSetupButton(e, getManager()); }},
+
+                                                              {AMScreenButtonIDs::MEMO, "Memo", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
+                                                               [this](const UIButton::ButtonEvent &e) { CommonRadioButtonHandlers::handleMemoryButton(e, pSi4735Manager); }}};
 
     // ===================================================================
     // UIVerticalButtonBar objektum létrehozása és konfiguráció
@@ -214,20 +229,18 @@ void AMScreen::createHorizontalButtonBar() {
 // =====================================================================
 
 /**
- * @brief Függőleges gombsor állapotainak szinkronizálása
+ * @brief Függőleges gombsor állapotainak szinkronizálása (REFACTORED)
  */
 void AMScreen::updateVerticalButtonStates() {
     if (!verticalButtonBar)
         return;
 
-    // MUTE gomb állapot szinkronizálása
-    auto muteButton = verticalButtonBar->getButton(AMScreenButtonIDs::MUTE);
-    if (muteButton) {
-        bool isMuted = rtv::muteStat;
-        muteButton->setButtonState(isMuted ? UIButton::ButtonState::On : UIButton::ButtonState::Off);
-    }
+    // ✅ KÖZÖS KEZELŐ HASZNÁLATA - Nincs kód duplikáció!
+    CommonRadioButtonHandlers::updateMuteButtonState(verticalButtonBar.get(), AMScreenButtonIDs::MUTE);
 
-    // További gomb állapotok szinkronizálása...
+    // TODO: További közös állapot szinkronizálók hozzáadása
+    // CommonRadioButtonHandlers::updateAGCButtonState(verticalButtonBar.get(), AMScreenButtonIDs::AGC, pSi4735Manager);
+    // CommonRadioButtonHandlers::updateAttenuatorButtonState(verticalButtonBar.get(), AMScreenButtonIDs::ATT, pSi4735Manager);
 }
 
 /**
@@ -249,82 +262,10 @@ void AMScreen::updateHorizontalButtonStates() {
 // Függőleges gomb eseménykezelők - az FMScreen mintájára
 // =====================================================================
 
-/**
- * @brief MUTE gomb eseménykezelő - Audió némítás BE/KI kapcsolás
- */
-void AMScreen::handleMuteButton(const UIButton::ButtonEvent &event) {
-    if (event.state == UIButton::EventButtonState::On) {
-        rtv::muteStat = true;
-        pSi4735Manager->getSi4735().setAudioMute(true);
-    } else if (event.state == UIButton::EventButtonState::Off) {
-        rtv::muteStat = false;
-        pSi4735Manager->getSi4735().setAudioMute(false);
-    }
-}
-
-/**
- * @brief VOLUME gomb eseménykezelő - Hangerő beállító dialógus
- */
-void AMScreen::handleVolumeButton(const UIButton::ButtonEvent &event) {
-    if (event.state == UIButton::EventButtonState::Clicked) {
-        // TODO: ValueChangeDialog megnyitása hangerő beállításhoz
-    }
-}
-
-/**
- * @brief AGC gomb eseménykezelő - Automatikus erősítésszabályozás BE/KI
- */
-void AMScreen::handleAGCButton(const UIButton::ButtonEvent &event) {
-    if (event.state == UIButton::EventButtonState::On || event.state == UIButton::EventButtonState::Off) {
-        // TODO: Si4735 AGC beállítása AM módban
-    }
-}
-
-/**
- * @brief ATTENUATOR gomb eseménykezelő - RF jel csillapítás BE/KI
- */
-void AMScreen::handleAttButton(const UIButton::ButtonEvent &event) {
-    if (event.state == UIButton::EventButtonState::On || event.state == UIButton::EventButtonState::Off) {
-        // TODO: Si4735 attenuator beállítása
-    }
-}
-
-/**
- * @brief SQUELCH gomb eseménykezelő - Zajzár beállító dialógus
- */
-void AMScreen::handleSquelchButton(const UIButton::ButtonEvent &event) {
-    if (event.state == UIButton::EventButtonState::Clicked) {
-        // TODO: RSSI alapú squelch beállító dialógus AM módban
-    }
-}
-
-/**
- * @brief FREQUENCY gomb eseménykezelő - Frekvencia közvetlen input dialógus
- */
-void AMScreen::handleFreqButton(const UIButton::ButtonEvent &event) {
-    if (event.state == UIButton::EventButtonState::Clicked) {
-        // TODO: Frekvencia input dialógus AM band-ekhez
-    }
-}
-
-/**
- * @brief SETUP gomb eseménykezelő (függőleges) - Beállítások képernyőre váltás
- */
-void AMScreen::handleSetupButtonVertical(const UIButton::ButtonEvent &event) {
-    if (event.state == UIButton::EventButtonState::Clicked) {
-        // Setup képernyőre váltás
-        getManager()->switchToScreen(SCREEN_NAME_SETUP);
-    }
-}
-
-/**
- * @brief MEMORY gomb eseménykezelő - Memória funkciók dialógus
- */
-void AMScreen::handleMemoButton(const UIButton::ButtonEvent &event) {
-    if (event.state == UIButton::EventButtonState::Clicked) {
-        // TODO: Memória funkciók dialógus AM állomásokhoz
-    }
-}
+// ===================================================================
+// REFAKTORÁLÁS: A függőleges gomb handlereket eltávolítottuk!
+// Most a CommonRadioButtonHandlers osztály statikus metódusait használjuk
+// ===================================================================
 
 // =====================================================================
 // Vízszintes gomb eseménykezelők - 3 navigációs gomb

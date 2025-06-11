@@ -13,6 +13,7 @@
 
 #include "FMScreen.h"
 #include "Band.h"
+#include "CommonRadioButtonHandlers.h"
 #include "FreqDisplay.h"
 #include "SMeter.h"
 #include "StatusLine.h"
@@ -255,35 +256,41 @@ void FMScreen::createVerticalButtonBar() {
     const uint16_t buttonBarY = 0;                            // Legfelső pixeltől kezdve
     const uint16_t buttonBarHeight = tft.height();            // Teljes képernyő magasság kihasználása
 
-    // ===================================================================
-    // Gomb konfigurációk - Event-driven eseménykezelőkkel
+    // ===================================================================    // Gomb konfigurációk - Event-driven eseménykezelőkkel (REFACTORED)
     // ===================================================================
     std::vector<UIVerticalButtonBar::ButtonConfig> buttonConfigs = {
 
         // 1. MUTE - Toggleable gomb (BE/KI állapottal)
-        {FMScreenButtonIDs::MUTE, "Mute", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off, [this](const UIButton::ButtonEvent &event) { handleMuteButton(event); }},
+        {FMScreenButtonIDs::MUTE, "Mute", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off,
+         [this](const UIButton::ButtonEvent &e) { CommonRadioButtonHandlers::handleMuteButton(e, pSi4735Manager); }},
 
         // 2. VOLUME - Pushable gomb (dialógus megnyitás)
-        {FMScreenButtonIDs::VOLUME, "Vol", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, [this](const UIButton::ButtonEvent &event) { handleVolumeButton(event); }},
+        {FMScreenButtonIDs::VOLUME, "Vol", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
+         [this](const UIButton::ButtonEvent &e) { CommonRadioButtonHandlers::handleVolumeButton(e, pSi4735Manager); }},
 
         // 3. AGC - Toggleable gomb (Automatikus erősítésszabályozás)
-        {FMScreenButtonIDs::AGC, "AGC", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off, [this](const UIButton::ButtonEvent &event) { handleAGCButton(event); }},
+        {FMScreenButtonIDs::AGC, "AGC", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off,
+         [this](const UIButton::ButtonEvent &e) { CommonRadioButtonHandlers::handleAGCButton(e, pSi4735Manager); }},
 
         // 4. ATTENUATOR - Toggleable gomb (Jel csillapítás)
-        {FMScreenButtonIDs::ATT, "Att", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off, [this](const UIButton::ButtonEvent &event) { handleAttButton(event); }},
+        {FMScreenButtonIDs::ATT, "Att", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off,
+         [this](const UIButton::ButtonEvent &e) { CommonRadioButtonHandlers::handleAttenuatorButton(e, pSi4735Manager); }},
 
         // 5. SQUELCH - Pushable gomb (Zajzár beállító dialógus)
-        {FMScreenButtonIDs::SQUELCH, "Sql", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, [this](const UIButton::ButtonEvent &event) { handleSquelchButton(event); }},
+        {FMScreenButtonIDs::SQUELCH, "Sql", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
+         [this](const UIButton::ButtonEvent &e) { CommonRadioButtonHandlers::handleSquelchButton(e, pSi4735Manager); }},
 
         // 6. FREQUENCY - Pushable gomb (Frekvencia input dialógus)
-        {FMScreenButtonIDs::FREQ, "Freq", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, [this](const UIButton::ButtonEvent &event) { handleFreqButton(event); }},
+        {FMScreenButtonIDs::FREQ, "Freq", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
+         [this](const UIButton::ButtonEvent &e) { CommonRadioButtonHandlers::handleFrequencyButton(e, pSi4735Manager); }},
 
         // 7. SETUP - Pushable gomb (Beállítások képernyőre váltás)
         {FMScreenButtonIDs::SETUP, "Setup", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
-         [this](const UIButton::ButtonEvent &event) { handleSetupButtonVertical(event); }},
+         [this](const UIButton::ButtonEvent &e) { CommonRadioButtonHandlers::handleSetupButton(e, getManager()); }},
 
         // 8. MEMORY - Pushable gomb (Memória funkciók dialógus)
-        {FMScreenButtonIDs::MEMO, "Memo", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, [this](const UIButton::ButtonEvent &event) { handleMemoButton(event); }}};
+        {FMScreenButtonIDs::MEMO, "Memo", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
+         [this](const UIButton::ButtonEvent &e) { CommonRadioButtonHandlers::handleMemoryButton(e, pSi4735Manager); }}};
 
     // ===================================================================
     // UIVerticalButtonBar objektum létrehozása és konfiguráció
@@ -315,10 +322,9 @@ void FMScreen::updateVerticalButtonStates() {
     }
 
     // ===================================================================
-    // MUTE gomb állapot szinkronizálása
+    // MUTE gomb állapot szinkronizálása - Common handler használata
     // ===================================================================
-    // rtv::muteStat globális változó → Mute gomb vizuális állapot
-    verticalButtonBar->setButtonState(FMScreenButtonIDs::MUTE, rtv::muteStat ? UIButton::ButtonState::On : UIButton::ButtonState::Off);
+    CommonRadioButtonHandlers::updateMuteButtonState(verticalButtonBar.get(), FMScreenButtonIDs::MUTE);
 
     // ===================================================================
     // AGC gomb állapot szinkronizálása (TODO: implementálásra vár)

@@ -177,73 +177,10 @@ class AMScreen : public UIScreen {
      */
     void updateHorizontalButtonStates();
 
+    // ===================================================================    // ===================================================================
+    // REFAKTORÁLÁS: Függőleges gomb handler deklarációk eltávolítva!
+    // Most a CommonRadioButtonHandlers osztály statikus metódusait használjuk
     // ===================================================================
-    // Függőleges gomb eseménykezelők - 8 funkcionális gomb (KÖZÖS)
-    // ===================================================================
-
-    /**
-     * @brief MUTE gomb eseménykezelő - Audió némítás BE/KI kapcsolás
-     * @param event Gomb esemény (On/Off állapotváltozás)
-     * @details Toggleable gomb: rtv::muteStat és Si4735 audió kimenet kezelése
-     * Azonos logika, mint FMScreen-ben
-     */
-    void handleMuteButton(const UIButton::ButtonEvent &event);
-
-    /**
-     * @brief VOLUME gomb eseménykezelő - Hangerő beállító dialógus
-     * @param event Gomb esemény (Clicked)
-     * @details Pushable gomb: ValueChangeDialog megnyitása hangerő beállításhoz
-     * Azonos logika, mint FMScreen-ben
-     */
-    void handleVolumeButton(const UIButton::ButtonEvent &event);
-
-    /**
-     * @brief AGC gomb eseménykezelő - Automatikus erősítésszabályozás BE/KI
-     * @param event Gomb esemény (On/Off állapotváltozás)
-     * @details Toggleable gomb: Si4735 AGC funkció kezelése
-     * AM-ben gyakran használt funkció (AM jelek változóak)
-     */
-    void handleAGCButton(const UIButton::ButtonEvent &event);
-
-    /**
-     * @brief ATTENUATOR gomb eseménykezelő - RF jel csillapítás BE/KI
-     * @param event Gomb esemény (On/Off állapotváltozás)
-     * @details Toggleable gomb: Si4735 attenuator funkció
-     * AM-ben hasznos erős helyi állomások csillapításához
-     */
-    void handleAttButton(const UIButton::ButtonEvent &event);
-
-    /**
-     * @brief SQUELCH gomb eseménykezelő - Zajzár beállító dialógus
-     * @param event Gomb esemény (Clicked)
-     * @details Pushable gomb: Squelch szint beállító dialógus
-     * AM-ben kevésbé használt (nincs natív squelch), de RSSI alapú implementálható
-     */
-    void handleSquelchButton(const UIButton::ButtonEvent &event);
-
-    /**
-     * @brief FREQUENCY gomb eseménykezelő - Frekvencia közvetlen input dialógus
-     * @param event Gomb esemény (Clicked)
-     * @details Pushable gomb: Numerikus frekvencia input dialógus
-     * AM specifikus tartományokhoz: MW (520-1710), LW (150-519), SW (2300-26100)
-     */
-    void handleFreqButton(const UIButton::ButtonEvent &event);
-
-    /**
-     * @brief SETUP gomb eseménykezelő (függőleges) - Beállítások képernyőre váltás
-     * @param event Gomb esemény (Clicked)
-     * @details Pushable gomb: Setup képernyőre navigálás
-     * Azonos logika, mint FMScreen-ben
-     */
-    void handleSetupButtonVertical(const UIButton::ButtonEvent &event);
-
-    /**
-     * @brief MEMORY gomb eseménykezelő - Memória funkciók dialógus
-     * @param event Gomb esemény (Clicked)
-     * @details Pushable gomb: Állomás memória kezelő dialógus
-     * AM állomások mentése/visszahívása
-     */
-    void handleMemoButton(const UIButton::ButtonEvent &event);
 
     // ===================================================================
     // Vízszintes gomb eseménykezelők - 3 navigációs gomb
