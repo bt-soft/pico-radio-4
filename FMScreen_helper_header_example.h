@@ -1,8 +1,10 @@
+// Példa FMScreen.h a helper megközelítéshez
+
 #ifndef __FM_SCREEN_H
 #define __FM_SCREEN_H
 #include "UIButton.h"
 #include "UIScreen.h"
-#include "UIVerticalButtonBar.h"
+#include <map>
 
 /**
  * @file FMScreen.h
@@ -45,25 +47,41 @@ class FMScreen : public UIScreen {
     void layoutComponents();
 
     /**
-     * @brief Függőleges gombsor létrehozása a jobb oldalon
+     * @brief Helper funkció függőleges gombok létrehozásához
      */
-    void createVerticalButtonBar();
+    void createVerticalButtonsHelper();
 
-    // Függőleges gomb eseménykezelők
+    /**
+     * @brief Függőleges gomb állapotának beállítása
+     * @param buttonId A gomb azonosítója
+     * @param state Az új állapot
+     */
+    void setVerticalButtonState(uint8_t buttonId, UIButton::ButtonState state);
+
+    /**
+     * @brief Függőleges gomb állapotának lekérdezése
+     * @param buttonId A gomb azonosítója
+     * @return A gomb aktuális állapota
+     */
+    UIButton::ButtonState getVerticalButtonState(uint8_t buttonId) const;
+
+    /**
+     * @brief Függőleges gombok állapotának frissítése
+     */
+    void updateVerticalButtonStates();
+
+    // Gomb eseménykezelők
     void handleMuteButton(const UIButton::ButtonEvent &event);
     void handleVolumeButton(const UIButton::ButtonEvent &event);
     void handleAGCButton(const UIButton::ButtonEvent &event);
     void handleAttButton(const UIButton::ButtonEvent &event);
     void handleSquelchButton(const UIButton::ButtonEvent &event);
     void handleFreqButton(const UIButton::ButtonEvent &event);
-    void handleSetupButtonVertical(const UIButton::ButtonEvent &event);
+    void handleSetupButton(const UIButton::ButtonEvent &event);
     void handleMemoButton(const UIButton::ButtonEvent &event);
 
-    // Gombállapot frissítő segédfunkciók
-    void updateVerticalButtonStates();
-
     // UI komponensek
-    std::shared_ptr<UIVerticalButtonBar> verticalButtonBar;
+    std::map<uint8_t, std::shared_ptr<UIButton>> verticalButtons; // ID -> gomb mapping
 };
 
 #endif // __FM_SCREEN_H

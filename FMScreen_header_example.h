@@ -1,3 +1,5 @@
+// Példa FMScreen.h frissítés a függőleges gombsorhoz
+
 #ifndef __FM_SCREEN_H
 #define __FM_SCREEN_H
 #include "UIButton.h"
@@ -45,22 +47,24 @@ class FMScreen : public UIScreen {
     void layoutComponents();
 
     /**
-     * @brief Függőleges gombsor létrehozása a jobb oldalon
+     * @brief Függőleges gombsor létrehozása
      */
     void createVerticalButtonBar();
 
-    // Függőleges gomb eseménykezelők
+    // Gomb eseménykezelők
     void handleMuteButton(const UIButton::ButtonEvent &event);
     void handleVolumeButton(const UIButton::ButtonEvent &event);
     void handleAGCButton(const UIButton::ButtonEvent &event);
     void handleAttButton(const UIButton::ButtonEvent &event);
     void handleSquelchButton(const UIButton::ButtonEvent &event);
     void handleFreqButton(const UIButton::ButtonEvent &event);
-    void handleSetupButtonVertical(const UIButton::ButtonEvent &event);
+    void handleSetupButton(const UIButton::ButtonEvent &event);
     void handleMemoButton(const UIButton::ButtonEvent &event);
 
     // Gombállapot frissítő segédfunkciók
-    void updateVerticalButtonStates();
+    void updateMuteButtonState();
+    void updateAGCButtonState();
+    void updateAttButtonState();
 
     // UI komponensek
     std::shared_ptr<UIVerticalButtonBar> verticalButtonBar;
