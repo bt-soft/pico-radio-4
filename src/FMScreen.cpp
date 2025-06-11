@@ -121,6 +121,12 @@ bool FMScreen::handleRotary(const RotaryEvent &event) {
         // Léptetjük (és el is mentjük a bandtable-ba) a frekvenciát a rotary értéke alapján
         si4735Manager.stepFrequency(event.value);
 
+        // Frekvencia frissítése a kijelzőn
+        if (freqDisplayComp) {
+            uint16_t currentRadioFreq = si4735Manager.getCurrentBand().currFreq;
+            freqDisplayComp->setFrequency(currentRadioFreq);
+        }
+
         return true;
     }
 
@@ -129,22 +135,10 @@ bool FMScreen::handleRotary(const RotaryEvent &event) {
 }
 
 /**
- * @brief Loop hívás felülírása
- * animációs vagy egyéb saját logika végrehajtására
- * @note Ez a metódus nem hívja meg a gyerek komponensek loop-ját, csak saját logikát tartalmaz.
+ * @brief Loop hívás felülírása animációs vagy egyéb saját logika végrehajtására
+ * @note Ez a metódus NEM hívja meg a gyerek komponensek loop-ját, csak saját logikát tartalmaz.
  */
 void FMScreen::handleOwnLoop() {
-    // Frekvencia frissítése, ha változott
-    static uint16_t lastDisplayedFreq = 0;
-    uint16_t currentRadioFreq = si4735Manager.getCurrentBand().currFreq;
-
-    if (currentRadioFreq != lastDisplayedFreq) {
-        if (freqDisplayComp) {
-            freqDisplayComp->setFrequency(currentRadioFreq);
-        }
-        lastDisplayedFreq = currentRadioFreq;
-    }
-
     // S-Meter frissítése
     if (smeterComp) {
 
