@@ -27,7 +27,7 @@ struct ColorScheme {
 
     static ColorScheme defaultScheme() {
         return {
-            TFT_DARKGREY,  // background
+            TFT_DARKGREY,  // background (pl. dialógok háttere)
             TFT_WHITE,     // foreground
             TFT_LIGHTGREY, // border
             TFT_BLUE,      // pressedBackground

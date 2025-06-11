@@ -1,12 +1,17 @@
 #include "FMScreen.h"
 #include "FreqDisplay.h" // Új include
 #include "SMeter.h"
+#include "StatusLine.h"     // StatusLine include
 #include "UIColorPalette.h" // TFT_COLOR_BACKGROUND makróhoz
 
+/**
+ * @brief FMScreen konstruktor
+ * @param tft TFT display referencia
+ * @param si4735Manager Si4735Manager referencia
+ *
+ */
 FMScreen::FMScreen(TFT_eSPI &tft, Si4735Manager &si4735Manager) : UIScreen(tft, SCREEN_NAME_FM), si4735Manager(si4735Manager) {
-
     si4735Manager.init(); // Si4735 inicializálása
-
     layoutComponents();
 }
 
@@ -14,6 +19,32 @@ FMScreen::FMScreen(TFT_eSPI &tft, Si4735Manager &si4735Manager) : UIScreen(tft, 
  * @brief UI komponensek létrehozása és elhelyezése
  */
 void FMScreen::layoutComponents() {
+
+    // StatusLine komponens létrehozása - bal felső sarok (0,0)
+    statusLineComp = std::make_shared<StatusLine>(tft, 0, 0);
+    addChild(statusLineComp);
+
+    // FreqDisplay komponens
+    uint16_t freqDisplayHeight = 38 + 20 + 10; // Szegmens + unit + aláhúzás + margók (becslés)
+    uint16_t freqDisplayWidth = 240;           // Becsült szélesség
+    uint16_t freqDisplayX = (tft.width() - freqDisplayWidth) / 2;
+    uint16_t freqDisplayY = 60;
+    Rect freqBounds(freqDisplayX, freqDisplayY, freqDisplayWidth, freqDisplayHeight);
+    freqDisplayComp = std::make_shared<FreqDisplay>(tft, freqBounds, si4735Manager);
+    addChild(freqDisplayComp);
+
+    // S-Meter komponens
+    uint16_t smeterX = 2;                                     // Kis margó balról
+    uint16_t smeterY = freqDisplayY + freqDisplayHeight + 10; // FreqDisplay alatt 10px réssel
+    uint16_t smeterWidth = 240;                               // S-Meter szélessége
+    uint16_t smeterHeight = 60;                               // S-Meter magassága (becsült)
+    Rect smeterBounds(smeterX, smeterY, smeterWidth, smeterHeight);
+    ColorScheme smeterColors = ColorScheme::defaultScheme();
+    smeterColors.background = TFT_COLOR_BACKGROUND; // Fekete háttér
+    smeterComp = std::make_shared<SMeter>(tft, smeterBounds, smeterColors);
+    addChild(smeterComp);
+
+    //--- Gombok létrehozása ---
     const int16_t screenHeight = tft.height();
     const int16_t buttonHeight = UIButton::DEFAULT_BUTTON_HEIGHT;
     const int16_t gap = 3;
@@ -75,26 +106,6 @@ void FMScreen::layoutComponents() {
             }
         });
     addChild(setupButton);
-
-    // FreqDisplay komponens
-    uint16_t freqDisplayHeight = 38 + 20 + 10; // Szegmens + unit + aláhúzás + margók (becslés)
-    uint16_t freqDisplayWidth = 240;           // Becsült szélesség
-    uint16_t freqDisplayX = (tft.width() - freqDisplayWidth) / 2;
-    uint16_t freqDisplayY = 60;
-    Rect freqBounds(freqDisplayX, freqDisplayY, freqDisplayWidth, freqDisplayHeight);
-    freqDisplayComp = std::make_shared<FreqDisplay>(tft, freqBounds, si4735Manager);
-    addChild(freqDisplayComp);
-
-    // S-Meter komponens
-    uint16_t smeterX = 2;                                     // Kis margó balról
-    uint16_t smeterY = freqDisplayY + freqDisplayHeight + 10; // FreqDisplay alatt 10px réssel
-    uint16_t smeterWidth = 240;                               // S-Meter szélessége
-    uint16_t smeterHeight = 60;                               // S-Meter magassága (becsült)
-    Rect smeterBounds(smeterX, smeterY, smeterWidth, smeterHeight);
-    ColorScheme smeterColors = ColorScheme::defaultScheme();
-    smeterColors.background = TFT_COLOR_BACKGROUND; // Fekete háttér
-    smeterComp = std::make_shared<SMeter>(tft, smeterBounds, smeterColors);
-    addChild(smeterComp);
 }
 
 /**

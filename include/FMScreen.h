@@ -4,6 +4,7 @@
 #include "FreqDisplay.h"
 #include "SMeter.h"
 #include "Si4735Manager.h"
+#include "StatusLine.h"
 #include "UIButton.h"
 #include "UIScreen.h"
 
@@ -15,6 +16,9 @@
 class FMScreen : public UIScreen {
   private:
     Si4735Manager &si4735Manager;
+
+    // Állapotsor komponens
+    std::shared_ptr<StatusLine> statusLineComp;
 
     // Frekvencia kijelző komponens
     std::shared_ptr<FreqDisplay> freqDisplayComp;

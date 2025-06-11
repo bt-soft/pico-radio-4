@@ -179,12 +179,14 @@ class SMeter : public UIComponent {
      * S-Meter skála kirajzolása (a statikus részek: vonalak, számok).
      * Ezt általában egyszer kell meghívni a képernyő inicializálásakor.
      */
-    void drawSmeterScale(); /**
-                             * S-Meter érték és RSSI/SNR szöveg megjelenítése.
-                             * @param rssi Aktuális RSSI érték (0–127 dBμV).
-                             * @param snr Aktuális SNR érték (0–127 dB).
-                             * @param isFMMode Igaz, ha FM módban vagyunk, hamis egyébként (AM/SSB/CW).
-                             */
+    void drawSmeterScale();
+
+    /**
+     * S-Meter érték és RSSI/SNR szöveg megjelenítése.
+     * @param rssi Aktuális RSSI érték (0–127 dBμV).
+     * @param snr Aktuális SNR érték (0–127 dB).
+     * @param isFMMode Igaz, ha FM módban vagyunk, hamis egyébként (AM/SSB/CW).
+     */
     void showRSSI(uint8_t rssi, uint8_t snr, bool isFMMode);
 
     // === UIComponent felülírt metódusok ===
@@ -198,6 +200,13 @@ class SMeter : public UIComponent {
      * @return false, mert az SMeter nem interaktív
      */
     virtual bool handleTouch(const TouchEvent &event) override { return false; }
+
+  protected:
+    /**
+     * @brief Vizuális lenyomott visszajelzés letiltása
+     * @return false - ez a komponens nem ad vizuális visszajelzést lenyomásra
+     */
+    virtual bool allowsVisualPressedFeedback() const override { return false; }
 };
 
 #endif
