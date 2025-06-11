@@ -4,6 +4,8 @@
 #ifndef __VERTICAL_BUTTON_CONFIGS_H
 #define __VERTICAL_BUTTON_CONFIGS_H
 
+#include "IScreenManager.h"
+#include "Si4735Manager.h"
 #include "UIVerticalButtonBar.h"
 #include "rtVars.h"
 
@@ -12,7 +14,7 @@
  */
 namespace VerticalButtonIDs {
 // FM Screen gombok (10-19)
-namespace FM {
+namespace FMScreenButtons {
 static constexpr uint8_t MUTE = 10;
 static constexpr uint8_t VOLUME = 11;
 static constexpr uint8_t AGC = 12;
@@ -21,10 +23,10 @@ static constexpr uint8_t SQUELCH = 14;
 static constexpr uint8_t FREQ = 15;
 static constexpr uint8_t SETUP = 16;
 static constexpr uint8_t MEMO = 17;
-} // namespace FM
+} // namespace FMScreenButtons
 
 // AM Screen gombok (20-29)
-namespace AM {
+namespace AMScreenButtons {
 static constexpr uint8_t MUTE = 20;
 static constexpr uint8_t VOLUME = 21;
 static constexpr uint8_t AGC = 22;
@@ -33,10 +35,10 @@ static constexpr uint8_t BANDWIDTH = 24;
 static constexpr uint8_t FREQ = 25;
 static constexpr uint8_t SETUP = 26;
 static constexpr uint8_t MEMO = 27;
-} // namespace AM
+} // namespace AMScreenButtons
 
 // SSB Screen gombok (30-39)
-namespace SSB {
+namespace SSBScreenButtons {
 static constexpr uint8_t MUTE = 30;
 static constexpr uint8_t VOLUME = 31;
 static constexpr uint8_t AGC = 32;
@@ -46,7 +48,7 @@ static constexpr uint8_t BANDWIDTH = 35;
 static constexpr uint8_t FREQ = 36;
 static constexpr uint8_t SETUP = 37;
 static constexpr uint8_t MEMO = 38;
-} // namespace SSB
+} // namespace SSBScreenButtons
 } // namespace VerticalButtonIDs
 
 /**
