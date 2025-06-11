@@ -1,0 +1,299 @@
+/**
+ * @file AMScreen.h
+ * @brief AM rádió vezérlő képernyő osztály definíció
+ * @details Event-driven gombállapot kezeléssel és optimalizált teljesítménnyel
+ *
+ * Fő komponensek:
+ * - AM/MW/LW/SW frekvencia hangolás és megjelenítés
+ * - S-Meter (jelerősség) valós idejű frissítés
+ * - Közös függőleges gombsor (8 funkcionális gomb) - FMScreen-nel megegyező
+ * - Vízszintes gombsor (3 navigációs gomb) - FM gombbal
+ * - Event-driven architektúra (nincs folyamatos polling)
+ *
+ * @author Rádió projekt
+ * @version 2.0 - Event-driven architecture
+ */
+
+#ifndef __AM_SCREEN_H
+#define __AM_SCREEN_H
+#include "UIButton.h"
+#include "UIHorizontalButtonBar.h"
+#include "UIScreen.h"
+#include "UIVerticalButtonBar.h"
+
+/**
+ * @class AMScreen
+ * @brief AM rádió vezérlő képernyő implementáció
+ * @details Ez az osztály kezeli az AM családú rádiók összes vezérlő funkcióját:
+ *
+ * **Event-driven architektúra:**
+ * - Gombállapotok CSAK aktiváláskor szinkronizálódnak
+ * - NINCS folyamatos polling a loop ciklusban
+ * - Optimalizált teljesítmény és hatékonyság
+ *
+ * **UI komponensek:**
+ * - Frekvencia kijelző (közép)
+ * - S-Meter jelerősség mérő (alul)
+ * - 8 funkcionális gomb (jobb oldal) - Közös FMScreen-nel
+ * - 3 navigációs gomb (alsó sor) - FM gombot tartalmaz
+ *
+ * **Támogatott band-ek:**
+ * - MW (Medium Wave) - 520-1710 kHz
+ * - LW (Long Wave) - 150-519 kHz
+ * - SW (Short Wave) - 2.3-26.1 MHz
+ */
+class AMScreen : public UIScreen {
+
+  public:
+    // ===================================================================
+    // Konstruktor és destruktor
+    // ===================================================================
+
+    /**
+     * @brief AMScreen konstruktor - AM rádió képernyő inicializálás
+     * @param tft TFT display referencia
+     * @param si4735Manager Si4735 rádió chip kezelő referencia
+     *
+     * @details Automatikusan végrehajtja:
+     * - Si4735 chip inicializálás AM módba
+     * - UI komponensek layout létrehozás
+     * - Event-driven gombkezelés beállítás
+     * - MW band aktiválás alapértelmezettként
+     */
+    AMScreen(TFT_eSPI &tft, Si4735Manager &si4735Manager);
+
+    /**
+     * @brief Virtuális destruktor - Automatikus cleanup
+     */
+    virtual ~AMScreen() = default;
+
+    // ===================================================================
+    // UIScreen interface megvalósítás
+    // ===================================================================
+
+    /**
+     * @brief Rotary encoder eseménykezelés - AM frekvencia hangolás
+     * @param event Rotary encoder esemény (forgatás irány, érték, gombnyomás)
+     * @return true ha sikeresen kezelte az eseményt, false egyébként
+     *
+     * @details AM frekvencia hangolási logika:
+     * - Rotary forgatás → frekvencia léptetés (AM band-nek megfelelően)
+     * - Automatikus Si4735 beállítás és band tábla mentés
+     * - Frekvencia kijelző azonnali frissítése
+     * - Dialógus aktív esetén esemény továbbítása
+     * - MW: 9/10 kHz lépések, LW: 1 kHz, SW: 5 kHz lépések
+     */
+    virtual bool handleRotary(const RotaryEvent &event) override;
+
+    /**
+     * @brief Folyamatos loop hívás - Optimalizált teljesítmény
+     * @details Event-driven architektúra - NINCS gombállapot polling!
+     *
+     * Csak valóban szükséges frissítések:
+     * - S-Meter (jelerősség) valós idejű frissítése AM módban
+     *
+     * Gombállapotok frissítése CSAK:
+     * - Képernyő aktiválásakor (activate())
+     * - Specifikus eseményekkor (eseménykezelőkben)
+     */
+    virtual void handleOwnLoop() override;
+
+    /**
+     * @brief Statikus képernyő tartalom kirajzolása
+     * @details Csak a statikus UI elemeket rajzolja:
+     * - S-Meter skála (vonalak, számok) AM módban
+     *
+     * A dinamikus tartalom (pl. S-Meter érték) a loop()-ban frissül.
+     */
+    virtual void drawContent() override;
+
+    /**
+     * @brief Képernyő aktiválása - Event-driven gombállapot szinkronizálás
+     * @details Ez az EGYETLEN hely, ahol gombállapotokat szinkronizáljuk!
+     *
+     * Szinkronizálási pontok:
+     * - Mute gomb ↔ rtv::muteStat állapot
+     * - FM gomb ↔ aktuális band típus (AM vs FM)
+     * - AGC/Attenuator gombok ↔ Si4735 állapotok (TODO)
+     * - Bandwidth gomb ↔ AM szűrő beállítások
+     */
+    virtual void activate() override;
+
+  private:
+    // ===================================================================
+    // UI komponensek layout és management
+    // ===================================================================
+
+    /**
+     * @brief UI komponensek létrehozása és képernyőn való elhelyezése
+     * @details Létrehozza és pozicionálja az összes UI elemet:
+     * - Állapotsor (felül)
+     * - Frekvencia kijelző (középen)
+     * - S-Meter (jelerősség mérő)
+     * - Függőleges gombsor (jobb oldal) - Közös FMScreen-nel
+     * - Vízszintes gombsor (alul) - FM gombbal
+     */
+    void layoutComponents();
+
+    /**
+     * @brief Függőleges gombsor létrehozása - Jobb oldali funkcionális gombok
+     * @details 8 gomb elhelyezése függőleges elrendezésben - KÖZÖS FMScreen-nel:
+     * Mute, Volume, AGC, Attenuator, Squelch, Frequency, Setup, Memory
+     *
+     * Megjegyzés: Ez pontosan ugyanaz a gombsor, mint az FMScreen-ben,
+     * csak az AM/MW/LW/SW band-ekhez optimalizált eseménykezelőkkel
+     */
+    void createVerticalButtonBar();
+
+    /**
+     * @brief Vízszintes gombsor létrehozása - Alsó navigációs gombok
+     * @details 3 navigációs gomb elhelyezése vízszintes elrendezésben:
+     * FM, Test, Setup (FM gomb az FMScreen-re navigál)
+     */
+    void createHorizontalButtonBar();
+
+    // ===================================================================
+    // Event-driven gombállapot szinkronizálás
+    // ===================================================================
+
+    /**
+     * @brief Függőleges gombsor állapotainak szinkronizálása
+     * @details CSAK aktiváláskor hívódik meg! Event-driven architektúra.
+     *
+     * Szinkronizált állapotok (AM specifikus):
+     * - Mute gomb ↔ rtv::muteStat
+     * - AGC gomb ↔ Si4735 AGC állapot (AM-ben gyakran használt)
+     * - Attenuator gomb ↔ Si4735 attenuator állapot
+     * - Bandwidth gomb ↔ AM szűrő szélesség (1.8kHz, 2kHz, 2.5kHz, 4kHz)
+     */
+    void updateVerticalButtonStates();
+
+    /**
+     * @brief Vízszintes gombsor állapotainak szinkronizálása
+     * @details CSAK aktiváláskor hívódik meg! Event-driven architektúra.
+     *
+     * Szinkronizált állapotok:
+     * - FM gomb ↔ aktuális band típus (AM vs FM)
+     */
+    void updateHorizontalButtonStates();
+
+    // ===================================================================
+    // Függőleges gomb eseménykezelők - 8 funkcionális gomb (KÖZÖS)
+    // ===================================================================
+
+    /**
+     * @brief MUTE gomb eseménykezelő - Audió némítás BE/KI kapcsolás
+     * @param event Gomb esemény (On/Off állapotváltozás)
+     * @details Toggleable gomb: rtv::muteStat és Si4735 audió kimenet kezelése
+     * Azonos logika, mint FMScreen-ben
+     */
+    void handleMuteButton(const UIButton::ButtonEvent &event);
+
+    /**
+     * @brief VOLUME gomb eseménykezelő - Hangerő beállító dialógus
+     * @param event Gomb esemény (Clicked)
+     * @details Pushable gomb: ValueChangeDialog megnyitása hangerő beállításhoz
+     * Azonos logika, mint FMScreen-ben
+     */
+    void handleVolumeButton(const UIButton::ButtonEvent &event);
+
+    /**
+     * @brief AGC gomb eseménykezelő - Automatikus erősítésszabályozás BE/KI
+     * @param event Gomb esemény (On/Off állapotváltozás)
+     * @details Toggleable gomb: Si4735 AGC funkció kezelése
+     * AM-ben gyakran használt funkció (AM jelek változóak)
+     */
+    void handleAGCButton(const UIButton::ButtonEvent &event);
+
+    /**
+     * @brief ATTENUATOR gomb eseménykezelő - RF jel csillapítás BE/KI
+     * @param event Gomb esemény (On/Off állapotváltozás)
+     * @details Toggleable gomb: Si4735 attenuator funkció
+     * AM-ben hasznos erős helyi állomások csillapításához
+     */
+    void handleAttButton(const UIButton::ButtonEvent &event);
+
+    /**
+     * @brief SQUELCH gomb eseménykezelő - Zajzár beállító dialógus
+     * @param event Gomb esemény (Clicked)
+     * @details Pushable gomb: Squelch szint beállító dialógus
+     * AM-ben kevésbé használt (nincs natív squelch), de RSSI alapú implementálható
+     */
+    void handleSquelchButton(const UIButton::ButtonEvent &event);
+
+    /**
+     * @brief FREQUENCY gomb eseménykezelő - Frekvencia közvetlen input dialógus
+     * @param event Gomb esemény (Clicked)
+     * @details Pushable gomb: Numerikus frekvencia input dialógus
+     * AM specifikus tartományokhoz: MW (520-1710), LW (150-519), SW (2300-26100)
+     */
+    void handleFreqButton(const UIButton::ButtonEvent &event);
+
+    /**
+     * @brief SETUP gomb eseménykezelő (függőleges) - Beállítások képernyőre váltás
+     * @param event Gomb esemény (Clicked)
+     * @details Pushable gomb: Setup képernyőre navigálás
+     * Azonos logika, mint FMScreen-ben
+     */
+    void handleSetupButtonVertical(const UIButton::ButtonEvent &event);
+
+    /**
+     * @brief MEMORY gomb eseménykezelő - Memória funkciók dialógus
+     * @param event Gomb esemény (Clicked)
+     * @details Pushable gomb: Állomás memória kezelő dialógus
+     * AM állomások mentése/visszahívása
+     */
+    void handleMemoButton(const UIButton::ButtonEvent &event);
+
+    // ===================================================================
+    // Vízszintes gomb eseménykezelők - 3 navigációs gomb
+    // ===================================================================
+
+    /**
+     * @brief FM gomb eseménykezelő - FM képernyőre váltás
+     * @param event Gomb esemény (Clicked)
+     * @details Pushable gomb: FMScreen-re navigálás
+     * Ellentéte az FMScreen AM gombjának
+     */
+    void handleFMButton(const UIButton::ButtonEvent &event);
+
+    /**
+     * @brief TEST gomb eseménykezelő - Teszt képernyőre váltás
+     * @param event Gomb esemény (Clicked)
+     * @details Pushable gomb: Test és diagnosztikai képernyőre navigálás
+     * Azonos logika, mint FMScreen-ben
+     */
+    void handleTestButton(const UIButton::ButtonEvent &event);
+
+    /**
+     * @brief SETUP gomb eseménykezelő (vízszintes) - Beállítások képernyőre váltás
+     * @param event Gomb esemény (Clicked)
+     * @details Pushable gomb: Setup képernyőre navigálás
+     * Duplikáció a függőleges gombbal (kényelemért)
+     */
+    void handleSetupButtonHorizontal(const UIButton::ButtonEvent &event);
+
+    // ===================================================================
+    // UI komponens objektumok - Smart pointer kezelés
+    // ===================================================================
+
+    /**
+     * @brief Függőleges gombsor komponens
+     * @details Smart pointer a 8 funkcionális gombhoz (jobb oldal)
+     * - Automatikus memória kezelés
+     * - Event-driven eseménykezelés
+     * - KÖZÖS FMScreen-nel: Mute, Volume, AGC, Attenuator, Squelch, Frequency, Setup, Memory
+     */
+    std::shared_ptr<UIVerticalButtonBar> verticalButtonBar;
+
+    /**
+     * @brief Vízszintes gombsor komponens
+     * @details Smart pointer a 3 navigációs gombhoz (alsó sor)
+     * - Automatikus memória kezelés
+     * - Event-driven eseménykezelés
+     * - FM, Test, Setup gombok
+     */
+    std::shared_ptr<UIHorizontalButtonBar> horizontalButtonBar;
+};
+
+#endif // __AM_SCREEN_H

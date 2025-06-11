@@ -1,4 +1,5 @@
 #include "ScreenManager.h"
+#include "AMScreen.h"
 #include "Band.h"
 #include "Config.h"
 #include "EmptyScreen.h"
@@ -18,6 +19,7 @@ extern Si4735Manager *si4735Manager;
  */
 void ScreenManager::registerDefaultScreenFactories() {
     registerScreenFactory(SCREEN_NAME_FM, [](TFT_eSPI &tft_param) { return std::make_shared<FMScreen>(tft_param, *si4735Manager); });
+    registerScreenFactory(SCREEN_NAME_AM, [](TFT_eSPI &tft_param) { return std::make_shared<AMScreen>(tft_param, *si4735Manager); });
     registerScreenFactory(SCREEN_NAME_SCREENSAVER,
                           [](TFT_eSPI &tft_param) { return std::make_shared<ScreenSaverScreen>(tft_param, *si4735Manager); }); // setup képernyők regisztrálása
     registerScreenFactory(SCREEN_NAME_SETUP, [](TFT_eSPI &tft_param) { return std::make_shared<SetupScreen>(tft_param); });
