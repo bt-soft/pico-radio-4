@@ -14,7 +14,7 @@ Successfully completed the refactoring of AM and FM screen implementations to el
   - `handleSetupButtonVertical()`, `handleMemoButton()`
 
 ### ✅ 2. Common Handler Creation
-- **Created** `include/CommonRadioButtonHandlers.h` with static methods for shared button handling logic
+- **Created** `include/CommonVerticalButtonHandlers.h` with static methods for shared button handling logic
 - **Implemented** band-independent logic leveraging Si4735Manager's ability to handle different radio modes automatically
 - **Methods created:**
   - `handleMuteButton()` - manages audio mute state
@@ -28,16 +28,16 @@ Successfully completed the refactoring of AM and FM screen implementations to el
   - `updateMuteButtonState()` - synchronizes mute button state
 
 ### ✅ 3. AMScreen Refactoring (COMPLETE)
-- **Added** `#include "CommonRadioButtonHandlers.h"`
-- **Replaced** all 8 lambda functions in `createVerticalButtonBar()` to call CommonRadioButtonHandlers methods
-- **Updated** `updateVerticalButtonStates()` to use `CommonRadioButtonHandlers::updateMuteButtonState()`
+- **Added** `#include "CommonVerticalButtonHandlers.h"`
+- **Replaced** all 8 lambda functions in `createVerticalButtonBar()` to call CommonVerticalButtonHandlers methods
+- **Updated** `updateVerticalButtonStates()` to use `CommonVerticalButtonHandlers::updateMuteButtonState()`
 - **Removed** all obsolete handler methods from `AMScreen.cpp` (265+ lines of code eliminated)
 - **Removed** all handler declarations from `AMScreen.h` header file
 
 ### ✅ 4. FMScreen Refactoring (COMPLETE)
-- **Added** `#include "CommonRadioButtonHandlers.h"`
-- **Replaced** all 8 lambda functions in `createVerticalButtonBar()` to call CommonRadioButtonHandlers methods
-- **Updated** `updateVerticalButtonStates()` to use `CommonRadioButtonHandlers::updateMuteButtonState()`
+- **Added** `#include "CommonVerticalButtonHandlers.h"`
+- **Replaced** all 8 lambda functions in `createVerticalButtonBar()` to call CommonVerticalButtonHandlers methods
+- **Updated** `updateVerticalButtonStates()` to use `CommonVerticalButtonHandlers::updateMuteButtonState()`
 - **Removed** all obsolete handler methods from `FMScreen.cpp`
 - **Removed** all handler declarations from `FMScreen.h` header file
 
@@ -45,7 +45,7 @@ Successfully completed the refactoring of AM and FM screen implementations to el
 - **Verified** no compilation errors in refactored files
 - **Confirmed** successful build with PlatformIO (`pio run`)
 - **Validated** that all obsolete code has been removed
-- **Ensured** CommonRadioButtonHandlers integration is working correctly
+- **Ensured** CommonVerticalButtonHandlers integration is working correctly
 
 ## Code Reduction Results
 
@@ -55,7 +55,7 @@ Successfully completed the refactoring of AM and FM screen implementations to el
 - **Total duplicated code:** ~530 lines
 
 ### After Refactoring:
-- **CommonRadioButtonHandlers:** ~150 lines (shared implementation)
+- **CommonVerticalButtonHandlers:** ~150 lines (shared implementation)
 - **AMScreen:** Handler code eliminated, only lambda calls remain
 - **FMScreen:** Handler code eliminated, only lambda calls remain
 - **Total shared code:** ~150 lines
@@ -80,7 +80,7 @@ Successfully completed the refactoring of AM and FM screen implementations to el
 
 // AFTER (common handler):
 {FMScreenButtonIDs::MUTE, "Mute", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off,
- [this](const UIButton::ButtonEvent &e) { CommonRadioButtonHandlers::handleMuteButton(e, pSi4735Manager); }}
+ [this](const UIButton::ButtonEvent &e) { CommonVerticalButtonHandlers::handleMuteButton(e, pSi4735Manager); }}
 ```
 
 ### State Synchronization Pattern:
@@ -90,13 +90,13 @@ verticalButtonBar->setButtonState(FMScreenButtonIDs::MUTE,
                                   rtv::muteStat ? UIButton::ButtonState::On : UIButton::ButtonState::Off);
 
 // AFTER (common state handler):
-CommonRadioButtonHandlers::updateMuteButtonState(verticalButtonBar.get(), FMScreenButtonIDs::MUTE);
+CommonVerticalButtonHandlers::updateMuteButtonState(verticalButtonBar.get(), FMScreenButtonIDs::MUTE);
 ```
 
 ## Files Modified
 
 ### ✅ Created:
-- `include/CommonRadioButtonHandlers.h` (new common handler class)
+- `include/CommonVerticalButtonHandlers.h` (new common handler class)
 
 ### ✅ Refactored:
 - `src/AMScreen.cpp` (include added, lambdas updated, obsolete methods removed)
@@ -124,7 +124,7 @@ The refactoring creates a solid foundation for future enhancements:
 
 1. **Additional Screens:** Easy to extend to SSB, DAB, or other radio mode screens
 2. **Horizontal Buttons:** Same pattern can be applied to horizontal button handlers
-3. **Enhanced Features:** New common features can be added to CommonRadioButtonHandlers
+3. **Enhanced Features:** New common features can be added to CommonVerticalButtonHandlers
 4. **Configuration:** Common button behaviors can be made configurable
 
 ## Conclusion

@@ -177,9 +177,8 @@ class AMScreen : public UIScreen {
      */
     void updateHorizontalButtonStates();
 
-    // ===================================================================    // ===================================================================
-    // REFAKTORÁLÁS: Függőleges gomb handler deklarációk eltávolítva!
-    // Most a CommonRadioButtonHandlers osztály statikus metódusait használjuk
+    // ===================================================================    // ===================================================================    // REFAKTORÁLÁS: Függőleges
+    // gomb handler deklarációk eltávolítva! Most a CommonVerticalButtonHandlers osztály statikus metódusait használjuk
     // ===================================================================
 
     // ===================================================================

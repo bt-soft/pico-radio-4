@@ -13,7 +13,7 @@
 
 #include "FMScreen.h"
 #include "Band.h"
-#include "CommonRadioButtonHandlers.h"
+#include "CommonVerticalButtonHandlers.h"
 #include "FreqDisplay.h"
 #include "SMeter.h"
 #include "StatusLine.h"
@@ -262,35 +262,35 @@ void FMScreen::createVerticalButtonBar() {
 
         // 1. MUTE - Toggleable gomb (BE/KI állapottal)
         {FMScreenButtonIDs::MUTE, "Mute", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off,
-         [this](const UIButton::ButtonEvent &e) { CommonRadioButtonHandlers::handleMuteButton(e, pSi4735Manager); }},
+         [this](const UIButton::ButtonEvent &e) { CommonVerticalButtonHandlers::handleMuteButton(e, pSi4735Manager); }},
 
         // 2. VOLUME - Pushable gomb (dialógus megnyitás)
         {FMScreenButtonIDs::VOLUME, "Vol", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
-         [this](const UIButton::ButtonEvent &e) { CommonRadioButtonHandlers::handleVolumeButton(e, pSi4735Manager); }},
+         [this](const UIButton::ButtonEvent &e) { CommonVerticalButtonHandlers::handleVolumeButton(e, pSi4735Manager); }},
 
         // 3. AGC - Toggleable gomb (Automatikus erősítésszabályozás)
         {FMScreenButtonIDs::AGC, "AGC", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off,
-         [this](const UIButton::ButtonEvent &e) { CommonRadioButtonHandlers::handleAGCButton(e, pSi4735Manager); }},
+         [this](const UIButton::ButtonEvent &e) { CommonVerticalButtonHandlers::handleAGCButton(e, pSi4735Manager); }},
 
         // 4. ATTENUATOR - Toggleable gomb (Jel csillapítás)
         {FMScreenButtonIDs::ATT, "Att", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off,
-         [this](const UIButton::ButtonEvent &e) { CommonRadioButtonHandlers::handleAttenuatorButton(e, pSi4735Manager); }},
+         [this](const UIButton::ButtonEvent &e) { CommonVerticalButtonHandlers::handleAttenuatorButton(e, pSi4735Manager); }},
 
         // 5. SQUELCH - Pushable gomb (Zajzár beállító dialógus)
         {FMScreenButtonIDs::SQUELCH, "Sql", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
-         [this](const UIButton::ButtonEvent &e) { CommonRadioButtonHandlers::handleSquelchButton(e, pSi4735Manager); }},
+         [this](const UIButton::ButtonEvent &e) { CommonVerticalButtonHandlers::handleSquelchButton(e, pSi4735Manager); }},
 
         // 6. FREQUENCY - Pushable gomb (Frekvencia input dialógus)
         {FMScreenButtonIDs::FREQ, "Freq", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
-         [this](const UIButton::ButtonEvent &e) { CommonRadioButtonHandlers::handleFrequencyButton(e, pSi4735Manager); }},
+         [this](const UIButton::ButtonEvent &e) { CommonVerticalButtonHandlers::handleFrequencyButton(e, pSi4735Manager); }},
 
         // 7. SETUP - Pushable gomb (Beállítások képernyőre váltás)
         {FMScreenButtonIDs::SETUP, "Setup", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
-         [this](const UIButton::ButtonEvent &e) { CommonRadioButtonHandlers::handleSetupButton(e, getManager()); }},
+         [this](const UIButton::ButtonEvent &e) { CommonVerticalButtonHandlers::handleSetupButton(e, getManager()); }},
 
         // 8. MEMORY - Pushable gomb (Memória funkciók dialógus)
         {FMScreenButtonIDs::MEMO, "Memo", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
-         [this](const UIButton::ButtonEvent &e) { CommonRadioButtonHandlers::handleMemoryButton(e, pSi4735Manager); }}};
+         [this](const UIButton::ButtonEvent &e) { CommonVerticalButtonHandlers::handleMemoryButton(e, pSi4735Manager); }}};
 
     // ===================================================================
     // UIVerticalButtonBar objektum létrehozása és konfiguráció
@@ -324,7 +324,7 @@ void FMScreen::updateVerticalButtonStates() {
     // ===================================================================
     // MUTE gomb állapot szinkronizálása - Common handler használata
     // ===================================================================
-    CommonRadioButtonHandlers::updateMuteButtonState(verticalButtonBar.get(), FMScreenButtonIDs::MUTE);
+    CommonVerticalButtonHandlers::updateMuteButtonState(verticalButtonBar.get(), FMScreenButtonIDs::MUTE);
 
     // ===================================================================
     // AGC gomb állapot szinkronizálása (TODO: implementálásra vár)

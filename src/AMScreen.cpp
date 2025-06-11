@@ -20,7 +20,7 @@
  */
 
 #include "AMScreen.h"
-#include "CommonRadioButtonHandlers.h"
+#include "CommonVerticalButtonHandlers.h"
 #include "defines.h"
 #include "rtVars.h"
 #include "utils.h"
@@ -153,28 +153,28 @@ void AMScreen::createVerticalButtonBar() {
     // Gomb konfigurációk - Event-driven eseménykezelőkkel (REFACTORED)
     // ===================================================================
     std::vector<UIVerticalButtonBar::ButtonConfig> configs = {{AMScreenButtonIDs::MUTE, "Mute", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off,
-                                                               [this](const UIButton::ButtonEvent &e) { CommonRadioButtonHandlers::handleMuteButton(e, pSi4735Manager); }},
+                                                               [this](const UIButton::ButtonEvent &e) { CommonVerticalButtonHandlers::handleMuteButton(e, pSi4735Manager); }},
 
                                                               {AMScreenButtonIDs::VOLUME, "Vol", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
-                                                               [this](const UIButton::ButtonEvent &e) { CommonRadioButtonHandlers::handleVolumeButton(e, pSi4735Manager); }},
+                                                               [this](const UIButton::ButtonEvent &e) { CommonVerticalButtonHandlers::handleVolumeButton(e, pSi4735Manager); }},
 
                                                               {AMScreenButtonIDs::AGC, "AGC", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off,
-                                                               [this](const UIButton::ButtonEvent &e) { CommonRadioButtonHandlers::handleAGCButton(e, pSi4735Manager); }},
+                                                               [this](const UIButton::ButtonEvent &e) { CommonVerticalButtonHandlers::handleAGCButton(e, pSi4735Manager); }},
 
                                                               {AMScreenButtonIDs::ATT, "Att", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off,
-                                                               [this](const UIButton::ButtonEvent &e) { CommonRadioButtonHandlers::handleAttenuatorButton(e, pSi4735Manager); }},
+                                                               [this](const UIButton::ButtonEvent &e) { CommonVerticalButtonHandlers::handleAttenuatorButton(e, pSi4735Manager); }},
 
                                                               {AMScreenButtonIDs::SQUELCH, "Sql", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
-                                                               [this](const UIButton::ButtonEvent &e) { CommonRadioButtonHandlers::handleSquelchButton(e, pSi4735Manager); }},
+                                                               [this](const UIButton::ButtonEvent &e) { CommonVerticalButtonHandlers::handleSquelchButton(e, pSi4735Manager); }},
 
                                                               {AMScreenButtonIDs::FREQ, "Freq", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
-                                                               [this](const UIButton::ButtonEvent &e) { CommonRadioButtonHandlers::handleFrequencyButton(e, pSi4735Manager); }},
+                                                               [this](const UIButton::ButtonEvent &e) { CommonVerticalButtonHandlers::handleFrequencyButton(e, pSi4735Manager); }},
 
                                                               {AMScreenButtonIDs::SETUP, "Setup", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
-                                                               [this](const UIButton::ButtonEvent &e) { CommonRadioButtonHandlers::handleSetupButton(e, getManager()); }},
+                                                               [this](const UIButton::ButtonEvent &e) { CommonVerticalButtonHandlers::handleSetupButton(e, getManager()); }},
 
                                                               {AMScreenButtonIDs::MEMO, "Memo", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
-                                                               [this](const UIButton::ButtonEvent &e) { CommonRadioButtonHandlers::handleMemoryButton(e, pSi4735Manager); }}};
+                                                               [this](const UIButton::ButtonEvent &e) { CommonVerticalButtonHandlers::handleMemoryButton(e, pSi4735Manager); }}};
 
     // ===================================================================
     // UIVerticalButtonBar objektum létrehozása és konfiguráció
@@ -233,14 +233,10 @@ void AMScreen::createHorizontalButtonBar() {
  */
 void AMScreen::updateVerticalButtonStates() {
     if (!verticalButtonBar)
-        return;
-
-    // ✅ KÖZÖS KEZELŐ HASZNÁLATA - Nincs kód duplikáció!
-    CommonRadioButtonHandlers::updateMuteButtonState(verticalButtonBar.get(), AMScreenButtonIDs::MUTE);
-
-    // TODO: További közös állapot szinkronizálók hozzáadása
-    // CommonRadioButtonHandlers::updateAGCButtonState(verticalButtonBar.get(), AMScreenButtonIDs::AGC, pSi4735Manager);
-    // CommonRadioButtonHandlers::updateAttenuatorButtonState(verticalButtonBar.get(), AMScreenButtonIDs::ATT, pSi4735Manager);
+        return;                                                                                            // ✅ KÖZÖS KEZELŐ HASZNÁLATA - Nincs kód duplikáció!
+    CommonVerticalButtonHandlers::updateMuteButtonState(verticalButtonBar.get(), AMScreenButtonIDs::MUTE); // TODO: További közös állapot szinkronizálók hozzáadása
+    // CommonVerticalButtonHandlers::updateAGCButtonState(verticalButtonBar.get(), AMScreenButtonIDs::AGC, pSi4735Manager);
+    // CommonVerticalButtonHandlers::updateAttenuatorButtonState(verticalButtonBar.get(), AMScreenButtonIDs::ATT, pSi4735Manager);
 }
 
 /**
@@ -264,7 +260,7 @@ void AMScreen::updateHorizontalButtonStates() {
 
 // ===================================================================
 // REFAKTORÁLÁS: A függőleges gomb handlereket eltávolítottuk!
-// Most a CommonRadioButtonHandlers osztály statikus metódusait használjuk
+// Most a CommonVerticalButtonHandlers osztály statikus metódusait használjuk
 // ===================================================================
 
 // =====================================================================

@@ -1,6 +1,6 @@
 /**
- * @file CommonRadioButtonHandlers.h
- * @brief Közös gombkezelő osztály FM és AM képernyőkhöz
+ * @file CommonVerticalButtonHandlers.h
+ * @brief Közös függőleges gombkezelő osztály FM és AM képernyőkhöz
  * @details Megszünteti a kód duplikációt a két képernyő között
  *
  * **Probléma**:
@@ -17,8 +17,8 @@
  * @version 1.0 - Common handlers refactoring
  */
 
-#ifndef __COMMON_RADIO_BUTTON_HANDLERS_H
-#define __COMMON_RADIO_BUTTON_HANDLERS_H
+#ifndef __COMMON_VERTICAL_BUTTON_HANDLERS_H
+#define __COMMON_VERTICAL_BUTTON_HANDLERS_H
 
 #include "IScreenManager.h"
 #include "Si4735Manager.h"
@@ -29,8 +29,8 @@
 #include "utils.h"
 
 /**
- * @brief Közös rádió gombkezelő osztály
- * @details Statikus metódusok gyűjteménye a gyakori gombkezelési logikákhoz
+ * @brief Közös függőleges gombkezelő osztály
+ * @details Statikus metódusok gyűjteménye a gyakori függőleges gombkezelési logikákhoz
  *
  * **Előnyök:**
  * - Nincs kód duplikáció FM és AM képernyők között
@@ -38,7 +38,7 @@
  * - Band-független implementáció
  * - Si4735Manager automatikusan kezeli a chip állapotokat
  */
-class CommonRadioButtonHandlers {
+class CommonVerticalButtonHandlers {
   public:
     // =====================================================================
     // Közös gombkezelő metódusok
@@ -52,11 +52,11 @@ class CommonRadioButtonHandlers {
      */
     static void handleMuteButton(const UIButton::ButtonEvent &event, Si4735Manager *si4735Manager) {
         if (event.state == UIButton::EventButtonState::On) {
-            DEBUG("CommonHandler: Mute ON\n");
+            DEBUG("CommonVerticalHandler: Mute ON\n");
             rtv::muteStat = true;
             si4735Manager->getSi4735().setAudioMute(true);
         } else if (event.state == UIButton::EventButtonState::Off) {
-            DEBUG("CommonHandler: Mute OFF\n");
+            DEBUG("CommonVerticalHandler: Mute OFF\n");
             rtv::muteStat = false;
             si4735Manager->getSi4735().setAudioMute(false);
         }
@@ -70,7 +70,7 @@ class CommonRadioButtonHandlers {
      */
     static void handleVolumeButton(const UIButton::ButtonEvent &event, Si4735Manager *si4735Manager) {
         if (event.state == UIButton::EventButtonState::Clicked) {
-            DEBUG("CommonHandler: Volume adjustment dialog requested\n");
+            DEBUG("CommonVerticalHandler: Volume adjustment dialog requested\n");
             // TODO: Hangerő beállító dialógus megjelenítése
             // showVolumeDialog(si4735Manager);
         }
@@ -84,11 +84,11 @@ class CommonRadioButtonHandlers {
      */
     static void handleAGCButton(const UIButton::ButtonEvent &event, Si4735Manager *si4735Manager) {
         if (event.state == UIButton::EventButtonState::On) {
-            DEBUG("CommonHandler: AGC ON\n");
+            DEBUG("CommonVerticalHandler: AGC ON\n");
             // TODO: Si4735 AGC bekapcsolása (band-független)
             // si4735Manager->setAGC(true);
         } else if (event.state == UIButton::EventButtonState::Off) {
-            DEBUG("CommonHandler: AGC OFF\n");
+            DEBUG("CommonVerticalHandler: AGC OFF\n");
             // TODO: Si4735 AGC kikapcsolása
             // si4735Manager->setAGC(false);
         }
@@ -102,11 +102,11 @@ class CommonRadioButtonHandlers {
      */
     static void handleAttenuatorButton(const UIButton::ButtonEvent &event, Si4735Manager *si4735Manager) {
         if (event.state == UIButton::EventButtonState::On) {
-            DEBUG("CommonHandler: Attenuator ON\n");
+            DEBUG("CommonVerticalHandler: Attenuator ON\n");
             // TODO: Si4735 attenuator bekapcsolása
             // si4735Manager->setAttenuator(true);
         } else if (event.state == UIButton::EventButtonState::Off) {
-            DEBUG("CommonHandler: Attenuator OFF\n");
+            DEBUG("CommonVerticalHandler: Attenuator OFF\n");
             // TODO: Si4735 attenuator kikapcsolása
             // si4735Manager->setAttenuator(false);
         }
@@ -120,7 +120,7 @@ class CommonRadioButtonHandlers {
      */
     static void handleFrequencyButton(const UIButton::ButtonEvent &event, Si4735Manager *si4735Manager) {
         if (event.state == UIButton::EventButtonState::Clicked) {
-            DEBUG("CommonHandler: Frequency input dialog requested\n");
+            DEBUG("CommonVerticalHandler: Frequency input dialog requested\n");
             // TODO: Band-aware frekvencia input dialógus
             // A Si4735Manager tudja, milyen band aktív és milyen tartomány érvényes
             // showFrequencyInputDialog(si4735Manager);
@@ -134,7 +134,7 @@ class CommonRadioButtonHandlers {
      */
     static void handleSetupButton(const UIButton::ButtonEvent &event, IScreenManager *screenManager) {
         if (event.state == UIButton::EventButtonState::Clicked) {
-            DEBUG("CommonHandler: Switching to Setup screen\n");
+            DEBUG("CommonVerticalHandler: Switching to Setup screen\n");
             screenManager->switchToScreen(SCREEN_NAME_SETUP);
         }
     }
@@ -147,7 +147,7 @@ class CommonRadioButtonHandlers {
      */
     static void handleMemoryButton(const UIButton::ButtonEvent &event, Si4735Manager *si4735Manager) {
         if (event.state == UIButton::EventButtonState::Clicked) {
-            DEBUG("CommonHandler: Memory functions dialog requested\n");
+            DEBUG("CommonVerticalHandler: Memory functions dialog requested\n");
             // TODO: Band-aware memória funkciók dialógus
             // A Si4735Manager tudja, milyen band aktív
             // showMemoryDialog(si4735Manager);
@@ -166,7 +166,7 @@ class CommonRadioButtonHandlers {
      */
     static void handleSquelchButton(const UIButton::ButtonEvent &event, Si4735Manager *si4735Manager) {
         if (event.state == UIButton::EventButtonState::Clicked) {
-            DEBUG("CommonHandler: Squelch adjustment dialog requested\n");
+            DEBUG("CommonVerticalHandler: Squelch adjustment dialog requested\n");
 
             // A Si4735Manager tudja, milyen band aktív
             // if (si4735Manager->getCurrentBandType() == FM_BAND) {
@@ -251,4 +251,4 @@ class CommonRadioButtonHandlers {
     }
 };
 
-#endif // __COMMON_RADIO_BUTTON_HANDLERS_H
+#endif // __COMMON_VERTICAL_BUTTON_HANDLERS_H

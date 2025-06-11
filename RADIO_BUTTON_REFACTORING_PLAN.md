@@ -15,12 +15,12 @@ A jelenlegi implementációban **~146 sor duplikált kód** van az AM és FM ké
 - `handleMemoButton()` - 90% azonos (band-specifikus memória)
 - `updateVerticalButtonStates()` - 80% azonos (csak gomb ID-k különböznek)
 
-## ✅ Megoldás - CommonRadioButtonHandlers
+## ✅ Megoldás - CommonVerticalButtonHandlers
 
 ### 1. Közös Kezelő Osztály
 ```cpp
-// include/CommonRadioButtonHandlers.h
-class CommonRadioButtonHandlers {
+// include/CommonVerticalButtonHandlers.h
+class CommonVerticalButtonHandlers {
 public:
     static void handleMuteButton(const UIButton::ButtonEvent &event, Si4735Manager *manager);
     static void handleVolumeButton(const UIButton::ButtonEvent &event, Si4735Manager *manager);
@@ -42,17 +42,17 @@ A Si4735Manager **automatikusan tudja**, milyen band-ben van:
 void AMScreen::createVerticalButtonBar() {
     std::vector<UIVerticalButtonBar::ButtonConfig> configs = {
         {MUTE, "Mute", Toggleable, Off, 
-         [this](auto &e) { CommonRadioButtonHandlers::handleMuteButton(e, pSi4735Manager); }},
+         [this](auto &e) { CommonVerticalButtonHandlers::handleMuteButton(e, pSi4735Manager); }},
          
         {VOLUME, "Vol", Pushable, Off, 
-         [this](auto &e) { CommonRadioButtonHandlers::handleVolumeButton(e, pSi4735Manager); }},
+         [this](auto &e) { CommonVerticalButtonHandlers::handleVolumeButton(e, pSi4735Manager); }},
          
         // ... azonos pattern minden gombra
     };
 }
 
 void AMScreen::updateVerticalButtonStates() {
-    CommonRadioButtonHandlers::updateAllButtonStates(
+    CommonVerticalButtonHandlers::updateAllButtonStates(
         verticalButtonBar.get(), AMScreenButtonIDs{}, pSi4735Manager, getManager());
 }
 ```
@@ -63,7 +63,7 @@ void FMScreen::createVerticalButtonBar() {
     // UGYANAZ A LOGIKA, MINT AM-BEN!
     std::vector<UIVerticalButtonBar::ButtonConfig> configs = {
         {MUTE, "Mute", Toggleable, Off, 
-         [this](auto &e) { CommonRadioButtonHandlers::handleMuteButton(e, pSi4735Manager); }},
+         [this](auto &e) { CommonVerticalButtonHandlers::handleMuteButton(e, pSi4735Manager); }},
          
         // ... ugyanaz a pattern
     };
@@ -71,7 +71,7 @@ void FMScreen::createVerticalButtonBar() {
 
 void FMScreen::updateVerticalButtonStates() {
     // UGYANAZ A METÓDUS, MINT AM-BEN!
-    CommonRadioButtonHandlers::updateAllButtonStates(
+    CommonVerticalButtonHandlers::updateAllButtonStates(
         verticalButtonBar.get(), FMScreenButtonIDs{}, pSi4735Manager, getManager());
 }
 ```
@@ -115,13 +115,13 @@ static void handleSquelchButton(const UIButton::ButtonEvent &event, Si4735Manage
 ## 🛠️ Implementációs Lépések
 
 ### 1. Fájl Létrehozás
-- ✅ `include/CommonRadioButtonHandlers.h` - Közös kezelők
+- ✅ `include/CommonVerticalButtonHandlers.h` - Közös kezelők
 - ✅ `examples/RefactoredScreenExample.cpp` - Példa implementáció
 
 ### 2. AMScreen Refactoring
 ```cpp
 // Jelenlegi handleXXX() metódusok eltávolítása
-// Lambda-k átírása CommonRadioButtonHandlers használatára
+// Lambda-k átírása CommonVerticalButtonHandlers használatára
 ```
 
 ### 3. FMScreen Refactoring  
