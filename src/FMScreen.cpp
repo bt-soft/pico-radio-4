@@ -10,7 +10,7 @@
  * @param si4735Manager Si4735Manager referencia
  *
  */
-FMScreen::FMScreen(TFT_eSPI &tft, Si4735Manager &si4735Manager) : UIScreen(tft, SCREEN_NAME_FM), si4735Manager(si4735Manager) {
+FMScreen::FMScreen(TFT_eSPI &tft, Si4735Manager &si4735Manager) : UIScreen(tft, SCREEN_NAME_FM, &si4735Manager) {
     si4735Manager.init(); // Si4735 inicializálása
     layoutComponents();
 }
@@ -20,9 +20,8 @@ FMScreen::FMScreen(TFT_eSPI &tft, Si4735Manager &si4735Manager) : UIScreen(tft, 
  */
 void FMScreen::layoutComponents() {
 
-    // StatusLine komponens létrehozása - bal felső sarok (0,0)
-    statusLineComp = std::make_shared<StatusLine>(tft, 0, 0);
-    addChild(statusLineComp);
+    // Állapotsor komponens létrehozása
+    UIScreen::createStatusLine();
 
     // FreqDisplay komponens
     uint16_t freqDisplayHeight = 38 + 20 + 10; // Szegmens + unit + aláhúzás + margók (becslés)
@@ -30,8 +29,7 @@ void FMScreen::layoutComponents() {
     uint16_t freqDisplayX = (tft.width() - freqDisplayWidth) / 2;
     uint16_t freqDisplayY = 60;
     Rect freqBounds(freqDisplayX, freqDisplayY, freqDisplayWidth, freqDisplayHeight);
-    freqDisplayComp = std::make_shared<FreqDisplay>(tft, freqBounds, si4735Manager);
-    addChild(freqDisplayComp);
+    UIScreen::createFreqDisplay(freqBounds);
 
     // S-Meter komponens
     uint16_t smeterX = 2;                                     // Kis margó balról
@@ -41,8 +39,7 @@ void FMScreen::layoutComponents() {
     Rect smeterBounds(smeterX, smeterY, smeterWidth, smeterHeight);
     ColorScheme smeterColors = ColorScheme::defaultScheme();
     smeterColors.background = TFT_COLOR_BACKGROUND; // Fekete háttér
-    smeterComp = std::make_shared<SMeter>(tft, smeterBounds, smeterColors);
-    addChild(smeterComp);
+    UIScreen::createSMeter(smeterBounds, smeterColors);
 
     //--- Gombok létrehozása ---
     const int16_t screenHeight = tft.height();
@@ -119,11 +116,11 @@ bool FMScreen::handleRotary(const RotaryEvent &event) {
     if (!isDialogActive() && event.buttonState != RotaryEvent::ButtonState::Clicked) {
 
         // Léptetjük (és el is mentjük a bandtable-ba) a frekvenciát a rotary értéke alapján
-        si4735Manager.stepFrequency(event.value);
+        pSi4735Manager->stepFrequency(event.value);
 
         // Frekvencia frissítése a kijelzőn
         if (freqDisplayComp) {
-            uint16_t currentRadioFreq = si4735Manager.getCurrentBand().currFreq;
+            uint16_t currentRadioFreq = pSi4735Manager->getCurrentBand().currFreq;
             freqDisplayComp->setFrequency(currentRadioFreq);
         }
 
@@ -139,12 +136,11 @@ bool FMScreen::handleRotary(const RotaryEvent &event) {
  * @note Ez a metódus NEM hívja meg a gyerek komponensek loop-ját, csak saját logikát tartalmaz.
  */
 void FMScreen::handleOwnLoop() {
+
     // S-Meter frissítése
     if (smeterComp) {
-
         // Si4735Manager-től lekérjük az RSSI és SNR értékeket cache-elt módon
-        SignalQualityData signalCache = si4735Manager.getSignalQuality();
-
+        SignalQualityData signalCache = pSi4735Manager->getSignalQuality();
         if (signalCache.isValid) {
             smeterComp->showRSSI(signalCache.rssi, signalCache.snr, true /* fm mód*/);
         }

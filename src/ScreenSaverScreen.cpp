@@ -17,20 +17,26 @@
  * @details Inicializálja az animációs színeket és a frekvencia kijelző komponenst
  */
 ScreenSaverScreen::ScreenSaverScreen(TFT_eSPI &tft_ref, Si4735Manager &si4735Manager)
-    : UIScreen(tft_ref, SCREEN_NAME_SCREENSAVER), activationTime(0), lastAnimationUpdateTime(0), animationBorderX(0), animationBorderY(0), currentFrequencyValue(0), posSaver(0),
-      si4735Manager(si4735Manager), lastFullUpdateSaverTime(0) {
+    : UIScreen(tft_ref, SCREEN_NAME_SCREENSAVER, &si4735Manager), //
+      activationTime(0),                                          //
+      lastAnimationUpdateTime(0),                                 //
+      animationBorderX(0),                                        //
+      animationBorderY(0),                                        //
+      currentFrequencyValue(0),                                   //
+      posSaver(0),                                                //
+      lastFullUpdateSaverTime(0) {
 
     // Animációs vonal színeinek előszámítása
     for (uint8_t i = 0; i < ScreenSaverConstants::SAVER_ANIMATION_LINE_LENGTH; i++) {
         // A képlet (31 - abs(i - 31)) értékeket generál 0-tól 31-ig és vissza 0-ig.
         saverLineColors[i] = (ScreenSaverConstants::SAVER_LINE_CENTER - std::abs(static_cast<int>(i) - ScreenSaverConstants::SAVER_LINE_CENTER));
     }
+
     // FreqDisplay inicializálása
     // A kezdeti határok helyőrzők, frissítésre kerülnek az updateFrequencyAndBatteryDisplay-ben
     using namespace ScreenSaverConstants;
-    Rect initialFreqBounds(0, 0, FREQ_DISPLAY_WIDTH, FREQ_DISPLAY_HEIGHT); // Helyőrző
-    freqDisplayComp = std::make_shared<FreqDisplay>(tft, initialFreqBounds, si4735Manager);
-    addChild(freqDisplayComp);
+    Rect initialFreqBounds(0, 0, FREQ_DISPLAY_WIDTH, FREQ_DISPLAY_HEIGHT); // Kezdeti frekvencia kijelző határok
+    UIScreen::createFreqDisplay(initialFreqBounds);
 }
 
 /**
@@ -136,7 +142,7 @@ void ScreenSaverScreen::updateFrequencyAndBatteryDisplay() {
     uint16_t freqDisplayY = animationBorderY + FREQ_DISPLAY_Y_OFFSET;
 
     // Aktuális frekvencia beállítása és FreqDisplay frissítése
-    currentFrequencyValue = si4735Manager.getCurrentBand().currFreq;
+    currentFrequencyValue = pSi4735Manager->getCurrentBand().currFreq;
     if (freqDisplayComp) {
         freqDisplayComp->setBounds(Rect(freqDisplayX, freqDisplayY, FREQ_DISPLAY_WIDTH, FREQ_DISPLAY_HEIGHT));
         freqDisplayComp->setFrequency(currentFrequencyValue);

@@ -1,5 +1,7 @@
 #include "Si4735Runtime.h"
 
+#define SIGNAL_QUALITY_CACHE_TIMEOUT_MS (1 * 1000) // 1 másodperc cache timeout
+
 /**
  * Manage Squelch
  */
@@ -149,7 +151,7 @@ void Si4735Runtime::updateSignalCacheIfNeeded() {
     unsigned long timeDiff = currentTime - signalCache.timestamp;
 
     // Overflow védelem: ha a currentTime kisebb mint timestamp (overflow történt)
-    bool timeoutExpired = (currentTime < signalCache.timestamp) || (timeDiff >= CACHE_TIMEOUT_MS);
+    bool timeoutExpired = (currentTime < signalCache.timestamp) || (timeDiff >= SIGNAL_QUALITY_CACHE_TIMEOUT_MS);
 
     if (!signalCache.isValid || timeoutExpired) {
         updateSignalCache();

@@ -11,7 +11,8 @@
  * Automatikusan teljes képernyő méretet használ (0,0 - tft.width(), tft.height()).
  * Az UIContainerComponent konstruktor hívása után a név beállítása történik.
  */
-UIScreen::UIScreen(TFT_eSPI &tft, const char *name) : UIContainerComponent(tft, {0, 0, static_cast<uint16_t>(tft.width()), static_cast<uint16_t>(tft.height())}), name(name) {}
+UIScreen::UIScreen(TFT_eSPI &tft, const char *name, Si4735Manager *pSi4735Manager)
+    : UIContainerComponent(tft, {0, 0, static_cast<uint16_t>(tft.width()), static_cast<uint16_t>(tft.height())}), name(name), pSi4735Manager(pSi4735Manager) {}
 
 // ================================
 // UIComponent Override Methods - Event Handling és Rendering

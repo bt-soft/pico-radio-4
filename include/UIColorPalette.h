@@ -12,6 +12,7 @@ struct FreqSegmentColors;
 
 // Alap színséma, LED specifikus színek nélkül
 struct ColorScheme {
+    uint16_t screenBackground; // Képernyő háttere
     uint16_t background;
     uint16_t foreground;
     uint16_t border;
@@ -27,18 +28,19 @@ struct ColorScheme {
 
     static ColorScheme defaultScheme() {
         return {
-            TFT_DARKGREY,  // background (pl. dialógok háttere)
-            TFT_WHITE,     // foreground
-            TFT_LIGHTGREY, // border
-            TFT_BLUE,      // pressedBackground
-            TFT_WHITE,     // pressedForeground
-            TFT_WHITE,     // pressedBorder
-            TFT_BLACK,     // disabledBackground
-            TFT_DARKGREY,  // disabledForeground (korábban ledColor értékével egyezett meg a defaultScheme-ben)
-            TFT_DARKGREY,  // disabledBorder (korábban disabledLedColor értékével egyezett meg)
-            TFT_GREEN,     // activeBackground (általános aktív, vagy gomb ON háttér)
-            TFT_WHITE,     // activeForeground
-            TFT_GREEN      // activeBorder (általános aktív, vagy gomb ON keret)
+            TFT_COLOR_BACKGROUND, // screenBackground
+            TFT_DARKGREY,         // background (pl. dialógok háttere)
+            TFT_WHITE,            // foreground
+            TFT_LIGHTGREY,        // border
+            TFT_BLUE,             // pressedBackground
+            TFT_WHITE,            // pressedForeground
+            TFT_WHITE,            // pressedBorder
+            TFT_BLACK,            // disabledBackground
+            TFT_DARKGREY,         // disabledForeground (korábban ledColor értékével egyezett meg a defaultScheme-ben)
+            TFT_DARKGREY,         // disabledBorder (korábban disabledLedColor értékével egyezett meg)
+            TFT_GREEN,            // activeBackground (általános aktív, vagy gomb ON háttér)
+            TFT_WHITE,            // activeForeground
+            TFT_GREEN             // activeBorder (általános aktív, vagy gomb ON keret)
         };
     }
 };

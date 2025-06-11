@@ -1,19 +1,33 @@
 #ifndef __STATUSLINE_H
 #define __STATUSLINE_H
 
+#include "Si4735Manager.h"
 #include "UIComponent.h"
 
 /**
  * @file StatusLine.h
  * @brief StatusLine komponens - állapotsor megjelenítése a képernyő tetején
- * @details Ez a komponens egy állapotsor megjelenítésére szolgál, amely a képernyő tetején helyezkedik el.
+ * @details Ez a komponens 9 kis négyzetet jelenít meg vízszintesen, mindegyikben különböző állapotinformációkkal.
  * A komponens nem reagál touch és rotary eseményekre, csak információ megjelenítésére szolgál.
  */
 class StatusLine : public UIComponent {
   private:
-    // Állandók a komponens méreteihez
-    static constexpr uint16_t STATUS_LINE_WIDTH = 240; // Állapotsor szélessége pixelben
-    static constexpr uint16_t STATUS_LINE_HEIGHT = 16; // Állapotsor magassága pixelben
+    // Négyzetek pozíciói és méretei
+    struct StatusBox {
+        uint16_t x;
+        uint16_t width;
+        uint16_t color;
+    };
+
+#define STATUS_LINE_BOXES 10
+    StatusBox statusBoxes[STATUS_LINE_BOXES];
+    Si4735Manager *pSi4735Manager;
+
+    // Privát rajzoló metódusok
+    void initializeBoxes();
+    void drawBoxFrames();
+    void clearBoxContent(uint8_t boxIndex);
+    void drawTextInBox(uint8_t boxIndex, const char *text, uint16_t textColor);
 
   public:
     /**
@@ -21,20 +35,15 @@ class StatusLine : public UIComponent {
      * @param tft TFT display referencia
      * @param x A komponens X koordinátája
      * @param y A komponens Y koordinátája
+     * @param pSi4735Manager Hivatkozás a Si4735Manager objektumra
      * @param colors Színséma (opcionális, alapértelmezett színsémát használ ha nincs megadva)
      */
-    StatusLine(TFT_eSPI &tft, int16_t x, int16_t y, const ColorScheme &colors = ColorScheme::defaultScheme());
+    StatusLine(TFT_eSPI &tft, int16_t x, int16_t y, Si4735Manager *pSi4735Manager, const ColorScheme &colors = ColorScheme::defaultScheme());
 
     /**
      * @brief Virtuális destruktor
      */
     virtual ~StatusLine() = default;
-
-    /**
-     * @brief A komponens kirajzolása
-     * @details Megrajzolja az állapotsor tartalmát
-     */
-    virtual void draw() override;
 
     /**
      * @brief Touch esemény kezelése
@@ -51,16 +60,22 @@ class StatusLine : public UIComponent {
     virtual bool handleRotary(const RotaryEvent &event) override { return false; };
 
     /**
-     * @brief Komponens szélesség konstans getter
-     * @return Az állapotsor szélessége pixelben
+     * @brief A komponens kirajzolása
+     * @details Megrajzolja az állapotsor kereteit és inicializálja a négyzeteket
      */
-    static constexpr uint16_t getStatusLineWidth() { return STATUS_LINE_WIDTH; }
+    virtual void draw() override;
 
-    /**
-     * @brief Komponens magasság konstans getter
-     * @return Az állapotsor magassága pixelben
-     */
-    static constexpr uint16_t getStatusLineHeight() { return STATUS_LINE_HEIGHT; }
+    // Értékfrissítő metódusok - mindegyik a saját négyzetét frissíti
+    void updateBfo();
+    void updateAgc();
+    void updateMode();
+    void updateBandwidth();
+    void updateBand();
+    void updateStep();
+    void updateAntCap();
+    void updateTemperature();
+    void updateVoltage();
+    void updateStationInMemory(bool isInMemo);
 
   protected:
     /**

@@ -1,7 +1,11 @@
 #ifndef __UI_SCREEN_H
 #define __UI_SCREEN_H
 
+#include "FreqDisplay.h"
 #include "IScreenManager.h"
+#include "SMeter.h"
+#include "Si4735Manager.h"
+#include "StatusLine.h"
 #include "UIContainerComponent.h"
 #include "UIDialogBase.h"
 
@@ -29,6 +33,40 @@ class UIScreen : public UIContainerComponent {
     std::shared_ptr<UIDialogBase> currentDialog;
 
   protected:
+    Si4735Manager *pSi4735Manager;
+
+    // Állapotsor komponens
+    std::shared_ptr<StatusLine> statusLineComp;
+
+    /**
+     * @brief Létrehozza az állapotsor komponenst
+     * A metódust az a képernyő hívja meg, aki akar ilyen komponenst
+     */
+    inline void createStatusLine() {
+        // StatusLine komponens létrehozása - bal felső sarok (0,0)
+        statusLineComp = std::make_shared<StatusLine>(tft, 0, 0, pSi4735Manager);
+        addChild(statusLineComp);
+    }
+
+    // Frekvencia kijelző komponens
+    std::shared_ptr<FreqDisplay> freqDisplayComp;
+
+    /**
+     * @brief Létrehozza a frekvencia kijelző komponenst
+     * @param freqBounds A frekvencia kijelző határai (Rect)
+     */
+    inline void createFreqDisplay(Rect freqBounds) {
+        freqDisplayComp = std::make_shared<FreqDisplay>(tft, freqBounds, pSi4735Manager);
+        addChild(freqDisplayComp);
+    }
+
+    // S-Meter komponens
+    std::shared_ptr<SMeter> smeterComp;
+    inline void createSMeter(Rect smeterBounds, ColorScheme smeterColors = ColorScheme::defaultScheme()) {
+        smeterComp = std::make_shared<SMeter>(tft, smeterBounds, smeterColors);
+        addChild(smeterComp);
+    }
+
     /**
      * @brief a képernyő üres részére klikk kiváltotta újrarajzolás elkerülése
      * @return false, mert a képernyők nem adnak vizuális "lenyomott" visszajelzést a hátterükön
@@ -63,7 +101,7 @@ class UIScreen : public UIContainerComponent {
      *
      * A képernyő teljes display méretet használja automatikusan.
      */
-    UIScreen(TFT_eSPI &tft, const char *name);
+    UIScreen(TFT_eSPI &tft, const char *name, Si4735Manager *si4735Manager = nullptr);
 
     /**
      * @brief Virtuális destruktor

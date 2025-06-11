@@ -70,10 +70,7 @@ class ScreenSaverScreen : public UIScreen {
     uint16_t posSaver;                                                          // Animáció pozíció számláló
     uint8_t saverLineColors[ScreenSaverConstants::SAVER_ANIMATION_LINE_LENGTH]; // Animációs vonal színei
 
-    // UI komponensek és referenciák
-    std::shared_ptr<FreqDisplay> freqDisplayComp; // Frekvencia kijelző komponens
-    uint32_t lastFullUpdateSaverTime;             // Utolsó teljes frissítés időpontja
-    Si4735Manager &si4735Manager;                 // Si4735Manager objektum
+    uint32_t lastFullUpdateSaverTime; // Utolsó teljes frissítés időpontja
 
     /**
      * @brief Animált keret rajzolása
