@@ -1,14 +1,30 @@
 /**
  * @file FMScreen.cpp
  * @brief FM rádió vezérlő képernyő implementáció
- * @details Event-driven gombállapot kezeléssel és optimalizált teljesítménnyel
+ * @details Event-driven gombállapot kezeléssel, optimalizált teljesítménnyel és
+ *          univerzális gomb ID rendszer használatával
  *
- * Fő funkciók:
- * - FM frekvencia hangolás rotary encoder-rel
- * - S-Meter (jelerősség) megjelenítés
- * - Függőleges gombsor: Mute, Volume, AGC, Attenuator, Squelch, Freq, Setup, Memory
- * - Vízszintes gombsor: AM, Test, Setup gombok
+ * **Fő funkciók**:
+ * - FM frekvencia hangolás rotary encoder-rel (87.5-108.0 MHz tartomány)
+ * - S-Meter (jelerősség és SNR) valós idejű megjelenítés FM módban
+ * - Univerzális függőleges gombsor: Mute, Volume, AGC, Attenuator, Squelch, Freq, Setup, Memory
+ * - Vízszintes navigációs gombsor: AM, Test, Setup gombok (képernyőváltáshoz)
  * - Event-driven gombállapot szinkronizálás (csak aktiváláskor és eseményekkor)
+ *
+ * **Architektúra változások (v3.0)**:
+ * - Univerzális gomb ID rendszer használata (CommonVerticalButtons)
+ * - Duplikált gombkezelési kód eliminálása (~25 sor eltávolítva)
+ * - Egyszerűsített factory pattern (template nélkül)
+ * - Közös gombkezelési logika az AMScreen-nel
+ *
+ * **Teljesítmény optimalizációk**:
+ * - NINCS folyamatos gombállapot polling a loop()-ban
+ * - S-Meter 200ms frissítési gyakorisággal
+ * - Frekvencia kijelző azonnali frissítés rotary eseményekkor
+ * - Gombállapotok csak aktiváláskor szinkronizálódnak
+ *
+ * @author Rádió projekt
+ * @version 3.0 - Univerzális gomb ID rendszer (2025.06.11)
  */
 
 #include "FMScreen.h"
@@ -23,16 +39,29 @@
 #include "rtVars.h"
 
 // ===================================================================
-// Gomb azonosítók - Event-driven architektúrához
+// UNIVERZÁLIS GOMB ID RENDSZER - Nincs több duplikáció!
 // ===================================================================
 
+// RÉGI RENDSZER ELTÁVOLÍTVA (2025.06.11):
+// - FMScreenButtonIDs namespace (~8 sor duplikált kód)
+// - FMScreenButtonIDStruct wrapper (~17 sor template komplexitás)
+//
+// ÚJ RENDSZER:
+// - Univerzális VerticalButtonIDs namespace (CommonVerticalButtons.h-ban)
+// - Egyszerűsített factory hívás (template és struct nélkül)
+// - Közös gombkezelési logika az AMScreen-nel
+
 // ===================================================================
-// Horizontal button IDs - Navigációs gombok
+// Vízszintes gombsor azonosítók - Képernyő-specifikus navigáció
 // ===================================================================
 
 /**
- * @brief Vízszintes gombsor gomb azonosítók
- * @details Alsó gombsor - navigációs gombok
+ * @brief Vízszintes gombsor gomb azonosítók (FM képernyő specifikus)
+ * @details Alsó navigációs gombsor - képernyőváltáshoz használt gombok
+ *
+ * **ID tartomány**: 20-22 (nem ütközik a univerzális 10-17 tartománnyal)
+ * **Funkció**: Képernyők közötti navigáció (AM, Test, Setup)
+ * **Gomb típus**: Pushable (egyszeri nyomás → képernyőváltás)
  */
 namespace FMScreenHorizontalButtonIDs {
 static constexpr uint8_t AM_BUTTON = 20;    ///< AM képernyőre váltás (pushable)
@@ -170,10 +199,6 @@ void FMScreen::handleOwnLoop() {
             smeterComp->showRSSI(signalCache.rssi, signalCache.snr, true /* FM mód */);
         }
     }
-
-    // ✅ OPTIMALIZÁLT: Gombállapotok már az eseménykezelőkben és activate()-ben frissülnek
-    // ❌ RÉGI MÓDSZER: updateVerticalButtonStates(); updateHorizontalButtonStates();
-    // Nincs szükség folyamatos pollozásra - Event-driven megközelítés!
 }
 
 // ===================================================================
@@ -236,21 +261,32 @@ void FMScreen::activate() {
  * 8. Memo (Memória funkciók) - Pushable → Dialog
  */
 /**
- * @brief Függőleges gombsor létrehozása - Közös factory használatával
- * @details Egyszerűsített implementáció - a teljes logika áthelyeződött
- * a CommonVerticalButtons::createVerticalButtonBar() metódusba
+ * @brief Függőleges gombsor létrehozása - Univerzális factory pattern használatával
+ * @details Egyszerűsített implementáció az univerzális gomb ID rendszer segítségével.
+ *          A teljes gombkezelési logika a CommonVerticalButtons osztályba került.
+ *
+ * **Változások a korábbi verzióhoz képest**:
+ * - Template paraméter eltávolítva (ButtonIDStruct már nem szükséges)
+ * - 5 paraméterről 4-re csökkentve (buttonIds paraméter eliminálva)
+ * - ~25 sor duplikált kód eltávolítva (FMScreenButtonIDs, FMScreenButtonIDStruct)
+ * - Közös gombkezelési logika az AMScreen-nel
+ *
+ * **Factory hívás**:
+ * - createVerticalButtonBar(tft, screen, si4735Manager, screenManager)
+ * - Automatikus gombkonfiguráció univerzális ID-kkal
+ * - Band-független működés (Si4735Manager kezeli a rádió állapotokat)
  */
 void FMScreen::createVerticalButtonBar() {
     // ===================================================================
-    // Új univerzális factory metódus használata - Nincs template szükséglet!
+    // Univerzális factory metódus - Egyszerűsített hívás
     // ===================================================================
     verticalButtonBar = CommonVerticalButtons::createVerticalButtonBar(tft,            // TFT display referencia
-                                                                       this,           // Screen referencia (lambda capture)
-                                                                       pSi4735Manager, // Si4735 manager referencia
-                                                                       getManager()    // Screen manager referencia
+                                                                       this,           // Screen referencia (lambda capture-hez)
+                                                                       pSi4735Manager, // Si4735 rádió chip manager referencia
+                                                                       getManager()    // Screen manager referencia (navigációhoz)
     );
 
-    // Komponens hozzáadása a képernyőhöz
+    // Gombsor hozzáadása a képernyő komponens hierarchiájához
     addChild(verticalButtonBar);
 }
 
@@ -285,186 +321,6 @@ void FMScreen::updateVerticalButtonStates() {
     // Új univerzális állapot szinkronizáló - Egyszerűsített verzió
     // ===================================================================
     CommonVerticalButtons::updateAllButtonStates(verticalButtonBar.get(), pSi4735Manager, getManager());
-}
-
-// ===================================================================
-// Függőleges gomb eseménykezelők - Event-driven architektúra
-// ===================================================================
-
-/**
- * @brief MUTE gomb eseménykezelő - Audió némítás BE/KI kapcsolás
- * @param event Gomb esemény (On/Off állapotváltozás)
- *
- * @details Toggleable gomb: Minden kattintásra vált BE/KI között
- *
- * Funkciók:
- * - rtv::muteStat globális állapot frissítése
- * - Si4735 chip audió kimenet némítása/engedélyezése
- * - Event-driven: Gomb vizuális állapotát a UIButton automatikusan kezeli
- */
-void FMScreen::handleMuteButton(const UIButton::ButtonEvent &event) {
-    if (event.state == UIButton::EventButtonState::On) {
-        DEBUG("FMScreen: Mute ON - Audio muted\n");
-        rtv::muteStat = true;                           // Globális némítás állapot beállítása
-        pSi4735Manager->getSi4735().setAudioMute(true); // Si4735 chip némítása
-    } else if (event.state == UIButton::EventButtonState::Off) {
-        DEBUG("FMScreen: Mute OFF - Audio enabled\n");
-        rtv::muteStat = false;                           // Globális némítás állapot törlése
-        pSi4735Manager->getSi4735().setAudioMute(false); // Si4735 chip hang engedélyezése
-    }
-
-    // ✅ Event-driven optimalizáció:
-    // A gomb vizuális állapotát a UIButton automatikusan beállítja az eseménykezelés során
-    // Nincs szükség manuális setButtonState() hívásra - a UI automatikusan szinkronban marad
-}
-
-/**
- * @brief VOLUME gomb eseménykezelő - Hangerő beállító dialógus megnyitása
- * @param event Gomb esemény (Clicked)
- *
- * @details Pushable gomb: Minden kattintásra dialógust nyit
- * TODO: ValueChangeDialog implementálása hangerő beállításhoz
- */
-void FMScreen::handleVolumeButton(const UIButton::ButtonEvent &event) {
-    if (event.state == UIButton::EventButtonState::Clicked) {
-        DEBUG("FMScreen: Volume adjustment dialog requested\n");
-
-        // TODO: Hangerő beállító dialógus megjelenítése
-        // Implementálandó funkciók:
-        // - ValueChangeDialog használata
-        // - Si4735 volume beállítás (0-63 tartomány)
-        // - Rotary encoder navigáció a dialógusban
-        // showVolumeDialog();
-    }
-}
-
-/**
- * @brief AGC gomb eseménykezelő - Automatikus erősítésszabályozás BE/KI
- * @param event Gomb esemény (On/Off állapotváltozás)
- *
- * @details Toggleable gomb: AGC (Automatic Gain Control) funkció
- * TODO: Si4735Manager AGC funkciók implementálása
- */
-void FMScreen::handleAGCButton(const UIButton::ButtonEvent &event) {
-    if (event.state == UIButton::EventButtonState::On) {
-        DEBUG("FMScreen: AGC ON - Automatic Gain Control enabled\n");
-
-        // TODO: Si4735 AGC bekapcsolása
-        // Implementálandó funkciók:
-        // - Si4735Manager::setAGC(true) metódus
-        // - AGC paraméterek beállítása
-        // - Állapot mentése a konfigurációba
-        // pSi4735Manager->setAGC(true);
-
-    } else if (event.state == UIButton::EventButtonState::Off) {
-        DEBUG("FMScreen: AGC OFF - Manual gain control\n");
-
-        // TODO: Si4735 AGC kikapcsolása
-        // pSi4735Manager->setAGC(false);
-    }
-}
-
-/**
- * @brief ATTENUATOR gomb eseménykezelő - Jel csillapítás BE/KI
- * @param event Gomb esemény (On/Off állapotváltozás)
- *
- * @details Toggleable gomb: RF attenuator funkció (erős jelek csillapítása)
- * TODO: Si4735Manager Attenuator funkciók implementálása
- */
-void FMScreen::handleAttButton(const UIButton::ButtonEvent &event) {
-    if (event.state == UIButton::EventButtonState::On) {
-        DEBUG("FMScreen: Attenuator ON - RF signal attenuation enabled\n");
-
-        // TODO: Si4735 attenuátor bekapcsolása
-        // Implementálandó funkciók:
-        // - Si4735Manager::setAttenuator(true) metódus
-        // - Attenuator szint beállítása (általában 10-30dB)
-        // - Állapot mentése
-        // pSi4735Manager->setAttenuator(true);
-
-    } else if (event.state == UIButton::EventButtonState::Off) {
-        DEBUG("FMScreen: Attenuator OFF - Full RF sensitivity\n");
-
-        // TODO: Si4735 attenuátor kikapcsolása
-        // pSi4735Manager->setAttenuator(false);
-    }
-}
-
-/**
- * @brief SQUELCH gomb eseménykezelő - Zajzár beállító dialógus
- * @param event Gomb esemény (Clicked)
- *
- * @details Pushable gomb: Squelch (zajzár) szint beállító dialógus
- * TODO: Squelch beállító dialógus implementálása
- */
-void FMScreen::handleSquelchButton(const UIButton::ButtonEvent &event) {
-    if (event.state == UIButton::EventButtonState::Clicked) {
-        DEBUG("FMScreen: Squelch adjustment dialog requested\n");
-
-        // TODO: Zajzár beállító dialógus megjelenítése
-        // Implementálandó funkciók:
-        // - ValueChangeDialog squelch szinthez (0-255)
-        // - RSSI alapú squelch logika
-        // - Valós idejű előnézet a beállítás közben
-        // showSquelchDialog();
-    }
-}
-
-/**
- * @brief FREQUENCY gomb eseménykezelő - Frekvencia közvetlen input
- * @param event Gomb esemény (Clicked)
- *
- * @details Pushable gomb: Frekvencia közvetlen megadása numerikus input-tal
- * TODO: Frekvencia input dialógus implementálása
- */
-void FMScreen::handleFreqButton(const UIButton::ButtonEvent &event) {
-    if (event.state == UIButton::EventButtonState::Clicked) {
-        DEBUG("FMScreen: Direct frequency input dialog requested\n");
-
-        // TODO: Frekvencia input dialógus megjelenítése
-        // Implementálandó funkciók:
-        // - Numerikus input dialógus (88.0 - 108.0 MHz FM tartomány)
-        // - Band límit ellenőrzés
-        // - Frekvencia validáció és beállítás
-        // - Si4735Manager frekvencia váltás
-        // showFrequencyInputDialog();
-    }
-}
-
-/**
- * @brief SETUP gomb eseménykezelő (függőleges) - Beállítások képernyőre váltás
- * @param event Gomb esemény (Clicked)
- *
- * @details Pushable gomb: Setup képernyőre navigálás
- * Azonos funkcionalitás a vízszintes Setup gombbal
- */
-void FMScreen::handleSetupButtonVertical(const UIButton::ButtonEvent &event) {
-    if (event.state == UIButton::EventButtonState::Clicked) {
-        DEBUG("FMScreen: Switching to Setup screen (from vertical button)\n");
-        // ScreenManager-en keresztül képernyő váltás
-        UIScreen::getManager()->switchToScreen(SCREEN_NAME_SETUP);
-    }
-}
-
-/**
- * @brief MEMORY gomb eseménykezelő - Memória funkciók dialógus
- * @param event Gomb esemény (Clicked)
- *
- * @details Pushable gomb: Állomás memória kezelő dialógus
- * TODO: Memória funkciók dialógus implementálása
- */
-void FMScreen::handleMemoButton(const UIButton::ButtonEvent &event) {
-    if (event.state == UIButton::EventButtonState::Clicked) {
-        DEBUG("FMScreen: Memory functions dialog requested\n");
-
-        // TODO: Memória funkciók dialógus megjelenítése
-        // Implementálandó funkciók:
-        // - Aktuális frekvencia mentése memória slotba
-        // - Mentett állomások visszahívása
-        // - Memória slot lista megjelenítése
-        // - Memória slot törlése/szerkesztése
-        // showMemoryDialog();
-    }
 }
 
 // ===================================================================

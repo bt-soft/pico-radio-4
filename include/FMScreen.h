@@ -166,66 +166,6 @@ class FMScreen : public UIScreen {
     void updateHorizontalButtonStates();
 
     // ===================================================================
-    // Függőleges gomb eseménykezelők - 8 funkcionális gomb
-    // ===================================================================
-
-    /**
-     * @brief MUTE gomb eseménykezelő - Audió némítás BE/KI kapcsolás
-     * @param event Gomb esemény (On/Off állapotváltozás)
-     * @details Toggleable gomb: rtv::muteStat és Si4735 audió kimenet kezelése
-     */
-    void handleMuteButton(const UIButton::ButtonEvent &event);
-
-    /**
-     * @brief VOLUME gomb eseménykezelő - Hangerő beállító dialógus
-     * @param event Gomb esemény (Clicked)
-     * @details Pushable gomb: ValueChangeDialog megnyitása hangerő beállításhoz
-     */
-    void handleVolumeButton(const UIButton::ButtonEvent &event);
-
-    /**
-     * @brief AGC gomb eseménykezelő - Automatikus erősítésszabályozás BE/KI
-     * @param event Gomb esemény (On/Off állapotváltozás)
-     * @details Toggleable gomb: Si4735 AGC funkció kezelése (TODO: implementálás)
-     */
-    void handleAGCButton(const UIButton::ButtonEvent &event);
-
-    /**
-     * @brief ATTENUATOR gomb eseménykezelő - RF jel csillapítás BE/KI
-     * @param event Gomb esemény (On/Off állapotváltozás)
-     * @details Toggleable gomb: Si4735 attenuator funkció (TODO: implementálás)
-     */
-    void handleAttButton(const UIButton::ButtonEvent &event);
-
-    /**
-     * @brief SQUELCH gomb eseménykezelő - Zajzár beállító dialógus
-     * @param event Gomb esemény (Clicked)
-     * @details Pushable gomb: Squelch szint beállító dialógus (TODO: implementálás)
-     */
-    void handleSquelchButton(const UIButton::ButtonEvent &event);
-
-    /**
-     * @brief FREQUENCY gomb eseménykezelő - Frekvencia közvetlen input dialógus
-     * @param event Gomb esemény (Clicked)
-     * @details Pushable gomb: Numerikus frekvencia input dialógus (TODO: implementálás)
-     */
-    void handleFreqButton(const UIButton::ButtonEvent &event);
-
-    /**
-     * @brief SETUP gomb eseménykezelő (függőleges) - Beállítások képernyőre váltás
-     * @param event Gomb esemény (Clicked)
-     * @details Pushable gomb: Setup képernyőre navigálás
-     */
-    void handleSetupButtonVertical(const UIButton::ButtonEvent &event);
-
-    /**
-     * @brief MEMORY gomb eseménykezelő - Memória funkciók dialógus
-     * @param event Gomb esemény (Clicked)
-     * @details Pushable gomb: Állomás memória kezelő dialógus (TODO: implementálás)
-     */
-    void handleMemoButton(const UIButton::ButtonEvent &event);
-
-    // ===================================================================
     // Vízszintes gomb eseménykezelők - 3 navigációs gomb
     // ===================================================================
 

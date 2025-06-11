@@ -1,22 +1,31 @@
 /**
  * @file AMScreen.cpp
  * @brief AM rádió vezérlő képernyő implementáció
- * @details Event-driven gombállapot kezeléssel és optimalizált teljesítménnyel
+ * @details Event-driven gombállapot kezeléssel, optimalizált teljesítménnyel és
+ *          univerzális gomb ID rendszer használatával
  *
- * **ARCHITEKTÚRA - Event-driven button state management:**
+ * **ARCHITEKTÚRA - Event-driven button state management**:
  * Ez az implementáció teljes mértékben Event-driven architektúrát használ:
- * - NINCS gombállapot polling a loop ciklusban
+ * - NINCS gombállapot polling a loop ciklusban (teljesítmény optimalizálás)
  * - Gombállapotok CSAK aktiváláskor szinkronizálódnak
  * - Jelentős teljesítményjavulás a korábbi polling megközelítéshez képest
+ * - Univerzális gomb ID rendszer (CommonVerticalButtons) használata
  *
- * **PROJEKTÖSSZETEVŐK:**
- * - Közös függőleges gombsor az FMScreen-nel (8 funkcionális gomb)
+ * **PROJEKTÖSSZETEVŐK**:
+ * - Közös függőleges gombsor az FMScreen-nel (8 univerzális funkcionális gomb)
  * - AM/MW/LW/SW frekvencia hangolás és megjelenítés
- * - S-Meter (jelerősség) valós idejű frissítés AM módban
- * - Vízszintes gombsor FM gombbal az FMScreen-re navigáláshoz
+ * - S-Meter (jelerősség és SNR) valós idejű frissítés AM módban
+ * - Vízszintes navigációs gombsor FM gombbal az FMScreen-re váltáshoz
+ *
+ * **VÁLTOZÁSOK (v3.0 - 2025.06.11)**:
+ * - Univerzális gomb ID rendszer bevezetése
+ * - Duplikált gombkezelési kód eliminálása (~25 sor eltávolítva)
+ * - Template komplexitás megszüntetése (AMScreenButtonIDStruct eltávolítva)
+ * - Közös factory pattern az FMScreen-nel
+ * - Egyszerűsített metódus hívások
  *
  * @author Rádió projekt
- * @version 2.0 - Event-driven architecture
+ * @version 3.0 - Univerzális gomb ID rendszer (2025.06.11)
  */
 
 #include "AMScreen.h"
@@ -27,12 +36,29 @@
 #include <algorithm>
 
 // ===================================================================
-// Horizontal button IDs - Navigációs gombok
+// UNIVERZÁLIS GOMB ID RENDSZER - Nincs több duplikáció!
+// ===================================================================
+
+// RÉGI RENDSZER ELTÁVOLÍTVA (2025.06.11):
+// - AMScreenButtonIDs namespace (~8 sor duplikált kód)
+// - AMScreenButtonIDStruct wrapper (~17 sor template komplexitás)
+//
+// ÚJ RENDSZER:
+// - Univerzális VerticalButtonIDs namespace (CommonVerticalButtons.h-ban)
+// - Egyszerűsített factory hívás (template és struct nélkül)
+// - Közös gombkezelési logika az FMScreen-nel
+
+// ===================================================================
+// Vízszintes gombsor azonosítók - Képernyő-specifikus navigáció
 // ===================================================================
 
 /**
- * @brief Vízszintes gombsor gomb azonosítók
- * @details Alsó gombsor - navigációs gombok
+ * @brief Vízszintes gombsor gomb azonosítók (AM képernyő specifikus)
+ * @details Alsó navigációs gombsor - képernyőváltáshoz használt gombok
+ *
+ * **ID tartomány**: 40-42 (nem ütközik a univerzális 10-17 és FM 20-22 tartománnyal)
+ * **Funkció**: Képernyők közötti navigáció (FM, Test, Setup)
+ * **Gomb típus**: Pushable (egyszeri nyomás → képernyőváltás)
  */
 namespace AMScreenHorizontalButtonIDs {
 static constexpr uint8_t FM_BUTTON = 40;    ///< FM képernyőre váltás (pushable)
@@ -61,52 +87,123 @@ AMScreen::AMScreen(TFT_eSPI &tft, Si4735Manager &si4735Manager) : UIScreen(tft, 
 
 /**
  * @brief Rotary encoder eseménykezelés - AM frekvencia hangolás implementáció
+ * @param event Rotary encoder esemény (forgatás irány, érték, gombnyomás)
+ * @return true ha sikeresen kezelte az eseményt, false egyébként
+ *
+ * @details AM frekvencia hangolás logika (TODO: implementálás szükséges):
+ * - Csak akkor reagál, ha nincs aktív dialógus
+ * - Rotary klikket figyelmen kívül hagyja (más funkciókhoz)
+ * - AM/MW/LW/SW frekvencia léptetés és mentés a band táblába
+ * - Frekvencia kijelző azonnali frissítése
+ * - Hasonló az FMScreen rotary kezeléshez, de AM-specifikus tartományokkal
  */
 bool AMScreen::handleRotary(const RotaryEvent &event) {
-    // Csak forgatás eseményt dolgozzuk fel
+    // Biztonsági ellenőrzés: csak forgatás eseményt dolgozzuk fel
     if (event.direction == RotaryEvent::Direction::None) {
         return false;
     }
 
     // TODO: AM frekvencia hangolás implementálása
-    // Ez az FMScreen rotary kezeléshez hasonló lesz
+    // Ez az FMScreen rotary kezeléshez hasonló lesz, de AM tartományokkal
+    // pSi4735Manager->stepFrequency(event.value);  // AM-specifikus léptetés
+    // if (freqDisplayComp) {
+    //     uint16_t currentRadioFreq = pSi4735Manager->getCurrentBand().currFreq;
+    //     freqDisplayComp->setFrequency(currentRadioFreq);
+    // }
+
     return true;
 }
 
 /**
  * @brief Folyamatos loop hívás - Event-driven optimalizált implementáció
+ * @details Csak valóban szükséges frissítések - NINCS folyamatos gombállapot pollozás!
+ *
+ * Csak az alábbi komponenseket frissíti minden ciklusban:
+ * - S-Meter (jelerősség) - valós idejű adat AM módban
+ *
+ * Gombállapotok frissítése CSAK:
+ * - Képernyő aktiválásakor (activate() metódus)
+ * - Specifikus eseményekkor (eseménykezelőkben)
+ *
+ * **Event-driven előnyök**:
+ * - Jelentős teljesítményjavulás a korábbi polling-hoz képest
+ * - CPU terhelés csökkentése
+ * - Univerzális gombkezelés (CommonVerticalButtons)
  */
 void AMScreen::handleOwnLoop() {
-    // *** NINCS GOMBÁLLAPOT POLLING! ***
-    // Ez az Event-driven architektúra lényege
+    // ===================================================================
+    // *** OPTIMALIZÁLT ARCHITEKTÚRA - NINCS GOMBÁLLAPOT POLLING! ***
+    // ===================================================================
 
-    // S-Meter (jelerősség) frissítése AM módban
+    // S-Meter (jelerősség és SNR) valós idejű frissítése AM módban
     static unsigned long lastSMeterUpdate = 0;
     if (millis() - lastSMeterUpdate > 200) { // 200ms frissítési gyakorisággal
         // TODO: S-Meter megjelenítés frissítése AM módban
+        // if (smeterComp) {
+        //     SignalQualityData signalCache = pSi4735Manager->getSignalQuality();
+        //     if (signalCache.isValid) {
+        //         smeterComp->showRSSI(signalCache.rssi, signalCache.snr, false /* AM mód */);
+        //     }
+        // }
         lastSMeterUpdate = millis();
     }
 }
 
 /**
- * @brief Statikus képernyő tartalom kirajzolása
+ * @brief Statikus képernyő tartalom kirajzolása - AM képernyő specifikus elemek
+ * @details Csak a statikus UI elemeket rajzolja ki (nem változó tartalom):
+ * - S-Meter skála vonalak és számok (AM módhoz optimalizálva)
+ * - Band információs terület (AM/MW/LW/SW jelzők)
+ * - Statikus címkék és szövegek
+ *
+ * A dinamikus tartalom (pl. S-Meter érték, frekvencia) a loop()-ban frissül.
+ *
+ * **TODO implementációk**:
+ * - S-Meter skála: RSSI alapú AM skála (0-60 dB tartomány)
+ * - Band indikátor: Aktuális band típus megjelenítése
+ * - Frekvencia egység: kHz/MHz megfelelő formátumban
  */
 void AMScreen::drawContent() {
-    // TODO: S-Meter skála kirajzolása AM módban
-    // TODO: Band információ terület
-    // TODO: Statikus címkék és szövegek
+    // TODO: S-Meter statikus skála kirajzolása AM módban
+    // if (smeterComp) {
+    //     smeterComp->drawAmeterScale(); // AM-specifikus skála
+    // }
+
+    // TODO: Band információs terület kirajzolása
+    // drawBandInfoArea();
+
+    // TODO: Statikus címkék és UI elemek
+    // drawStaticLabels();
 }
 
 /**
  * @brief Képernyő aktiválása - Event-driven gombállapot szinkronizálás
+ * @details Meghívódik, amikor a felhasználó erre a képernyőre vált.
+ *
+ * Ez az EGYETLEN hely, ahol a gombállapotokat szinkronizáljuk a rendszer állapotával:
+ * - Függőleges gombok: Mute, AGC, Attenuator állapotok
+ * - Vízszintes gombok: Navigációs gombok állapotai
+ *
+ * **Event-driven előnyök**:
+ * - NINCS folyamatos polling a loop()-ban
+ * - Csak aktiváláskor történik szinkronizálás
+ * - Jelentős teljesítményjavulás
+ * - Univerzális gombkezelés (CommonVerticalButtons)
+ *
+ * **Szinkronizált állapotok**:
+ * - MUTE gomb ↔ rtv::muteStat
+ * - AGC gomb ↔ Si4735 AGC állapot (TODO)
+ * - ATTENUATOR gomb ↔ Si4735 attenuator állapot (TODO)
  */
 void AMScreen::activate() {
-    // Alaposztály aktiválás
+    // Alaposztály aktiválás (UI komponens hierarchia)
     UIScreen::activate();
 
-    // *** EGYETLEN GOMBÁLLAPOT SZINKRONIZÁLÁSI PONT ***
-    updateVerticalButtonStates();   // Funkcionális gombok szinkronizálása
-    updateHorizontalButtonStates(); // Navigációs gombok szinkronizálása
+    // ===================================================================
+    // *** EGYETLEN GOMBÁLLAPOT SZINKRONIZÁLÁSI PONT - Event-driven ***
+    // ===================================================================
+    updateVerticalButtonStates();   // Univerzális funkcionális gombok
+    updateHorizontalButtonStates(); // AM-specifikus navigációs gombok
 }
 
 // =====================================================================
@@ -123,21 +220,32 @@ void AMScreen::layoutComponents() {
 }
 
 /**
- * @brief Függőleges gombsor létrehozása - Közös factory használatával
- * @details Egyszerűsített implementáció - a teljes logika áthelyeződött
- * a CommonVerticalButtons::createVerticalButtonBar() metódusba
+ * @brief Függőleges gombsor létrehozása - Univerzális factory pattern használatával
+ * @details Egyszerűsített implementáció az univerzális gomb ID rendszer segítségével.
+ *          A teljes gombkezelési logika a CommonVerticalButtons osztályba került.
+ *
+ * **Változások a korábbi verzióhoz képest**:
+ * - Template paraméter eltávolítva (ButtonIDStruct már nem szükséges)
+ * - 5 paraméterről 4-re csökkentve (buttonIds paraméter eliminálva)
+ * - ~25 sor duplikált kód eltávolítva (AMScreenButtonIDs, AMScreenButtonIDStruct)
+ * - Közös gombkezelési logika az FMScreen-nel
+ *
+ * **Factory hívás**:
+ * - createVerticalButtonBar(tft, screen, si4735Manager, screenManager)
+ * - Automatikus gombkonfiguráció univerzális ID-kkal
+ * - Band-független működés (Si4735Manager kezeli a rádió állapotokat)
  */
 void AMScreen::createVerticalButtonBar() {
     // ===================================================================
-    // Új univerzális factory metódus használata - Nincs template szükséglet!
+    // Univerzális factory metódus - Egyszerűsített hívás
     // ===================================================================
     verticalButtonBar = CommonVerticalButtons::createVerticalButtonBar(tft,            // TFT display referencia
-                                                                       this,           // Screen referencia (lambda capture)
-                                                                       pSi4735Manager, // Si4735 manager referencia
-                                                                       getManager()    // Screen manager referencia
+                                                                       this,           // Screen referencia (lambda capture-hez)
+                                                                       pSi4735Manager, // Si4735 rádió chip manager referencia
+                                                                       getManager()    // Screen manager referencia (navigációhoz)
     );
 
-    // Komponens hozzáadása a képernyőhöz
+    // Gombsor hozzáadása a képernyő komponens hierarchiájához
     addChild(verticalButtonBar);
 }
 
@@ -177,35 +285,66 @@ void AMScreen::createHorizontalButtonBar() {
 }
 
 // =====================================================================
-// Event-driven gombállapot szinkronizálás
+// EVENT-DRIVEN GOMBÁLLAPOT SZINKRONIZÁLÁS - Univerzális rendszer
 // =====================================================================
 
 /**
- * @brief Függőleges gombsor állapotainak szinkronizálása (REFACTORED)
+ * @brief Függőleges gombsor állapotainak szinkronizálása - Univerzális rendszer
+ * @details REFACTORED implementáció az univerzális gomb ID rendszer használatával:
+ *
+ * **Korábbi implementáció problémái**:
+ * - ~20 sor duplikált kód az FMScreen-nel
+ * - Manuális ID átadás minden gombhoz
+ * - Karbantartási nehézségek
+ *
+ * **Új univerzális megoldás**:
+ * - CommonVerticalButtons::updateAllButtonStates() használata
+ * - Automatikus univerzális ID kezelés
+ * - Közös logika az FMScreen-nel
+ * - Csak 3 sor kód a korábbi ~20 helyett
+ *
+ * **Szinkronizált állapotok**:
+ * - MUTE: rtv::muteStat → VerticalButtonIDs::MUTE
+ * - AGC: Si4735 AGC állapot → VerticalButtonIDs::AGC (TODO)
+ * - ATTENUATOR: Si4735 attenuator → VerticalButtonIDs::ATT (TODO)
  */
 void AMScreen::updateVerticalButtonStates() {
     if (!verticalButtonBar)
         return;
 
     // ===================================================================
-    // Új univerzális állapot szinkronizáló - Egyszerűsített verzió
+    // Univerzális állapot szinkronizáló - Egyszerűsített hívás
     // ===================================================================
     CommonVerticalButtons::updateAllButtonStates(verticalButtonBar.get(), pSi4735Manager, getManager());
 }
 
 /**
- * @brief Vízszintes gombsor állapotainak szinkronizálása
+ * @brief Vízszintes gombsor állapotainak szinkronizálása - AM képernyő specifikus
+ * @details Navigációs gombok állapot kezelése:
+ *
+ * **FM gomb állapot logika**:
+ * - Mindig Off állapotban (mivel jelenleg AM képernyőn vagyunk)
+ * - Vizuálisan jelzi, hogy nem FM módban vagyunk
+ * - Kattintásra átváltás FM képernyőre
+ *
+ * **Jövőbeli bővítési lehetőségek**:
+ * - Test gomb állapot kezelése
+ * - Setup gomb állapot kezelése
+ * - Band-specifikus vizuális visszajelzések
  */
 void AMScreen::updateHorizontalButtonStates() {
     if (!horizontalButtonBar)
         return;
 
-    // FM gomb állapot szinkronizálása
+    // FM gomb állapot szinkronizálása (AM képernyőn mindig Off)
     auto fmButton = horizontalButtonBar->getButton(AMScreenHorizontalButtonIDs::FM_BUTTON);
     if (fmButton) {
-        // FM gomb mindig Off állapotban (mi AM képernyőn vagyunk)
+        // FM gomb Off állapotban: jelzi hogy jelenleg AM módban vagyunk
         fmButton->setButtonState(UIButton::ButtonState::Off);
     }
+
+    // További navigációs gombok állapot kezelése itt...
+    // TODO: Test és Setup gombok állapot szinkronizálása szükség szerint
 }
 
 // =====================================================================
