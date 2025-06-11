@@ -1,8 +1,9 @@
 #include "FMScreen.h"
 #include "FreqDisplay.h" // Új include
 #include "SMeter.h"
-#include "StatusLine.h"     // StatusLine include
-#include "UIColorPalette.h" // TFT_COLOR_BACKGROUND makróhoz
+#include "StatusLine.h"            // StatusLine include
+#include "UIColorPalette.h"        // TFT_COLOR_BACKGROUND makróhoz
+#include "UIHorizontalButtonBar.h" // Új include a vízszintes gombokhoz
 #include "UIVerticalButtonBar.h"
 #include "rtVars.h" // rtv::muteStat változóhoz
 
@@ -17,6 +18,13 @@ static constexpr uint8_t FREQ = 15;
 static constexpr uint8_t SETUP = 16;
 static constexpr uint8_t MEMO = 17;
 } // namespace FMScreenButtonIDs
+
+// Vízszintes gomb ID konstansai
+namespace FMScreenHorizontalButtonIDs {
+static constexpr uint8_t AM_BUTTON = 20;
+static constexpr uint8_t TEST_BUTTON = 21;
+static constexpr uint8_t SETUP_BUTTON = 22;
+} // namespace FMScreenHorizontalButtonIDs
 
 /**
  * @brief FMScreen konstruktor
@@ -52,74 +60,12 @@ void FMScreen::layoutComponents() {
     uint16_t smeterHeight = 60;                               // S-Meter magassága (becsült)
     Rect smeterBounds(smeterX, smeterY, smeterWidth, smeterHeight);
     ColorScheme smeterColors = ColorScheme::defaultScheme();
-    smeterColors.background = TFT_COLOR_BACKGROUND; // Fekete háttér
-    UIScreen::createSMeter(smeterBounds, smeterColors);
-
-    // Függőleges gombsor létrehozása
+    smeterColors.background = TFT_COLOR_BACKGROUND;     // Fekete háttér
+    UIScreen::createSMeter(smeterBounds, smeterColors); // Függőleges gombsor létrehozása
     createVerticalButtonBar();
 
-    //--- Gombok létrehozása ---
-    const int16_t screenHeight = tft.height();
-    const int16_t buttonHeight = UIButton::DEFAULT_BUTTON_HEIGHT;
-    const int16_t gap = 3;
-    const int16_t margin = 5;
-    const int16_t buttonWidth = UIButton::DEFAULT_BUTTON_WIDTH;
-    const int16_t buttonY = screenHeight - buttonHeight - margin;
-
-    int16_t currentX = margin;
-
-    // AM gomb létrehozása
-    std::shared_ptr<UIButton> amButton = std::make_shared<UIButton>( //
-        tft,
-        1,                                                  // ID
-        Rect(currentX, buttonY, buttonWidth, buttonHeight), // rect
-        "AM",                                               // label
-        UIButton::ButtonType::Pushable,                     // type
-        UIButton::ButtonState::Disabled,                    // initial state
-        [this](const UIButton::ButtonEvent &event) {        // callback
-            if (event.state == UIButton::EventButtonState::Clicked) {
-                DEBUG("FMScreen: Switching to AM screen\n");
-                // Képernyőváltás AM-re
-                UIScreen::getManager()->switchToScreen(SCREEN_NAME_AM);
-            }
-        });
-    addChild(amButton);
-
-    currentX += buttonWidth + gap;
-
-    // Test gomb létrehozása
-    std::shared_ptr<UIButton> testButton = std::make_shared<UIButton>( //
-        tft,
-        2,                                                  // Id
-        Rect(currentX, buttonY, buttonWidth, buttonHeight), // rect
-        "Test",                                             // label
-        UIButton::ButtonType::Pushable,                     // type
-        [this](const UIButton::ButtonEvent &event) {        // callback
-            if (event.state == UIButton::EventButtonState::Clicked) {
-                DEBUG("FMScreen: Switching to Test screen\n");
-                // Képernyőváltás Test-re
-                UIScreen::getManager()->switchToScreen(SCREEN_NAME_TEST);
-            }
-        });
-    addChild(testButton);
-
-    currentX += buttonWidth + gap;
-
-    // Test gomb létrehozása
-    std::shared_ptr<UIButton> setupButton = std::make_shared<UIButton>( //
-        tft,
-        2,                                                  // Id
-        Rect(currentX, buttonY, buttonWidth, buttonHeight), // rect
-        "Setup",                                            // label
-        UIButton::ButtonType::Pushable,                     // type
-        [this](const UIButton::ButtonEvent &event) {        // callback
-            if (event.state == UIButton::EventButtonState::Clicked) {
-                DEBUG("FMScreen: Switching to Setup screen\n");
-                // Képernyőváltás Setup-re
-                UIScreen::getManager()->switchToScreen(SCREEN_NAME_SETUP);
-            }
-        });
-    addChild(setupButton);
+    // Vízszintes gombsor létrehozása
+    createHorizontalButtonBar();
 }
 
 /**
@@ -312,4 +258,59 @@ void FMScreen::updateVerticalButtonStates() {
     //                                  agcEnabled ? UIButton::ButtonState::On : UIButton::ButtonState::Off);
 
     // További gombállapotok szinkronizálása...
+}
+
+/**
+ * @brief Vízszintes gombsor létrehozása a bal alsó sarokban
+ */
+void FMScreen::createHorizontalButtonBar() {
+    // Gombsor pozíciója - bal alsó sarok
+    const uint16_t buttonBarHeight = 35;
+    const uint16_t buttonBarX = 0;                              // Bal szélhez illesztve
+    const uint16_t buttonBarY = tft.height() - buttonBarHeight; // Alsó szélhez illesztve
+    const uint16_t buttonBarWidth = 220;                        // 3 gomb + margók számára    // Vízszintes gomb konfiguráció
+    std::vector<UIHorizontalButtonBar::ButtonConfig> buttonConfigs = {{FMScreenHorizontalButtonIDs::AM_BUTTON, "AM", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
+                                                                       [this](const UIButton::ButtonEvent &event) { handleAMButton(event); }},
+
+                                                                      {FMScreenHorizontalButtonIDs::TEST_BUTTON, "Test", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
+                                                                       [this](const UIButton::ButtonEvent &event) { handleTestButton(event); }},
+
+                                                                      {FMScreenHorizontalButtonIDs::SETUP_BUTTON, "Setup", UIButton::ButtonType::Pushable,
+                                                                       UIButton::ButtonState::Off,
+                                                                       [this](const UIButton::ButtonEvent &event) { handleSetupButtonHorizontal(event); }}};
+
+    // UIHorizontalButtonBar létrehozása
+    horizontalButtonBar = std::make_shared<UIHorizontalButtonBar>(tft, Rect(buttonBarX, buttonBarY, buttonBarWidth, buttonBarHeight), buttonConfigs,
+                                                                  70, // gomb szélessége
+                                                                  30, // gomb magassága
+                                                                  3   // gombok közötti távolság
+    );
+
+    // Hozzáadás a képernyőhöz
+    addChild(horizontalButtonBar);
+}
+
+// ================================
+// Vízszintes gomb eseménykezelők
+// ================================
+
+void FMScreen::handleAMButton(const UIButton::ButtonEvent &event) {
+    if (event.state == UIButton::EventButtonState::Clicked) {
+        DEBUG("FMScreen: Switching to AM screen\n");
+        UIScreen::getManager()->switchToScreen(SCREEN_NAME_AM);
+    }
+}
+
+void FMScreen::handleTestButton(const UIButton::ButtonEvent &event) {
+    if (event.state == UIButton::EventButtonState::Clicked) {
+        DEBUG("FMScreen: Switching to Test screen\n");
+        UIScreen::getManager()->switchToScreen(SCREEN_NAME_TEST);
+    }
+}
+
+void FMScreen::handleSetupButtonHorizontal(const UIButton::ButtonEvent &event) {
+    if (event.state == UIButton::EventButtonState::Clicked) {
+        DEBUG("FMScreen: Switching to Setup screen (from horizontal button)\n");
+        UIScreen::getManager()->switchToScreen(SCREEN_NAME_SETUP);
+    }
 }

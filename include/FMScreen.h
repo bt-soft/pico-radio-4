@@ -1,6 +1,7 @@
 #ifndef __FM_SCREEN_H
 #define __FM_SCREEN_H
 #include "UIButton.h"
+#include "UIHorizontalButtonBar.h"
 #include "UIScreen.h"
 #include "UIVerticalButtonBar.h"
 
@@ -42,12 +43,15 @@ class FMScreen : public UIScreen {
     /**
      * @brief UI komponensek létrehozása és elhelyezése
      */
-    void layoutComponents();
+    void layoutComponents(); /**
+                              * @brief Függőleges gombsor létrehozása a jobb oldalon
+                              */
+    void createVerticalButtonBar();
 
     /**
-     * @brief Függőleges gombsor létrehozása a jobb oldalon
+     * @brief Vízszintes gombsor létrehozása alul
      */
-    void createVerticalButtonBar();
+    void createHorizontalButtonBar();
 
     // Függőleges gomb eseménykezelők
     void handleMuteButton(const UIButton::ButtonEvent &event);
@@ -59,11 +63,17 @@ class FMScreen : public UIScreen {
     void handleSetupButtonVertical(const UIButton::ButtonEvent &event);
     void handleMemoButton(const UIButton::ButtonEvent &event);
 
+    // Vízszintes gomb eseménykezelők
+    void handleAMButton(const UIButton::ButtonEvent &event);
+    void handleTestButton(const UIButton::ButtonEvent &event);
+    void handleSetupButtonHorizontal(const UIButton::ButtonEvent &event);
+
     // Gombállapot frissítő segédfunkciók
     void updateVerticalButtonStates();
 
     // UI komponensek
     std::shared_ptr<UIVerticalButtonBar> verticalButtonBar;
+    std::shared_ptr<UIHorizontalButtonBar> horizontalButtonBar;
 };
 
 #endif // __FM_SCREEN_H

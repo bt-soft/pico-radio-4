@@ -8,7 +8,12 @@ auto verticalBar = std::make_shared<UIVerticalButtonBar>(tft, Rect(tft.width() -
                                                          buttonConfigs, 60, 32, 4                          // btn_w, btn_h, gap
 );
 
-// 2. VÍZSZINTES GOMBOK - Bal alsó sarok (1 gombos UIVerticalButtonBar-okkal)
+// 2A. VÍZSZINTES GOMBOK - UIHorizontalButtonBar (AJÁNLOTT)
+auto horizontalBar = std::make_shared<UIHorizontalButtonBar>(tft, Rect(0, tft.height() - 35, 220, 35), // x, y, width, height
+                                                             horizontalConfigs, 70, 30, 3              // btn_w, btn_h, gap
+);
+
+// 2B. VÍZSZINTES GOMBOK - Bal alsó sarok (1 gombos UIVerticalButtonBar-okkal, LEGACY)
 const uint16_t bottomY = tft.height() - 30;
 const uint16_t startX = 0;
 uint16_t currentX = startX;
@@ -21,7 +26,7 @@ for (const auto &buttonData : horizontalButtons) {
     currentX += 45 + 3; // width + gap
 }
 
-// 3. GOMB KONFIGURÁCIÓ PÉLDÁK
+// 3A. FÜGGŐLEGES GOMB KONFIGURÁCIÓ PÉLDÁK
 std::vector<UIVerticalButtonBar::ButtonConfig> configs = {
     // Toggleable gombok (on/off állapottal)
     {10, "Mute", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off, callback},
@@ -30,6 +35,11 @@ std::vector<UIVerticalButtonBar::ButtonConfig> configs = {
     // Pushable gombok (kattintás esemény)
     {20, "Vol", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, callback},
     {21, "Setup", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, callback}};
+
+// 3B. VÍZSZINTES GOMB KONFIGURÁCIÓ PÉLDÁK
+std::vector<UIHorizontalButtonBar::ButtonConfig> horizontalConfigs = {{20, "AM", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, callback},
+                                                                      {21, "Test", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, callback},
+                                                                      {22, "Setup", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, callback}};
 
 // 4. CALLBACK PÉLDÁK
 [this](const UIButton::ButtonEvent &event) {
