@@ -130,7 +130,7 @@ class VerticalButtonConfigHelper {
 /**
  * @brief Közös mute gomb eseménykezelő
  */
-class CommonVerticalButtonHandlers {
+class CommonVerticalButtons {
   public:
     /**
      * @brief Általános mute gomb kezelő

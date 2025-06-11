@@ -1,24 +1,24 @@
 /**
- * @file CommonVerticalButtonHandlers.h
- * @brief Közös függőleges gombkezelő osztály FM és AM képernyőkhöz
- * @details Megszünteti a kód duplikációt a két képernyő között
+ * @file CommonVerticalButtons.h
+ * @brief Közös függőleges gombsor létrehozó és kezelő osztály FM és AM képernyőkhöz
+ * @details Teljes mértékben megszünteti a kód duplikációt a képernyők között
  *
  * **Probléma**:
  * - FMScreen és AMScreen 87.5%-ban azonos gombkezelő logikával rendelkezik
  * - Mute, Volume, AGC, Attenuator, Setup, Memory gombok teljesen azonosak
  * - Kód duplikáció karbantartási problémákat okoz
- *
- * **Megoldás**:
- * - Közös statikus metódusok a gyakori gombkezelési logikákhoz
+ * * **Megoldás**:
+ * - Közös statikus metódusok a gombkezelési logikákhoz
+ * - Közös gombsor factory metódus - teljes gombsor létrehozás
  * - Si4735Manager referencia alapú működés
  * - Band-független implementáció (a chip állapotot kezeli)
  *
  * @author Rádió projekt
- * @version 1.0 - Common handlers refactoring
+ * @version 2.0 - Complete vertical button bar factory
  */
 
-#ifndef __COMMON_VERTICAL_BUTTON_HANDLERS_H
-#define __COMMON_VERTICAL_BUTTON_HANDLERS_H
+#ifndef __COMMON_VERTICAL_BUTTONS_H
+#define __COMMON_VERTICAL_BUTTONS_H
 
 #include "IScreenManager.h"
 #include "Si4735Manager.h"
@@ -29,20 +29,95 @@
 #include "utils.h"
 
 /**
- * @brief Közös függőleges gombkezelő osztály
- * @details Statikus metódusok gyűjteménye a gyakori függőleges gombkezelési logikákhoz
+ * @brief Közös függőleges gombsor osztály
+ * @details Statikus metódusok gyűjteménye a teljes gombsor létrehozásához és kezeléshez
  *
  * **Előnyök:**
  * - Nincs kód duplikáció FM és AM képernyők között
+ * - Teljes gombsor factory metódus - egy helyen minden
  * - Egy helyen karbantartható a logika
  * - Band-független implementáció
  * - Si4735Manager automatikusan kezeli a chip állapotokat
  */
-class CommonVerticalButtonHandlers {
+class CommonVerticalButtons {
   public:
     // =====================================================================
-    // Közös gombkezelő metódusok
+    // Gombsor factory metódus - teljes gombsor létrehozás
     // =====================================================================
+
+    /**
+     * @brief Közös függőleges gombsor létrehozása
+     * @param tft TFT display referencia
+     * @param screen Képernyő referencia (lambda capturehez)
+     * @param si4735Manager Si4735 manager referencia
+     * @param screenManager Screen manager referencia
+     * @param buttonIds Gomb ID struktúra (template paraméter)
+     * @return Létrehozott UIVerticalButtonBar smart pointer
+     *
+     * @details Ez a metódus teljes mértékben kiváltja a createVerticalButtonBar()
+     * metódusokat az AM és FM képernyőkben. Minden gombsor konfiguráció itt található.
+     */
+    template <typename ButtonIDStruct>
+    static std::shared_ptr<UIVerticalButtonBar> createVerticalButtonBar(TFT_eSPI &tft, UIScreen *screen, Si4735Manager *si4735Manager, IScreenManager *screenManager,
+                                                                        const ButtonIDStruct &buttonIds) {
+        // ===================================================================
+        // Gombsor pozicionálás - Egységes minden képernyőre
+        // ===================================================================
+        const uint16_t buttonBarWidth = 65;                       // Optimális gombméret + margók
+        const uint16_t buttonBarX = tft.width() - buttonBarWidth; // Pontosan a jobb szélhez igazítva (dinamikus)
+        const uint16_t buttonBarY = 0;                            // Legfelső pixeltől kezdve
+        const uint16_t buttonBarHeight = tft.height();            // Teljes képernyő magasság kihasználása (dinamikus)
+
+        // ===================================================================
+        // Gomb konfigurációk - Minden képernyőre azonos logika
+        // ===================================================================
+        std::vector<UIVerticalButtonBar::ButtonConfig> configs = {
+
+            // 1. MUTE - Toggleable gomb (BE/KI állapottal)
+            {buttonIds.MUTE, "Mute", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off,
+             [screen, si4735Manager](const UIButton::ButtonEvent &e) { CommonVerticalButtons::handleMuteButton(e, si4735Manager); }},
+
+            // 2. VOLUME - Pushable gomb (dialógus megnyitás)
+            {buttonIds.VOLUME, "Vol", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
+             [screen, si4735Manager](const UIButton::ButtonEvent &e) { CommonVerticalButtons::handleVolumeButton(e, si4735Manager); }},
+
+            // 3. AGC - Toggleable gomb (Automatikus erősítésszabályozás)
+            {buttonIds.AGC, "AGC", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off,
+             [screen, si4735Manager](const UIButton::ButtonEvent &e) { CommonVerticalButtons::handleAGCButton(e, si4735Manager); }},
+
+            // 4. ATTENUATOR - Toggleable gomb (Jel csillapítás)
+            {buttonIds.ATT, "Att", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off,
+             [screen, si4735Manager](const UIButton::ButtonEvent &e) { CommonVerticalButtons::handleAttenuatorButton(e, si4735Manager); }},
+
+            // 5. SQUELCH - Pushable gomb (Zajzár beállító dialógus)
+            {buttonIds.SQUELCH, "Sql", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
+             [screen, si4735Manager](const UIButton::ButtonEvent &e) { CommonVerticalButtons::handleSquelchButton(e, si4735Manager); }},
+
+            // 6. FREQUENCY - Pushable gomb (Frekvencia input dialógus)
+            {buttonIds.FREQ, "Freq", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
+             [screen, si4735Manager](const UIButton::ButtonEvent &e) { CommonVerticalButtons::handleFrequencyButton(e, si4735Manager); }},
+
+            // 7. SETUP - Pushable gomb (Beállítások képernyőre váltás)
+            {buttonIds.SETUP, "Setup", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
+             [screen, screenManager](const UIButton::ButtonEvent &e) { CommonVerticalButtons::handleSetupButton(e, screenManager); }},
+
+            // 8. MEMORY - Pushable gomb (Memória funkciók dialógus)
+            {buttonIds.MEMO, "Memo", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
+             [screen, si4735Manager](const UIButton::ButtonEvent &e) { CommonVerticalButtons::handleMemoryButton(e, si4735Manager); }}};
+
+        // ===================================================================
+        // UIVerticalButtonBar objektum létrehozása és konfiguráció
+        // ===================================================================
+        return std::make_shared<UIVerticalButtonBar>(tft, Rect(buttonBarX, buttonBarY, buttonBarWidth, buttonBarHeight), configs,
+                                                     60, // Egyedi gomb szélessége (pixel)
+                                                     32, // Egyedi gomb magassága (pixel)
+                                                     4   // Gombok közötti távolság (pixel)
+        );
+    }
+
+    // =====================================================================
+    // Közös gombkezelő metódusok
+    // ===================================================================
 
     /**
      * @brief Általános MUTE gomb kezelő
@@ -251,4 +326,4 @@ class CommonVerticalButtonHandlers {
     }
 };
 
-#endif // __COMMON_VERTICAL_BUTTON_HANDLERS_H
+#endif // __COMMON_VERTICAL_BUTTONS_H

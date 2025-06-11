@@ -13,7 +13,7 @@
 
 #include "FMScreen.h"
 #include "Band.h"
-#include "CommonVerticalButtonHandlers.h"
+#include "CommonVerticalButtons.h"
 #include "FreqDisplay.h"
 #include "SMeter.h"
 #include "StatusLine.h"
@@ -40,6 +40,21 @@ static constexpr uint8_t FREQ = 15;    ///< Frekvencia input (pushable)
 static constexpr uint8_t SETUP = 16;   ///< Beállítások képernyő (pushable)
 static constexpr uint8_t MEMO = 17;    ///< Memória funkciók (pushable)
 } // namespace FMScreenButtonIDs
+
+/**
+ * @brief Button ID struct for factory template compatibility
+ * @details Struct wrapper for namespace constants to work with template
+ */
+struct FMScreenButtonIDStruct {
+    static constexpr uint8_t MUTE = FMScreenButtonIDs::MUTE;
+    static constexpr uint8_t VOLUME = FMScreenButtonIDs::VOLUME;
+    static constexpr uint8_t AGC = FMScreenButtonIDs::AGC;
+    static constexpr uint8_t ATT = FMScreenButtonIDs::ATT;
+    static constexpr uint8_t SQUELCH = FMScreenButtonIDs::SQUELCH;
+    static constexpr uint8_t FREQ = FMScreenButtonIDs::FREQ;
+    static constexpr uint8_t SETUP = FMScreenButtonIDs::SETUP;
+    static constexpr uint8_t MEMO = FMScreenButtonIDs::MEMO;
+};
 
 /**
  * @brief Vízszintes gombsor gomb azonosítók
@@ -246,65 +261,37 @@ void FMScreen::activate() {
  * 7. Setup (Beállítások) - Pushable → Screen switch
  * 8. Memo (Memória funkciók) - Pushable → Dialog
  */
+/**
+ * @brief Függőleges gombsor létrehozása - Közös factory használatával
+ * @details Egyszerűsített implementáció - a teljes logika áthelyeződött
+ * a CommonVerticalButtons::createVerticalButtonBar() metódusba
+ */
 void FMScreen::createVerticalButtonBar() {
-
     // ===================================================================
-    // Gombsor pozicionálás - Jobb felső sarok, teljes magasság
+    // Közös factory metódus használata - Nincs kód duplikáció!
     // ===================================================================
-    const uint16_t buttonBarWidth = 65;                       // Optimális gombméret + margók
-    const uint16_t buttonBarX = tft.width() - buttonBarWidth; // Pontosan a jobb szélhez igazítva
-    const uint16_t buttonBarY = 0;                            // Legfelső pixeltől kezdve
-    const uint16_t buttonBarHeight = tft.height();            // Teljes képernyő magasság kihasználása
-
-    // ===================================================================    // Gomb konfigurációk - Event-driven eseménykezelőkkel (REFACTORED)
-    // ===================================================================
-    std::vector<UIVerticalButtonBar::ButtonConfig> buttonConfigs = {
-
-        // 1. MUTE - Toggleable gomb (BE/KI állapottal)
-        {FMScreenButtonIDs::MUTE, "Mute", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off,
-         [this](const UIButton::ButtonEvent &e) { CommonVerticalButtonHandlers::handleMuteButton(e, pSi4735Manager); }},
-
-        // 2. VOLUME - Pushable gomb (dialógus megnyitás)
-        {FMScreenButtonIDs::VOLUME, "Vol", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
-         [this](const UIButton::ButtonEvent &e) { CommonVerticalButtonHandlers::handleVolumeButton(e, pSi4735Manager); }},
-
-        // 3. AGC - Toggleable gomb (Automatikus erősítésszabályozás)
-        {FMScreenButtonIDs::AGC, "AGC", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off,
-         [this](const UIButton::ButtonEvent &e) { CommonVerticalButtonHandlers::handleAGCButton(e, pSi4735Manager); }},
-
-        // 4. ATTENUATOR - Toggleable gomb (Jel csillapítás)
-        {FMScreenButtonIDs::ATT, "Att", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off,
-         [this](const UIButton::ButtonEvent &e) { CommonVerticalButtonHandlers::handleAttenuatorButton(e, pSi4735Manager); }},
-
-        // 5. SQUELCH - Pushable gomb (Zajzár beállító dialógus)
-        {FMScreenButtonIDs::SQUELCH, "Sql", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
-         [this](const UIButton::ButtonEvent &e) { CommonVerticalButtonHandlers::handleSquelchButton(e, pSi4735Manager); }},
-
-        // 6. FREQUENCY - Pushable gomb (Frekvencia input dialógus)
-        {FMScreenButtonIDs::FREQ, "Freq", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
-         [this](const UIButton::ButtonEvent &e) { CommonVerticalButtonHandlers::handleFrequencyButton(e, pSi4735Manager); }},
-
-        // 7. SETUP - Pushable gomb (Beállítások képernyőre váltás)
-        {FMScreenButtonIDs::SETUP, "Setup", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
-         [this](const UIButton::ButtonEvent &e) { CommonVerticalButtonHandlers::handleSetupButton(e, getManager()); }},
-
-        // 8. MEMORY - Pushable gomb (Memória funkciók dialógus)
-        {FMScreenButtonIDs::MEMO, "Memo", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
-         [this](const UIButton::ButtonEvent &e) { CommonVerticalButtonHandlers::handleMemoryButton(e, pSi4735Manager); }}};
-
-    // ===================================================================
-    // UIVerticalButtonBar objektum létrehozása és konfiguráció
-    // ===================================================================
-    verticalButtonBar = std::make_shared<UIVerticalButtonBar>(tft, Rect(buttonBarX, buttonBarY, buttonBarWidth, buttonBarHeight), buttonConfigs,
-                                                              60, // Egyedi gomb szélessége (pixel)
-                                                              32, // Egyedi gomb magassága (pixel)
-                                                              4   // Gombok közötti távolság (pixel)
+    verticalButtonBar = CommonVerticalButtons::createVerticalButtonBar(tft,                     // TFT display referencia
+                                                                       this,                    // Screen referencia (lambda capture)
+                                                                       pSi4735Manager,          // Si4735 manager referencia
+                                                                       getManager(),            // Screen manager referencia
+                                                                       FMScreenButtonIDStruct{} // FM specifikus gomb ID-k
     );
 
-    // Gombsor hozzáadása a képernyő komponens hierarchiájához
+    // Komponens hozzáadása a képernyőhöz
     addChild(verticalButtonBar);
 }
 
+/**
+ * @brief Függőleges gombsor állapotainak szinkronizálása a rendszer állapotával
+ * @details Event-driven architektúra: CSAK aktiváláskor hívódik meg!
+ *
+ * Szinkronizált állapotok:
+ * - Mute gomb ↔ rtv::muteStat (globális némítás állapot)
+ * - AGC gomb ↔ Si4735 AGC állapot (implementálandó)
+ * - Attenuator gomb ↔ Si4735 attenuator állapot (implementálandó)
+ *
+ * @note Ez a metódus NEM hívódik meg minden loop ciklusban!
+ */
 /**
  * @brief Függőleges gombsor állapotainak szinkronizálása a rendszer állapotával
  * @details Event-driven architektúra: CSAK aktiváláskor hívódik meg!
@@ -324,7 +311,7 @@ void FMScreen::updateVerticalButtonStates() {
     // ===================================================================
     // MUTE gomb állapot szinkronizálása - Common handler használata
     // ===================================================================
-    CommonVerticalButtonHandlers::updateMuteButtonState(verticalButtonBar.get(), FMScreenButtonIDs::MUTE);
+    CommonVerticalButtons::updateMuteButtonState(verticalButtonBar.get(), FMScreenButtonIDs::MUTE);
 
     // ===================================================================
     // AGC gomb állapot szinkronizálása (TODO: implementálásra vár)

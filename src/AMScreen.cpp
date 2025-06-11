@@ -20,7 +20,7 @@
  */
 
 #include "AMScreen.h"
-#include "CommonVerticalButtonHandlers.h"
+#include "CommonVerticalButtons.h"
 #include "defines.h"
 #include "rtVars.h"
 #include "utils.h"
@@ -44,6 +44,21 @@ static constexpr uint8_t FREQ = 35;    ///< Frekvencia input (pushable)
 static constexpr uint8_t SETUP = 36;   ///< Beállítások képernyő (pushable)
 static constexpr uint8_t MEMO = 37;    ///< Memória funkciók (pushable)
 } // namespace AMScreenButtonIDs
+
+/**
+ * @brief Button ID struct for factory template compatibility
+ * @details Struct wrapper for namespace constants to work with template
+ */
+struct AMScreenButtonIDStruct {
+    static constexpr uint8_t MUTE = AMScreenButtonIDs::MUTE;
+    static constexpr uint8_t VOLUME = AMScreenButtonIDs::VOLUME;
+    static constexpr uint8_t AGC = AMScreenButtonIDs::AGC;
+    static constexpr uint8_t ATT = AMScreenButtonIDs::ATT;
+    static constexpr uint8_t SQUELCH = AMScreenButtonIDs::SQUELCH;
+    static constexpr uint8_t FREQ = AMScreenButtonIDs::FREQ;
+    static constexpr uint8_t SETUP = AMScreenButtonIDs::SETUP;
+    static constexpr uint8_t MEMO = AMScreenButtonIDs::MEMO;
+};
 
 /**
  * @brief Vízszintes gombsor gomb azonosítók
@@ -138,51 +153,19 @@ void AMScreen::layoutComponents() {
 }
 
 /**
- * @brief Függőleges gombsor létrehozása - az FMScreen mintájára
+ * @brief Függőleges gombsor létrehozása - Közös factory használatával
+ * @details Egyszerűsített implementáció - a teljes logika áthelyeződött
+ * a CommonVerticalButtons::createVerticalButtonBar() metódusba
  */
 void AMScreen::createVerticalButtonBar() {
     // ===================================================================
-    // Gombsor pozicionálás - Jobb felső sarok, teljes magasság (dinamikus)
+    // Közös factory metódus használata - Nincs kód duplikáció!
     // ===================================================================
-    const uint16_t buttonBarWidth = 65;                       // Optimális gombméret + margók  (FMScreen-hez igazítva)
-    const uint16_t buttonBarX = tft.width() - buttonBarWidth; // Pontosan a jobb szélhez igazítva (dinamikus)
-    const uint16_t buttonBarY = 0;                            // Legfelső pixeltől kezdve
-    const uint16_t buttonBarHeight = tft.height();            // Teljes képernyő magasság kihasználása (dinamikus)
-
-    // ===================================================================
-    // Gomb konfigurációk - Event-driven eseménykezelőkkel (REFACTORED)
-    // ===================================================================
-    std::vector<UIVerticalButtonBar::ButtonConfig> configs = {{AMScreenButtonIDs::MUTE, "Mute", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off,
-                                                               [this](const UIButton::ButtonEvent &e) { CommonVerticalButtonHandlers::handleMuteButton(e, pSi4735Manager); }},
-
-                                                              {AMScreenButtonIDs::VOLUME, "Vol", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
-                                                               [this](const UIButton::ButtonEvent &e) { CommonVerticalButtonHandlers::handleVolumeButton(e, pSi4735Manager); }},
-
-                                                              {AMScreenButtonIDs::AGC, "AGC", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off,
-                                                               [this](const UIButton::ButtonEvent &e) { CommonVerticalButtonHandlers::handleAGCButton(e, pSi4735Manager); }},
-
-                                                              {AMScreenButtonIDs::ATT, "Att", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off,
-                                                               [this](const UIButton::ButtonEvent &e) { CommonVerticalButtonHandlers::handleAttenuatorButton(e, pSi4735Manager); }},
-
-                                                              {AMScreenButtonIDs::SQUELCH, "Sql", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
-                                                               [this](const UIButton::ButtonEvent &e) { CommonVerticalButtonHandlers::handleSquelchButton(e, pSi4735Manager); }},
-
-                                                              {AMScreenButtonIDs::FREQ, "Freq", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
-                                                               [this](const UIButton::ButtonEvent &e) { CommonVerticalButtonHandlers::handleFrequencyButton(e, pSi4735Manager); }},
-
-                                                              {AMScreenButtonIDs::SETUP, "Setup", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
-                                                               [this](const UIButton::ButtonEvent &e) { CommonVerticalButtonHandlers::handleSetupButton(e, getManager()); }},
-
-                                                              {AMScreenButtonIDs::MEMO, "Memo", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
-                                                               [this](const UIButton::ButtonEvent &e) { CommonVerticalButtonHandlers::handleMemoryButton(e, pSi4735Manager); }}};
-
-    // ===================================================================
-    // UIVerticalButtonBar objektum létrehozása és konfiguráció
-    // ===================================================================
-    verticalButtonBar = std::make_shared<UIVerticalButtonBar>(tft, Rect(buttonBarX, buttonBarY, buttonBarWidth, buttonBarHeight), configs,
-                                                              60, // Egyedi gomb szélessége (pixel)
-                                                              32, // Egyedi gomb magassága (pixel)
-                                                              4   // Gombok közötti távolság (pixel)
+    verticalButtonBar = CommonVerticalButtons::createVerticalButtonBar(tft,                     // TFT display referencia
+                                                                       this,                    // Screen referencia (lambda capture)
+                                                                       pSi4735Manager,          // Si4735 manager referencia
+                                                                       getManager(),            // Screen manager referencia
+                                                                       AMScreenButtonIDStruct{} // AM specifikus gomb ID-k
     );
 
     // Komponens hozzáadása a képernyőhöz
@@ -233,10 +216,10 @@ void AMScreen::createHorizontalButtonBar() {
  */
 void AMScreen::updateVerticalButtonStates() {
     if (!verticalButtonBar)
-        return;                                                                                            // ✅ KÖZÖS KEZELŐ HASZNÁLATA - Nincs kód duplikáció!
-    CommonVerticalButtonHandlers::updateMuteButtonState(verticalButtonBar.get(), AMScreenButtonIDs::MUTE); // TODO: További közös állapot szinkronizálók hozzáadása
-    // CommonVerticalButtonHandlers::updateAGCButtonState(verticalButtonBar.get(), AMScreenButtonIDs::AGC, pSi4735Manager);
-    // CommonVerticalButtonHandlers::updateAttenuatorButtonState(verticalButtonBar.get(), AMScreenButtonIDs::ATT, pSi4735Manager);
+        return;                                                                                     // ✅ KÖZÖS KEZELŐ HASZNÁLATA - Nincs kód duplikáció!
+    CommonVerticalButtons::updateMuteButtonState(verticalButtonBar.get(), AMScreenButtonIDs::MUTE); // TODO: További közös állapot szinkronizálók hozzáadása
+    // CommonVerticalButtons::updateAGCButtonState(verticalButtonBar.get(), AMScreenButtonIDs::AGC, pSi4735Manager);
+    // CommonVerticalButtons::updateAttenuatorButtonState(verticalButtonBar.get(), AMScreenButtonIDs::ATT, pSi4735Manager);
 }
 
 /**
@@ -260,7 +243,8 @@ void AMScreen::updateHorizontalButtonStates() {
 
 // ===================================================================
 // REFAKTORÁLÁS: A függőleges gomb handlereket eltávolítottuk!
-// Most a CommonVerticalButtonHandlers osztály statikus metódusait használjuk
+// Most a CommonVerticalButtons osztály statikus metódusait használjuk
+// A teljes gombsor létrehozás is áthelyeződött a közös factory-ba
 // ===================================================================
 
 // =====================================================================
