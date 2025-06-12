@@ -1,32 +1,3 @@
-/**
- * @file FMScreen.cpp
- * @brief FM rádió vezérlő képernyő implementáció
- * @details Event-driven gombállapot kezeléssel, optimalizált teljesítménnyel és
- *          univerzális gomb ID rendszer használatával
- *
- * **Fő funkciók**:
- * - FM frekvencia hangolás rotary encoder-rel (87.5-108.0 MHz tartomány)
- * - S-Meter (jelerősség és SNR) valós idejű megjelenítés FM módban
- * - Univerzális függőleges gombsor: Mute, Volume, AGC, Attenuator, Squelch, Freq, Setup, Memory
- * - Vízszintes navigációs gombsor: AM, Test, Setup gombok (képernyőváltáshoz)
- * - Event-driven gombállapot szinkronizálás (csak aktiváláskor és eseményekkor)
- *
- * **Architektúra változások (v3.0)**:
- * - Univerzális gomb ID rendszer használata (CommonVerticalButtons)
- * - Duplikált gombkezelési kód eliminálása (~25 sor eltávolítva)
- * - Egyszerűsített factory pattern (template nélkül)
- * - Közös gombkezelési logika az AMScreen-nel
- *
- * **Teljesítmény optimalizációk**:
- * - NINCS folyamatos gombállapot polling a loop()-ban
- * - S-Meter 200ms frissítési gyakorisággal
- * - Frekvencia kijelző azonnali frissítés rotary eseményekkor
- * - Gombállapotok csak aktiváláskor szinkronizálódnak
- *
- * @author Rádió projekt
- * @version 3.0 - Univerzális gomb ID rendszer (2025.06.11)
- */
-
 #include "FMScreen.h"
 #include "Band.h"
 #include "CommonVerticalButtons.h"
@@ -39,22 +10,8 @@
 #include "rtVars.h"
 
 // ===================================================================
-// UNIVERZÁLIS GOMB ID RENDSZER - Nincs több duplikáció!
-// ===================================================================
-
-// RÉGI RENDSZER ELTÁVOLÍTVA (2025.06.11):
-// - FMScreenButtonIDs namespace (~8 sor duplikált kód)
-// - FMScreenButtonIDStruct wrapper (~17 sor template komplexitás)
-//
-// ÚJ RENDSZER:
-// - Univerzális VerticalButtonIDs namespace (CommonVerticalButtons.h-ban)
-// - Egyszerűsített factory hívás (template és struct nélkül)
-// - Közös gombkezelési logika az AMScreen-nel
-
-// ===================================================================
 // Vízszintes gombsor azonosítók - Képernyő-specifikus navigáció
 // ===================================================================
-
 /**
  * @brief Vízszintes gombsor gomb azonosítók (FM képernyő specifikus)
  * @details Alsó navigációs gombsor - képernyőváltáshoz használt gombok
@@ -255,22 +212,6 @@ void FMScreen::activate() {
  * 6. Freq (Frekvencia input) - Pushable → Dialog
  * 7. Setup (Beállítások) - Pushable → Screen switch
  * 8. Memo (Memória funkciók) - Pushable → Dialog
- */
-/**
- * @brief Függőleges gombsor létrehozása - Univerzális factory pattern használatával
- * @details Egyszerűsített implementáció az univerzális gomb ID rendszer segítségével.
- *          A teljes gombkezelési logika a CommonVerticalButtons osztályba került.
- *
- * **Változások a korábbi verzióhoz képest**:
- * - Template paraméter eltávolítva (ButtonIDStruct már nem szükséges)
- * - 5 paraméterről 4-re csökkentve (buttonIds paraméter eliminálva)
- * - ~25 sor duplikált kód eltávolítva (FMScreenButtonIDs, FMScreenButtonIDStruct)
- * - Közös gombkezelési logika az AMScreen-nel
- *
- * **Factory hívás**:
- * - createVerticalButtonBar(tft, screen, si4735Manager, screenManager)
- * - Automatikus gombkonfiguráció univerzális ID-kkal
- * - Band-független működés (Si4735Manager kezeli a rádió állapotokat)
  */
 // ===================================================================
 // Vízszintes gombsor - Alsó navigációs gombok
