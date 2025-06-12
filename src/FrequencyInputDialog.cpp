@@ -174,8 +174,6 @@ String FrequencyInputDialog::applyInputMask(const String &inputString) const {
  * @brief Dialógus tartalom létrehozása
  */
 void FrequencyInputDialog::createDialogContent() {
-    DEBUG("FrequencyInputDialog::createDialogContent() called\n");
-
     // OK és Cancel gombok létrehozása
     createOkCancelButtons();
 
@@ -184,25 +182,17 @@ void FrequencyInputDialog::createDialogContent() {
 
     // Funkció gombok létrehozása
     createFunctionButtons();
-
-    DEBUG("FrequencyInputDialog::createDialogContent() completed\n");
 }
 
 /**
  * @brief OK és Cancel gombok létrehozása
  */
 void FrequencyInputDialog::createOkCancelButtons() {
-    DEBUG("Creating OK/Cancel buttons\n");
 
-    // Statikus feliratok
-    static const char *OK_LABEL = "OK";
-    static const char *CANCEL_LABEL = "Cancel"; // OK gomb - proper ButtonColorScheme beállítással
-    _okButton = std::make_shared<UIButton>(tft, 100, Rect(0, 0, 60, 30), OK_LABEL, UIButton::ButtonType::Pushable, UIButton::ButtonState::Off);
-
+    _okButton = std::make_shared<UIButton>(tft, 100, Rect(0, 0, 60, 30), "OK", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off);
     // Disabled színek beállítása az OK gomb számára
     ButtonColorScheme okButtonScheme = UIColorPalette::createDefaultButtonScheme();
     _okButton->setButtonColorScheme(okButtonScheme);
-
     _okButton->setEventCallback([this](const UIButton::ButtonEvent &event) {
         if (event.state == UIButton::EventButtonState::Clicked) {
             onOkClicked();
@@ -211,22 +201,19 @@ void FrequencyInputDialog::createOkCancelButtons() {
     addChild(_okButton);
 
     // Cancel gomb
-    _cancelButton = std::make_shared<UIButton>(tft, 101, Rect(0, 0, 60, 30), CANCEL_LABEL, UIButton::ButtonType::Pushable, UIButton::ButtonState::Off);
+    _cancelButton = std::make_shared<UIButton>(tft, 101, Rect(0, 0, 60, 30), "Cancel", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off);
     _cancelButton->setEventCallback([this](const UIButton::ButtonEvent &event) {
         if (event.state == UIButton::EventButtonState::Clicked) {
             onCancelClicked();
         }
     });
     addChild(_cancelButton);
-
-    DEBUG("OK/Cancel buttons created\n");
 }
 
 /**
  * @brief Numerikus gombok létrehozása
  */
 void FrequencyInputDialog::createNumericButtons() {
-    DEBUG("Creating numeric buttons (0-9)\n");
 
     // Statikus felirat tömb a gombok számára
     static const char *digitLabels[10] = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"};
@@ -248,11 +235,7 @@ void FrequencyInputDialog::createNumericButtons() {
 
         _digitButtons.push_back(button);
         addChild(button);
-
-        DEBUG("Created digit button: %d with label: %s\n", i, digitLabels[i]);
     }
-
-    DEBUG("Numeric buttons created: %d buttons\n", _digitButtons.size());
 }
 
 /**
@@ -260,12 +243,9 @@ void FrequencyInputDialog::createNumericButtons() {
  */
 void FrequencyInputDialog::createFunctionButtons() {
     // Statikus feliratok
-    static const char *DOT_LABEL = ".";
-    static const char *CLEAR_LABEL = "C";
 
     // Tizedes pont gomb (mindig létrehozzuk, de csak FM-nél látható)
-    _dotButton = std::make_shared<UIButton>(tft, 10, Rect(0, 0, NUMERIC_BUTTON_SIZE, NUMERIC_BUTTON_SIZE), DOT_LABEL, UIButton::ButtonType::Pushable, UIButton::ButtonState::Off);
-
+    _dotButton = std::make_shared<UIButton>(tft, 10, Rect(0, 0, NUMERIC_BUTTON_SIZE, NUMERIC_BUTTON_SIZE), ".", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off);
     _dotButton->setEventCallback([this](const UIButton::ButtonEvent &event) {
         if (event.state == UIButton::EventButtonState::Clicked) {
             handleDotInput();
@@ -275,9 +255,7 @@ void FrequencyInputDialog::createFunctionButtons() {
     addChild(_dotButton);
 
     // Clear All gomb (C)
-    _clearAllButton =
-        std::make_shared<UIButton>(tft, 12, Rect(0, 0, NUMERIC_BUTTON_SIZE, NUMERIC_BUTTON_SIZE), CLEAR_LABEL, UIButton::ButtonType::Pushable, UIButton::ButtonState::Off);
-
+    _clearAllButton = std::make_shared<UIButton>(tft, 12, Rect(0, 0, NUMERIC_BUTTON_SIZE, NUMERIC_BUTTON_SIZE), "C", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off);
     _clearAllButton->setEventCallback([this](const UIButton::ButtonEvent &event) {
         if (event.state == UIButton::EventButtonState::Clicked) {
             handleClearAll();
@@ -379,16 +357,12 @@ void FrequencyInputDialog::drawFrequencyDisplay() {
     tft.setTextColor(textColor, colors.background);
     tft.drawString(freqNumbers, displayCenterX - 20, displayY + 40); // Kicsit balra tolva
 
-    // Normál font a mértékegységhez
+    // Mértékegység kirajzolása a számok mellé
     tft.setFreeFont();
     tft.setTextSize(2);
     tft.setTextDatum(BL_DATUM);
-    tft.setTextColor(colors.foreground, colors.background); // Mértékegység kirajzolása a számok mellé
-    int16_t numberWidth = 0;
-    // Számjegyek szélességének becslése 7-szegmenses fonttal
-    numberWidth = freqNumbers.length() * 20;                // Körülbelüli szélesség per karakter
-    uint16_t unitX = displayCenterX - 20 + numberWidth + 5; // 5px helyett 10px (5px-szel balrább)
-    tft.drawString(_unitString, unitX, displayY + 40);
+    tft.setTextColor(colors.foreground, colors.background); 
+    tft.drawString(_unitString, displayCenterX + 70, displayY + 40);
 
     // Font visszaállítása
     tft.setTextSize(1);
@@ -402,7 +376,6 @@ void FrequencyInputDialog::handleDigitInput(uint8_t digit) {
     if (_firstInput) {
         _inputString = "";
         _firstInput = false;
-        DEBUG("First input - cleared previous value\n");
     }
 
     // Maximum hossz ellenőrzése sáv alapján
@@ -445,7 +418,6 @@ void FrequencyInputDialog::handleDotInput() {
     if (_firstInput) {
         _inputString = "";
         _firstInput = false;
-        DEBUG("First input (dot) - cleared previous value\n");
     }
 
     // Ellenőrizzük, hogy már van-e pont
@@ -603,7 +575,6 @@ bool FrequencyInputDialog::handleRotary(const RotaryEvent &event) { return UIDia
 void FrequencyInputDialog::onOkClicked() {
     if (_isValid && _frequencyCallback) {
         uint16_t rawFreq = calculateRawFrequency();
-        DEBUG("FrequencyInputDialog: Setting frequency to %d\n", rawFreq);
         _frequencyCallback(rawFreq);
     }
 
@@ -613,10 +584,7 @@ void FrequencyInputDialog::onOkClicked() {
 /**
  * @brief Cancel gomb kezelése
  */
-void FrequencyInputDialog::onCancelClicked() {
-    DEBUG("FrequencyInputDialog: Cancelled\n");
-    close(DialogResult::Rejected);
-}
+void FrequencyInputDialog::onCancelClicked() { close(DialogResult::Rejected); }
 
 // Hiányzó metódusok implementálása (ha szükséges)
 int FrequencyInputDialog::findNextEditablePosition() const {

@@ -199,14 +199,12 @@ void FMScreen::activate() {
  * (Volume, Attenuator, Squelch, Frequency) után.
  */
 void FMScreen::onDialogClosed(UIDialogBase *closedDialog) {
-    DEBUG("FMScreen::onDialogClosed - Dialog closed, checking if last dialog\n");
 
     // Először hívjuk az alap implementációt (stack cleanup, navigation logic)
     UIScreen::onDialogClosed(closedDialog);
 
     // Ha ez volt az utolsó dialógus, frissítsük a gombállapotokat
     if (!isDialogActive()) {
-        DEBUG("FMScreen::onDialogClosed - Last dialog closed, updating button states\n");
         updateAllVerticalButtonStates(pSi4735Manager); // Függőleges gombok szinkronizálása
         updateHorizontalButtonStates();                // Vízszintes gombok szinkronizálása
     }
@@ -216,21 +214,6 @@ void FMScreen::onDialogClosed(UIDialogBase *closedDialog) {
 // Függőleges gombsor - Jobb oldali funkcionális gombok
 // ===================================================================
 
-/**
- * @brief Függőleges gombsor létrehozása a képernyő jobb oldalán
- * @details 8 funkcionális gomb elhelyezése függőleges elrendezésben:
- *
- * Gombsor pozíció: Jobb felső sarok, teljes magasság
- * Gombok (felülről lefelé):
- * 1. Mute (Némítás) - Toggleable
- * 2. Volume (Hangerő) - Pushable → Dialog
- * 3. AGC (Auto Gain Control) - Toggleable
- * 4. Att (Attenuator/Csillapító) - Toggleable
- * 5. Sql (Squelch/Zajzár) - Pushable → Dialog
- * 6. Freq (Frekvencia input) - Pushable → Dialog
- * 7. Setup (Beállítások) - Pushable → Screen switch
- * 8. Memo (Memória funkciók) - Pushable → Dialog
- */
 // ===================================================================
 // Vízszintes gombsor - Alsó navigációs gombok
 // ===================================================================
