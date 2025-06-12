@@ -12,12 +12,14 @@
 #ifndef __FREQDISPLAY_H
 #define __FREQDISPLAY_H
 
+#include <TFT_eSPI.h>
+
 #include "Config.h"
 #include "Si4735Manager.h"
 #include "UIColorPalette.h"
 #include "UIComponent.h"
 #include "rtVars.h"
-#include <TFT_eSPI.h>
+
 
 /**
  * @brief Színstruktúra a 7-szegmenses kijelző különböző elemeihez

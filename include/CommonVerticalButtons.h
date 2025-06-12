@@ -9,6 +9,7 @@
 
 #include "ButtonsGroupManager.h"
 #include "Config.h"
+#include "FrequencyInputDialog.h"
 #include "IScreenManager.h"
 #include "MessageDialog.h"
 #include "Si4735Manager.h"
@@ -232,41 +233,24 @@ class CommonVerticalButtons {
             config.data.currentSquelch = 0; // Squelch kikapcsolása
             DEBUG("Squelch disabled\n");
         }
-    }
-
-    /**
-     * @brief FREQUENCY gomb kezelő - ValueChangeDialog megjelenítése
-     */
+    } /**
+       * @brief FREQUENCY gomb kezelő - FrequencyInputDialog megjelenítése
+       */
     static void handleFrequencyButton(const UIButton::ButtonEvent &event, Si4735Manager *si4735Manager, UIScreen *screen) {
         if (event.state != UIButton::EventButtonState::Clicked || !screen) {
             return;
         }
 
-        DEBUG("Frequency input dialog requested\n");
+        DEBUG("Frequency input dialog requested\n");                                                                // FrequencyInputDialog létrehozása automatikus sávfelismeréssel
+        auto freqDialog = std::make_shared<FrequencyInputDialog>(screen, screen->getTFT(),                          // UIScreen, TFT_eSPI
+                                                                 Rect(-1, -1, 320, 300),                            // Méret: 320x300 pixel
+                                                                 "Frequency Input", "Enter the desired frequency:", // Cím és üzenet
+                                                                 si4735Manager,                                     // Si4735Manager referencia
+                                                                 [si4735Manager](uint16_t newFrequency) {           // Frekvencia változás callback
+                                                                     DEBUG("Frequency changed to: %d\n", newFrequency);
+                                                                     si4735Manager->getSi4735().setFrequency(newFrequency);
+                                                                 });
 
-        // Band-specifikus frekvencia tartomány (példa FM-hez)
-        float minFreq = 87.5f;
-        float maxFreq = 108.0f;
-        float stepSize = 0.1f;
-        // Aktuális frekvencia lekérése és statikus változóba tárolása
-        uint16_t currentFreqRaw = si4735Manager->getSi4735().getFrequency();
-        static float currentFreq = 100.0f; // Alapértelmezett érték
-        currentFreq = static_cast<float>(currentFreqRaw) / 100.0f;
-
-        auto freqDialog = std::make_shared<ValueChangeDialog>(
-            screen, screen->getTFT(), "Frequency Input", "Enter frequency (MHz):",
-            &currentFreq, // Pointer a statikus változóra
-            minFreq, maxFreq, stepSize,
-            [si4735Manager](const std::variant<int, float, bool> &newValue) {
-                if (std::holds_alternative<float>(newValue)) {
-                    float freq = std::get<float>(newValue);
-                    uint16_t freqValue = static_cast<uint16_t>(freq * 100);
-                    DEBUG("Frequency changed to: %.1f MHz\n", freq);
-                    si4735Manager->getSi4735().setFrequency(freqValue);
-                }
-            },
-            nullptr, Rect(-1, -1, 300, 0));
-        // Aktuális frekvencia beállítása a konstruktorban történik a valuePtr alapján
         screen->showDialog(freqDialog);
     } /**
        * @brief SETUP gomb kezelő - Képernyőváltás Setup képernyőre
