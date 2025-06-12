@@ -316,10 +316,13 @@ void FMScreen::createHorizontalButtonBar() {
     // ===================================================================
     // UIHorizontalButtonBar objektum létrehozása
     // ===================================================================
-    horizontalButtonBar = std::make_shared<UIHorizontalButtonBar>(tft, Rect(buttonBarX, buttonBarY, buttonBarWidth, buttonBarHeight), buttonConfigs,
-                                                                  70, // Egyedi gomb szélessége (pixel)
-                                                                  30, // Egyedi gomb magassága (pixel)
-                                                                  3   // Gombok közötti távolság (pixel)
+    horizontalButtonBar = std::make_shared<UIHorizontalButtonBar>(     //
+        tft,                                                           // TFT display referencia
+        Rect(buttonBarX, buttonBarY, buttonBarWidth, buttonBarHeight), // Gombsor pozíció és méret
+        buttonConfigs,                                                 // Gomb konfigurációk
+        70,                                                            // Egyedi gomb szélessége (pixel)
+        30,                                                            // Egyedi gomb magassága (pixel)
+        3                                                              // Gombok közötti távolság (pixel)
     );
 
     // Gombsor hozzáadása a képernyő komponens hierarchiájához

@@ -36,19 +36,6 @@
 #include <algorithm>
 
 // ===================================================================
-// UNIVERZÁLIS GOMB ID RENDSZER - Nincs több duplikáció!
-// ===================================================================
-
-// RÉGI RENDSZER ELTÁVOLÍTVA (2025.06.11):
-// - AMScreenButtonIDs namespace (~8 sor duplikált kód)
-// - AMScreenButtonIDStruct wrapper (~17 sor template komplexitás)
-//
-// ÚJ RENDSZER:
-// - Univerzális VerticalButtonIDs namespace (CommonVerticalButtons.h-ban)
-// - Egyszerűsített factory hívás (template és struct nélkül)
-// - Közös gombkezelési logika az FMScreen-nel
-
-// ===================================================================
 // Vízszintes gombsor azonosítók - Képernyő-specifikus navigáció
 // ===================================================================
 
