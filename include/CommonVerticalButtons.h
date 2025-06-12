@@ -241,20 +241,22 @@ class CommonVerticalButtons {
             return;
         }
 
-        DEBUG("Frequency input dialog requested\n");                                                                // FrequencyInputDialog létrehozása automatikus sávfelismeréssel
-        auto freqDialog = std::make_shared<FrequencyInputDialog>(screen, screen->getTFT(),                          // UIScreen, TFT_eSPI
-                                                                 Rect(-1, -1, 320, 300),                            // Méret: 320x300 pixel
-                                                                 "Frequency Input", "Enter the desired frequency:", // Cím és üzenet
-                                                                 si4735Manager,                                     // Si4735Manager referencia
-                                                                 [si4735Manager](uint16_t newFrequency) {           // Frekvencia változás callback
-                                                                     DEBUG("Frequency changed to: %d\n", newFrequency);
-                                                                     si4735Manager->getSi4735().setFrequency(newFrequency);
-                                                                 });
+        auto freqDialog = std::make_shared<FrequencyInputDialog>( //
+            screen, screen->getTFT(),                             // UIScreen, TFT_eSPI
+            Rect(-1, -1, 250, 220),                               // Méret
+            "Frequency Input", nullptr,                           // Cím és üzenet
+            si4735Manager,                                        // Si4735Manager referencia
+            [si4735Manager](uint16_t newFrequency) {              // Frekvencia változás callback
+                config.data.currentFrequency = newFrequency;
+                si4735Manager->getSi4735().setFrequency(config.data.currentFrequency);
+            });
 
         screen->showDialog(freqDialog);
-    } /**
-       * @brief SETUP gomb kezelő - Képernyőváltás Setup képernyőre
-       */
+    }
+
+    /**
+     * @brief SETUP gomb kezelő - Képernyőváltás Setup képernyőre
+     */
     static void handleSetupButton(const UIButton::ButtonEvent &event, Si4735Manager *si4735Manager, UIScreen *screen) {
         if (event.state == UIButton::EventButtonState::Clicked && screen) {
             IScreenManager *screenManager = screen->getScreenManager();

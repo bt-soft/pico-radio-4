@@ -17,11 +17,11 @@ FrequencyInputDialog::FrequencyInputDialog(UIScreen *parentScreen, TFT_eSPI &tft
     : UIDialogBase(parentScreen, tft, bounds, title, cs), _si4735Manager(si4735Manager), _frequencyCallback(callback), _isValid(false), _firstInput(true) {
 
     // Sáv paraméterek inicializálása
-    initializeBandParameters();
-
-    // Aktuális frekvencia betöltése
+    initializeBandParameters(); // Aktuális frekvencia betöltése
     uint16_t currentFreq = _si4735Manager->getSi4735().getFrequency();
-    setCurrentFrequency(currentFreq); // Dialógus méret beállítása ha automatikus
+    setCurrentFrequency(currentFreq);
+
+    // Dialógus méret beállítása ha automatikus
     if (this->bounds.width <= 0 || this->bounds.height <= 0) {
         this->bounds.width = 320;
         this->bounds.height = 350; // Növelt magasság a gomboknak
@@ -32,6 +32,9 @@ FrequencyInputDialog::FrequencyInputDialog(UIScreen *parentScreen, TFT_eSPI &tft
 
     // Layout alkalmazása
     layoutDialogContent();
+
+    // OK gomb kezdeti állapotának beállítása (az inicializálás után)
+    updateOkButtonState();
 }
 
 /**
@@ -99,10 +102,11 @@ void FrequencyInputDialog::setCurrentFrequency(uint16_t rawFrequency) {
     }
 
     // Maszk generálása
-    generateMaskPattern();
-
-    // Validálás
+    generateMaskPattern(); // Validálás
     _isValid = validateAndParseFrequency();
+
+    // OK gomb állapot frissítése (ha már létezik)
+    updateOkButtonState();
 }
 
 /**
@@ -288,53 +292,46 @@ void FrequencyInputDialog::layoutDialogContent() {
     // Frekvencia kijelző terület a cím alatt
     uint16_t displayY = bounds.y + HEADER_HEIGHT + PADDING;
 
-    // Numerikus billentyűzet elrendezése - középre pozícionálva
+    // Numerikus billentyűzet elrendezése - 5 oszlopos layout
     uint16_t buttonSpacing = NUMERIC_BUTTON_SIZE + BUTTON_SPACING;
-    uint16_t keypadWidth = 3 * buttonSpacing - BUTTON_SPACING;           // 3 gomb szélessége + 2 spacing
-    uint16_t keypadStartX = bounds.x + (bounds.width - keypadWidth) / 2; // Középre igazítás
-    uint16_t keypadStartY = displayY + DISPLAY_AREA_HEIGHT + PADDING;
+    uint16_t wideButtonWidth = NUMERIC_BUTTON_SIZE * 2 + BUTTON_SPACING; // Dupla szélesség + spacing
 
-    // 4x3 grid elrendezés:
-    // Sor 1: 1, 2, 3
-    for (int i = 1; i <= 3; i++) {
+    // Teljes keypad szélességének számítása (4 normál gomb + 1 dupla gomb)
+    uint16_t keypadWidth = 4 * buttonSpacing + wideButtonWidth;
+    uint16_t keypadStartX = bounds.x + (bounds.width - keypadWidth) / 2;   // Középre igazítás
+    uint16_t keypadStartY = displayY + DISPLAY_AREA_HEIGHT + PADDING - 10; // 10px feljebb// Sor 1: [1] [2] [3] [4] [Cancel]
+    for (int i = 1; i <= 4; i++) {
         auto &button = _digitButtons[i];
         button->setBounds(Rect(keypadStartX + (i - 1) * buttonSpacing, keypadStartY, NUMERIC_BUTTON_SIZE, NUMERIC_BUTTON_SIZE));
     }
+    // Cancel gomb az első sor végén - dupla szélesség
+    _cancelButton->setBounds(Rect(keypadStartX + 4 * buttonSpacing, keypadStartY, wideButtonWidth, NUMERIC_BUTTON_SIZE));
 
-    // Sor 2: 4, 5, 6
-    for (int i = 4; i <= 6; i++) {
+    // Sor 2: [5] [6] [7] [8]
+    for (int i = 5; i <= 8; i++) {
         auto &button = _digitButtons[i];
-        button->setBounds(Rect(keypadStartX + (i - 4) * buttonSpacing, keypadStartY + buttonSpacing, NUMERIC_BUTTON_SIZE, NUMERIC_BUTTON_SIZE));
+        button->setBounds(Rect(keypadStartX + (i - 5) * buttonSpacing, keypadStartY + buttonSpacing, NUMERIC_BUTTON_SIZE, NUMERIC_BUTTON_SIZE));
     }
 
-    // Sor 3: 7, 8, 9
-    for (int i = 7; i <= 9; i++) {
-        auto &button = _digitButtons[i];
-        button->setBounds(Rect(keypadStartX + (i - 7) * buttonSpacing, keypadStartY + 2 * buttonSpacing, NUMERIC_BUTTON_SIZE, NUMERIC_BUTTON_SIZE));
-    }
+    // Sor 3: [C] [9] [0] [.] [OK]
+    // Clear All gomb (bal oldal)
+    _clearAllButton->setBounds(Rect(keypadStartX, keypadStartY + 2 * buttonSpacing, NUMERIC_BUTTON_SIZE, NUMERIC_BUTTON_SIZE));
 
-    // Sor 4: [.] [0] [C]    // Tizedes pont gomb (bal oldal)
+    // 9 gomb (második pozíció)
+    _digitButtons[9]->setBounds(Rect(keypadStartX + buttonSpacing, keypadStartY + 2 * buttonSpacing, NUMERIC_BUTTON_SIZE, NUMERIC_BUTTON_SIZE));
+
+    // 0 gomb (harmadik pozíció)
+    _digitButtons[0]->setBounds(Rect(keypadStartX + 2 * buttonSpacing, keypadStartY + 2 * buttonSpacing, NUMERIC_BUTTON_SIZE, NUMERIC_BUTTON_SIZE));
+
+    // Tizedes pont gomb (negyedik pozíció)
     if (_dotButton) {
-        _dotButton->setBounds(Rect(keypadStartX, keypadStartY + 3 * buttonSpacing, NUMERIC_BUTTON_SIZE, NUMERIC_BUTTON_SIZE));
+        _dotButton->setBounds(Rect(keypadStartX + 3 * buttonSpacing, keypadStartY + 2 * buttonSpacing, NUMERIC_BUTTON_SIZE, NUMERIC_BUTTON_SIZE));
         // FM sávnál engedélyezett, egyébként letiltott
         _dotButton->setEnabled(_currentBandType == FM_BAND_TYPE);
     }
 
-    // 0 gomb (középen)
-    _digitButtons[0]->setBounds(Rect(keypadStartX + buttonSpacing, keypadStartY + 3 * buttonSpacing, NUMERIC_BUTTON_SIZE, NUMERIC_BUTTON_SIZE));
-
-    // Clear All gomb (jobb oldal)
-    _clearAllButton->setBounds(Rect(keypadStartX + 2 * buttonSpacing, keypadStartY + 3 * buttonSpacing, NUMERIC_BUTTON_SIZE, NUMERIC_BUTTON_SIZE));
-
-    // OK/Cancel gombok alul - középre igazítva
-    uint16_t bottomButtonY = keypadStartY + 4 * buttonSpacing + PADDING;
-    uint16_t buttonWidth = 70;
-    uint16_t buttonHeight = 35;
-    uint16_t centerX = bounds.x + bounds.width / 2;
-    uint16_t buttonGap = 20;
-
-    _cancelButton->setBounds(Rect(centerX - buttonWidth - buttonGap / 2, bottomButtonY, buttonWidth, buttonHeight));
-    _okButton->setBounds(Rect(centerX + buttonGap / 2, bottomButtonY, buttonWidth, buttonHeight));
+    // OK gomb a harmadik sor végén - dupla szélesség
+    _okButton->setBounds(Rect(keypadStartX + 4 * buttonSpacing, keypadStartY + 2 * buttonSpacing, wideButtonWidth, NUMERIC_BUTTON_SIZE));
 }
 
 /**
@@ -388,8 +385,8 @@ void FrequencyInputDialog::drawFrequencyDisplay() {
     tft.setTextColor(colors.foreground, colors.background); // Mértékegység kirajzolása a számok mellé
     int16_t numberWidth = 0;
     // Számjegyek szélességének becslése 7-szegmenses fonttal
-    numberWidth = freqNumbers.length() * 20; // Körülbelüli szélesség per karakter
-    uint16_t unitX = displayCenterX - 20 + numberWidth + 10;
+    numberWidth = freqNumbers.length() * 20;                // Körülbelüli szélesség per karakter
+    uint16_t unitX = displayCenterX - 20 + numberWidth + 5; // 5px helyett 10px (5px-szel balrább)
     tft.drawString(_unitString, unitX, displayY + 40);
 
     // Font visszaállítása
@@ -572,7 +569,11 @@ bool FrequencyInputDialog::isFrequencyInBounds(uint16_t rawFreq) const { return 
  */
 void FrequencyInputDialog::updateOkButtonState() {
     if (_okButton) {
-        _okButton->setEnabled(_isValid);
+        if (_isValid) {
+            _okButton->setEnabled(true); // Engedélyezett állapot
+        } else {
+            _okButton->setEnabled(false); // Letiltott állapot (vizuálisan is)
+        }
     }
 }
 
@@ -583,8 +584,10 @@ void FrequencyInputDialog::updateFrequencyDisplay() {
     // Csak a frekvencia kijelző területet frissítjük
     uint16_t displayY = bounds.y + HEADER_HEIGHT + PADDING;
 
-    // Kijelző terület törlése
-    tft.fillRect(bounds.x + PADDING, displayY, bounds.width - 2 * PADDING, DISPLAY_AREA_HEIGHT, colors.background);
+    // Teljes szélességben törlés kis margóval, de kisebb magasságban (50px)
+    uint16_t clearHeight = 50; // Kisebb magasság, hogy ne nyúljon bele a gombokba
+    uint16_t clearMargin = 5;  // Kis margó a szélek mellett
+    tft.fillRect(bounds.x + clearMargin, displayY, bounds.width - 2 * clearMargin, clearHeight, colors.background);
 
     // Frekvencia újrarajzolása
     drawFrequencyDisplay();
