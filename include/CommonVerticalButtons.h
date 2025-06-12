@@ -39,13 +39,15 @@ static constexpr uint8_t MEMO = 17;    ///< Memória funkciók (univerzális)
  * @details Handler függvények képesek dialógusokat megjeleníteni
  */
 class CommonVerticalButtons {
-  public:
-    // =====================================================================
+  public: // =====================================================================
     // HANDLER FÜGGVÉNY TÍPUSOK - UIScreen pointerrel kiegészítve dialógusokhoz
     // =====================================================================
-    using Si4735HandlerFunc = void (*)(const UIButton::ButtonEvent &, Si4735Manager *, UIScreen *);
+    using CommonHandlerFunc = void (*)(const UIButton::ButtonEvent &, Si4735Manager *, UIScreen *);
     using ScreenHandlerFunc = void (*)(const UIButton::ButtonEvent &, IScreenManager *, UIScreen *);
-    using DialogHandlerFunc = void (*)(const UIButton::ButtonEvent &, Si4735Manager *, UIScreen *);
+
+    // Kompatibilitás miatt megtartjuk a régi neveket, de azonos típusra mutatnak
+    using Si4735HandlerFunc = CommonHandlerFunc;
+    using DialogHandlerFunc = CommonHandlerFunc;
 
     /**
      * @brief Gomb statikus adatok struktúrája
