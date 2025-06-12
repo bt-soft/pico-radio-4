@@ -158,6 +158,8 @@ class CommonVerticalButtons {
      * @brief ATTENUATOR gomb kezelő
      */
     static void handleAttenuatorButton(const UIButton::ButtonEvent &event, Si4735Manager *si4735Manager, UIScreen *screen = nullptr) {
+
+        // Bekapcsolás
         if (event.state == UIButton::EventButtonState::On) {
 
             // Az AGC gomb OFF állapotba helyezése, ha az Attenuator be van kapcsolva
@@ -202,6 +204,35 @@ class CommonVerticalButtons {
             if (screen->getStatusLineComp()) {
                 screen->getStatusLineComp()->updateAgc();
             }
+        }
+    }
+
+    /**
+     * @brief SQUELCH gomb kezelő - ValueChangeDialog megjelenítése
+     */
+    static void handleSquelchButton(const UIButton::ButtonEvent &event, Si4735Manager *si4735Manager, UIScreen *screen) {
+
+        if (event.state == UIButton::EventButtonState::On) {
+            const char *squelchPrompt = config.data.squelchUsesRSSI ? "RSSI Value[dBuV]:" : "SNR Value[dB]:";
+
+            // ValueChangeDialog létrehozása a statikus változó pointerével
+            auto squelchDialog = std::make_shared<ValueChangeDialog>(
+                screen, screen->getTFT(),                                                 //
+                "Squelch Level", squelchPrompt,                                           // Cím, felirat
+                &config.data.currentSquelch,                                              // Pointer a statikus változóra
+                MIN_SQUELCH, MAX_SQUELCH, 1,                                              // Min, Max, Step  (rtVars.h-ban definiálva)
+                [si4735Manager, screen](const std::variant<int, float, bool> &newValue) { // Callback a változásra
+                    // if (std::holds_alternative<int>(newValue) == 0) {
+                    //     updateButtonStateInScreen(screen, VerticalButtonIDs::SQUELCH, UIButton::ButtonState::Off);
+                    // }
+                },
+                nullptr,             // Nincs külön dialog bezárás callback
+                Rect(-1, -1, 280, 0) // Auto-magasság
+            );
+            screen->showDialog(squelchDialog);
+        } else {
+            config.data.currentSquelch = 0; // Squelch kikapcsolása
+            DEBUG("Squelch disabled\n");
         }
     }
 
@@ -271,36 +302,6 @@ class CommonVerticalButtons {
     }
 
     /**
-     * @brief SQUELCH gomb kezelő - ValueChangeDialog megjelenítése
-     */
-    static void handleSquelchButton(const UIButton::ButtonEvent &event, Si4735Manager *si4735Manager, UIScreen *screen) {
-        if (event.state != UIButton::EventButtonState::Clicked || !screen) {
-            return;
-        }
-
-        DEBUG("Squelch adjustment dialog requested\n");
-        // Squelch beállítás statikus változóval
-        int minSquelch = 0;
-        int maxSquelch = 127;           // FM alapértelmezett
-        static int currentSquelch = 20; // Statikus alapértelmezett érték
-
-        auto squelchDialog = std::make_shared<ValueChangeDialog>(
-            screen, screen->getTFT(), "Squelch Control", "Adjust squelch level (0=off):",
-            &currentSquelch, // Pointer a statikus változóra
-            minSquelch, maxSquelch, 1,
-            [si4735Manager](const std::variant<int, float, bool> &newValue) {
-                if (std::holds_alternative<int>(newValue)) {
-                    int squelch = std::get<int>(newValue);
-                    DEBUG("Squelch changed to: %d\n", squelch);
-                    // TODO: si4735Manager->setSquelch(squelch);
-                }
-            },
-            nullptr, Rect(-1, -1, 280, 0));
-        // Aktuális squelch beállítása a konstruktorban történik a valuePtr alapján
-        screen->showDialog(squelchDialog);
-    }
-
-    /**
      * @brief Központi gomb definíciók
      */
     static const std::vector<ButtonDefinition> &getButtonDefinitions() {
@@ -310,7 +311,7 @@ class CommonVerticalButtons {
             {VerticalButtonIDs::VOLUME, "Vol", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, 32, nullptr, nullptr, handleVolumeButton},
             {VerticalButtonIDs::AGC, "AGC", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off, 32, handleAGCButton, nullptr, nullptr},
             {VerticalButtonIDs::ATT, "Att", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off, 32, handleAttenuatorButton, nullptr, nullptr},
-            {VerticalButtonIDs::SQUELCH, "Sql", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, 32, nullptr, nullptr, handleSquelchButton},
+            {VerticalButtonIDs::SQUELCH, "Sql", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off, 32, nullptr, nullptr, handleSquelchButton},
             {VerticalButtonIDs::FREQ, "Freq", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, 32, nullptr, nullptr, handleFrequencyButton},
             {VerticalButtonIDs::SETUP, "Setup", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, 32, nullptr, handleSetupButton, nullptr},
             {VerticalButtonIDs::MEMO, "Memo", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, 32, nullptr, nullptr, handleMemoryButton}};
@@ -417,7 +418,18 @@ class CommonVerticalButtons {
          * @param si4735Manager Si4735Manager példány, amely a rádió állapotát kezeli
          */
         void updateAllVerticalButtonStates(Si4735Manager *si4735Manager) {
+
+            DEBUG("Updating vertical button states\n");
+
             updateVerticalButtonState(VerticalButtonIDs::MUTE, rtv::muteStat ? UIButton::ButtonState::On : UIButton::ButtonState::Off);
+
+            bool agcAuto = config.data.agcGain == static_cast<uint8_t>(Si4735Runtime::AgcGainMode::Automatic);
+            updateVerticalButtonState(VerticalButtonIDs::AGC, agcAuto ? UIButton::ButtonState::On : UIButton::ButtonState::Off);
+
+            bool attEnabled = config.data.agcGain == static_cast<uint8_t>(Si4735Runtime::AgcGainMode::Manual) && config.data.currentAGCgain > 0;
+            updateVerticalButtonState(VerticalButtonIDs::ATT, attEnabled ? UIButton::ButtonState::On : UIButton::ButtonState::Off);
+
+            updateVerticalButtonState(VerticalButtonIDs::SQUELCH, config.data.currentSquelch > 0 ? UIButton::ButtonState::On : UIButton::ButtonState::Off);
         }
     };
 }; // CommonVerticalButtons osztály bezárása

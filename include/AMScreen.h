@@ -109,7 +109,7 @@ class AMScreen : public UIScreen, public CommonVerticalButtons::Mixin<AMScreen> 
 
     /**
      * @brief Képernyő aktiválása - Event-driven gombállapot szinkronizálás
-     * @details Ez az EGYETLEN hely, ahol gombállapotokat szinkronizáljuk!
+     * @details Ez az EGYETLEN hely, ahol gombállapotokat szinkronizálunk!
      *
      * Szinkronizálási pontok:
      * - Mute gomb ↔ rtv::muteStat állapot
@@ -118,6 +118,17 @@ class AMScreen : public UIScreen, public CommonVerticalButtons::Mixin<AMScreen> 
      * - Bandwidth gomb ↔ AM szűrő beállítások
      */
     virtual void activate() override;
+
+    /**
+     * @brief Dialógus bezárásának kezelése - Gombállapot szinkronizálás
+     * @details Az utolsó dialógus bezárásakor frissíti a gombállapotokat
+     *
+     * Funkcionalitás:
+     * - Alap UIScreen::onDialogClosed() hívása
+     * - Ha ez volt az utolsó dialógus -> updateAllVerticalButtonStates() + updateHorizontalButtonStates()
+     * - Biztosítja a konzisztens gombállapotokat dialógus bezárás után
+     */
+    virtual void onDialogClosed(UIDialogBase *closedDialog) override;
 
   private:
     // ===================================================================

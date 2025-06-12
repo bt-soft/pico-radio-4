@@ -85,6 +85,17 @@ class FMScreen : public UIScreen, public CommonVerticalButtons::Mixin<FMScreen> 
      */
     virtual void activate() override;
 
+    /**
+     * @brief Dialógus bezárásának kezelése - Gombállapot szinkronizálás
+     * @details Az utolsó dialógus bezárásakor frissíti a gombállapotokat
+     *
+     * Funkcionalitás:
+     * - Alap UIScreen::onDialogClosed() hívása
+     * - Ha ez volt az utolsó dialógus -> updateAllVerticalButtonStates() + updateHorizontalButtonStates()
+     * - Biztosítja a konzisztens gombállapotokat dialógus bezárás után
+     */
+    virtual void onDialogClosed(UIDialogBase *closedDialog) override;
+
   private:
     // ===================================================================
     // UI komponensek layout és management

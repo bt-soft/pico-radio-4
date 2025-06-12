@@ -84,6 +84,7 @@ String Si4735Manager::getCurrentRdsProgramService() {
  * Ez a függvény folyamatosan figyeli a squelch állapotát és kezeli a hardver némítást.
  */
 void Si4735Manager::loop() {
+
     // Squelch kezelése
     manageSquelch();
 

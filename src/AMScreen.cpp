@@ -194,6 +194,28 @@ void AMScreen::activate() {
     updateHorizontalButtonStates();                // AM-specifikus navigációs gombok
 }
 
+/**
+ * @brief Dialógus bezárásának kezelése - Gombállapot szinkronizálás
+ * @details Az utolsó dialógus bezárásakor frissíti a gombállapotokat
+ *
+ * Ez a metódus biztosítja, hogy a gombállapotok konzisztensek maradjanak
+ * a dialógusok bezárása után. Különösen fontos a ValueChangeDialog-ok
+ * (Volume, Attenuator, Squelch, Frequency) után.
+ */
+void AMScreen::onDialogClosed(UIDialogBase *closedDialog) {
+    DEBUG("AMScreen::onDialogClosed - Dialog closed, checking if last dialog\n");
+
+    // Először hívjuk az alap implementációt (stack cleanup, navigation logic)
+    UIScreen::onDialogClosed(closedDialog);
+
+    // Ha ez volt az utolsó dialógus, frissítsük a gombállapotokat
+    if (!isDialogActive()) {
+        DEBUG("AMScreen::onDialogClosed - Last dialog closed, updating button states\n");
+        updateAllVerticalButtonStates(pSi4735Manager); // Függőleges gombok szinkronizálása
+        updateHorizontalButtonStates();                // Vízszintes gombok szinkronizálása
+    }
+}
+
 // =====================================================================
 // UI komponensek layout és management
 // =====================================================================

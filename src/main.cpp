@@ -315,7 +315,6 @@ void loop() {
     // Képernyő rajzolása (csak szükség esetén, korlátozott gyakorisággal)
     static uint32_t lastDrawTime = 0;
     const uint32_t DRAW_INTERVAL = 50; // Maximum 20 FPS (50ms között rajzolás)
-
     if (millis() - lastDrawTime >= DRAW_INTERVAL) {
         if (screenManager) {
             screenManager->draw();
