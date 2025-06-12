@@ -16,10 +16,10 @@
 
 #ifndef __AM_SCREEN_H
 #define __AM_SCREEN_H
+#include "CommonVerticalButtons.h"
 #include "UIButton.h"
 #include "UIHorizontalButtonBar.h"
 #include "UIScreen.h"
-#include "UIVerticalButtonBar.h"
 
 /**
  * @class AMScreen
@@ -42,7 +42,7 @@
  * - LW (Long Wave) - 150-519 kHz
  * - SW (Short Wave) - 2.3-26.1 MHz
  */
-class AMScreen : public UIScreen {
+class AMScreen : public UIScreen, public CommonVerticalButtons::Mixin<AMScreen> {
 
   public:
     // ===================================================================
@@ -133,40 +133,16 @@ class AMScreen : public UIScreen {
      * - Függőleges gombsor (jobb oldal) - Közös FMScreen-nel
      * - Vízszintes gombsor (alul) - FM gombbal
      */
-    void layoutComponents();
-
-    /**
-     * @brief Függőleges gombsor létrehozása - Jobb oldali funkcionális gombok
-     * @details 8 gomb elhelyezése függőleges elrendezésben - KÖZÖS FMScreen-nel:
-     * Mute, Volume, AGC, Attenuator, Squelch, Frequency, Setup, Memory
-     *
-     * Megjegyzés: Ez pontosan ugyanaz a gombsor, mint az FMScreen-ben,
-     * csak az AM/MW/LW/SW band-ekhez optimalizált eseménykezelőkkel
-     */
-    void createVerticalButtonBar();
-
-    /**
-     * @brief Vízszintes gombsor létrehozása - Alsó navigációs gombok
-     * @details 3 navigációs gomb elhelyezése vízszintes elrendezésben:
-     * FM, Test, Setup (FM gomb az FMScreen-re navigál)
-     */
+    void layoutComponents(); /**
+                              * @brief Vízszintes gombsor létrehozása - Alsó navigációs gombok
+                              * @details 3 navigációs gomb elhelyezése vízszintes elrendezésben:
+                              * FM, Test, Setup (FM gomb az FMScreen-re navigál)
+                              */
     void createHorizontalButtonBar();
 
     // ===================================================================
     // Event-driven gombállapot szinkronizálás
     // ===================================================================
-
-    /**
-     * @brief Függőleges gombsor állapotainak szinkronizálása
-     * @details CSAK aktiváláskor hívódik meg! Event-driven architektúra.
-     *
-     * Szinkronizált állapotok (AM specifikus):
-     * - Mute gomb ↔ rtv::muteStat
-     * - AGC gomb ↔ Si4735 AGC állapot (AM-ben gyakran használt)
-     * - Attenuator gomb ↔ Si4735 attenuator állapot
-     * - Bandwidth gomb ↔ AM szűrő szélesség (1.8kHz, 2kHz, 2.5kHz, 4kHz)
-     */
-    void updateVerticalButtonStates();
 
     /**
      * @brief Vízszintes gombsor állapotainak szinkronizálása
@@ -203,20 +179,9 @@ class AMScreen : public UIScreen {
      * @details Pushable gomb: Setup képernyőre navigálás
      * Duplikáció a függőleges gombbal (kényelemért)
      */
-    void handleSetupButtonHorizontal(const UIButton::ButtonEvent &event);
-
-    // ===================================================================
+    void handleSetupButtonHorizontal(const UIButton::ButtonEvent &event); // ===================================================================
     // UI komponens objektumok - Smart pointer kezelés
     // ===================================================================
-
-    /**
-     * @brief Függőleges gombsor komponens
-     * @details Smart pointer a 8 funkcionális gombhoz (jobb oldal)
-     * - Automatikus memória kezelés
-     * - Event-driven eseménykezelés
-     * - KÖZÖS FMScreen-nel: Mute, Volume, AGC, Attenuator, Squelch, Frequency, Setup, Memory
-     */
-    std::shared_ptr<UIVerticalButtonBar> verticalButtonBar;
 
     /**
      * @brief Vízszintes gombsor komponens

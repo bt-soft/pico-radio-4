@@ -16,10 +16,10 @@
 
 #ifndef __FM_SCREEN_H
 #define __FM_SCREEN_H
+#include "CommonVerticalButtons.h"
 #include "UIButton.h"
 #include "UIHorizontalButtonBar.h"
 #include "UIScreen.h"
-#include "UIVerticalButtonBar.h"
 
 /**
  * @class FMScreen
@@ -37,7 +37,7 @@
  * - 8 funkcionális gomb (jobb oldal)
  * - 3 navigációs gomb (alsó sor)
  */
-class FMScreen : public UIScreen {
+class FMScreen : public UIScreen, public CommonVerticalButtons::Mixin<FMScreen> {
 
   public:
     // ===================================================================
@@ -128,13 +128,6 @@ class FMScreen : public UIScreen {
     void layoutComponents();
 
     /**
-     * @brief Függőleges gombsor létrehozása - Jobb oldali funkcionális gombok
-     * @details 8 gomb elhelyezése függőleges elrendezésben:
-     * Mute, Volume, AGC, Attenuator, Squelch, Frequency, Setup, Memory
-     */
-    void createVerticalButtonBar();
-
-    /**
      * @brief Vízszintes gombsor létrehozása - Alsó navigációs gombok
      * @details 3 navigációs gomb elhelyezése vízszintes elrendezésben:
      * AM, Test, Setup
@@ -144,17 +137,6 @@ class FMScreen : public UIScreen {
     // ===================================================================
     // Event-driven gombállapot szinkronizálás
     // ===================================================================
-
-    /**
-     * @brief Függőleges gombsor állapotainak szinkronizálása
-     * @details CSAK aktiváláskor hívódik meg! Event-driven architektúra.
-     *
-     * Szinkronizált állapotok:
-     * - Mute gomb ↔ rtv::muteStat
-     * - AGC gomb ↔ Si4735 AGC állapot (TODO)
-     * - Attenuator gomb ↔ Si4735 attenuator állapot (TODO)
-     */
-    void updateVerticalButtonStates();
 
     /**
      * @brief Vízszintes gombsor állapotainak szinkronizálása
@@ -188,20 +170,9 @@ class FMScreen : public UIScreen {
      * @param event Gomb esemény (Clicked)
      * @details Pushable gomb: Setup képernyőre navigálás (duplikáció a függőleges gombbal)
      */
-    void handleSetupButtonHorizontal(const UIButton::ButtonEvent &event);
-
-    // ===================================================================
+    void handleSetupButtonHorizontal(const UIButton::ButtonEvent &event); // ===================================================================
     // UI komponens objektumok - Smart pointer kezelés
     // ===================================================================
-
-    /**
-     * @brief Függőleges gombsor komponens
-     * @details Smart pointer a 8 funkcionális gombhoz (jobb oldal)
-     * - Automatikus memória kezelés
-     * - Event-driven eseménykezelés
-     * - Mute, Volume, AGC, Attenuator, Squelch, Frequency, Setup, Memory
-     */
-    std::shared_ptr<UIVerticalButtonBar> verticalButtonBar;
 
     /**
      * @brief Vízszintes gombsor komponens

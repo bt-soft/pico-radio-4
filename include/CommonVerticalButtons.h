@@ -132,10 +132,9 @@ class CommonVerticalButtons {
     template <typename ScreenType> class Mixin : public ButtonsGroupManager<ScreenType> {
       protected:
         std::vector<std::shared_ptr<UIButton>> createdVerticalButtons;
-
         void createCommonVerticalButtons(Si4735Manager *si4735Manager, IScreenManager *screenManager) {
             auto buttonDefs = CommonVerticalButtons::createButtonDefinitions(si4735Manager, screenManager);
-            this->layoutVerticalButtonGroup(buttonDefs, &createdVerticalButtons, 5, 5, 5, 60, 32, 3, 4);
+            this->layoutVerticalButtonGroup(buttonDefs, &createdVerticalButtons, 0, 0, 5, 60, 32, 3, 4);
         }
         void updateVerticalButtonState(uint8_t buttonId, UIButton::ButtonState state) {
             for (auto &button : createdVerticalButtons) {
@@ -359,24 +358,8 @@ class CommonVerticalButtons {
             //     showFMSquelchDialog(si4735Manager);
             // } else {
             //     // AM RSSI alapú squelch
-            //     showAMSquelchDialog(si4735Manager);
-            // }
+            //     showAMSquelchDialog(si4735Manager);            // }
         }
-    }
-
-    // =====================================================================
-    // BACKWARD COMPATIBILITY - Régi API támogatás
-    // =====================================================================
-
-    static std::shared_ptr<UIVerticalButtonBar> createVerticalButtonBar(TFT_eSPI &tft, UIScreen *screen, Si4735Manager *si4735Manager, IScreenManager *screenManager) {
-        // Ideiglenesen visszaadom a nullptr-t, mert most a ButtonsGroupManager-t használjuk
-        // Ez a metódus deprecated, használd a Mixin template-et helyette
-        return nullptr;
-    }
-
-    template <typename ButtonBarType> static void updateAllButtonStates(ButtonBarType *buttonBar, Si4735Manager *si4735Manager, IScreenManager *screenManager) {
-        // Deprecated metódus - használd a Mixin::updateAllVerticalButtonStates()-t helyette
-        // Egyelőre üres implementáció
     }
 };
 

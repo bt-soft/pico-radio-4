@@ -125,14 +125,12 @@ void FMScreen::layoutComponents() {
     uint16_t smeterHeight = 60;                               // S-Meter optimális magassága
     Rect smeterBounds(smeterX, smeterY, smeterWidth, smeterHeight);
     ColorScheme smeterColors = ColorScheme::defaultScheme();
-    smeterColors.background = TFT_COLOR_BACKGROUND; // Fekete háttér a designhoz
-    UIScreen::createSMeter(smeterBounds, smeterColors);
-
-    // ===================================================================
+    smeterColors.background = TFT_COLOR_BACKGROUND;     // Fekete háttér a designhoz
+    UIScreen::createSMeter(smeterBounds, smeterColors); // ===================================================================
     // Gombsorok létrehozása - Event-driven architektúra
     // ===================================================================
-    createVerticalButtonBar();   // Jobb oldali függőleges gombsor
-    createHorizontalButtonBar(); // Alsó vízszintes gombsor
+    createCommonVerticalButtons(pSi4735Manager, getManager()); // ButtonsGroupManager alapú függőleges gombsor
+    createHorizontalButtonBar();                               // Alsó vízszintes gombsor
 }
 
 // ===================================================================
@@ -232,13 +230,11 @@ void FMScreen::activate() {
     DEBUG("FMScreen activated - syncing button states\n");
 
     // Szülő osztály activate() hívása (UIScreen lifecycle)
-    UIScreen::activate();
-
-    // ===================================================================
+    UIScreen::activate(); // ===================================================================
     // Event-driven gombállapot szinkronizálás - CSAK AKTIVÁLÁSKOR!
     // ===================================================================
-    updateVerticalButtonStates();   // Függőleges gombsor szinkronizálás
-    updateHorizontalButtonStates(); // Vízszintes gombsor szinkronizálás
+    updateAllVerticalButtonStates(pSi4735Manager); // Függőleges gombsor szinkronizálás (mixin method)
+    updateHorizontalButtonStates();                // Vízszintes gombsor szinkronizálás
 }
 
 // ===================================================================
@@ -276,53 +272,6 @@ void FMScreen::activate() {
  * - Automatikus gombkonfiguráció univerzális ID-kkal
  * - Band-független működés (Si4735Manager kezeli a rádió állapotokat)
  */
-void FMScreen::createVerticalButtonBar() {
-    // ===================================================================
-    // Univerzális factory metódus - Egyszerűsített hívás
-    // ===================================================================
-    verticalButtonBar = CommonVerticalButtons::createVerticalButtonBar(tft,            // TFT display referencia
-                                                                       this,           // Screen referencia (lambda capture-hez)
-                                                                       pSi4735Manager, // Si4735 rádió chip manager referencia
-                                                                       getManager()    // Screen manager referencia (navigációhoz)
-    );
-
-    // Gombsor hozzáadása a képernyő komponens hierarchiájához
-    addChild(verticalButtonBar);
-}
-
-/**
- * @brief Függőleges gombsor állapotainak szinkronizálása a rendszer állapotával
- * @details Event-driven architektúra: CSAK aktiváláskor hívódik meg!
- *
- * Szinkronizált állapotok:
- * - Mute gomb ↔ rtv::muteStat (globális némítás állapot)
- * - AGC gomb ↔ Si4735 AGC állapot (implementálandó)
- * - Attenuator gomb ↔ Si4735 attenuator állapot (implementálandó)
- *
- * @note Ez a metódus NEM hívódik meg minden loop ciklusban!
- */
-/**
- * @brief Függőleges gombsor állapotainak szinkronizálása a rendszer állapotával
- * @details Event-driven architektúra: CSAK aktiváláskor hívódik meg!
- *
- * Szinkronizált állapotok:
- * - Mute gomb ↔ rtv::muteStat (globális némítás állapot)
- * - AGC gomb ↔ Si4735 AGC állapot (implementálandó)
- * - Attenuator gomb ↔ Si4735 attenuator állapot (implementálandó)
- *
- * @note Ez a metódus NEM hívódik meg minden loop ciklusban!
- */
-void FMScreen::updateVerticalButtonStates() {
-    if (!verticalButtonBar) {
-        return; // Biztonsági ellenőrzés
-    }
-
-    // ===================================================================
-    // Új univerzális állapot szinkronizáló - Egyszerűsített verzió
-    // ===================================================================
-    CommonVerticalButtons::updateAllButtonStates(verticalButtonBar.get(), pSi4735Manager, getManager());
-}
-
 // ===================================================================
 // Vízszintes gombsor - Alsó navigációs gombok
 // ===================================================================

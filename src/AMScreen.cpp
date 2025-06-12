@@ -196,14 +196,15 @@ void AMScreen::drawContent() {
  * - ATTENUATOR gomb ↔ Si4735 attenuator állapot (TODO)
  */
 void AMScreen::activate() {
+
     // Alaposztály aktiválás (UI komponens hierarchia)
     UIScreen::activate();
 
     // ===================================================================
     // *** EGYETLEN GOMBÁLLAPOT SZINKRONIZÁLÁSI PONT - Event-driven ***
     // ===================================================================
-    updateVerticalButtonStates();   // Univerzális funkcionális gombok
-    updateHorizontalButtonStates(); // AM-specifikus navigációs gombok
+    updateAllVerticalButtonStates(pSi4735Manager); // Univerzális funkcionális gombok (mixin method)
+    updateHorizontalButtonStates();                // AM-specifikus navigációs gombok
 }
 
 // =====================================================================
@@ -215,38 +216,8 @@ void AMScreen::activate() {
  */
 void AMScreen::layoutComponents() {
     // UI komponensek létrehozása
-    createVerticalButtonBar();   // Jobb oldali funkcionális gombok
-    createHorizontalButtonBar(); // Alsó navigációs gombok
-}
-
-/**
- * @brief Függőleges gombsor létrehozása - Univerzális factory pattern használatával
- * @details Egyszerűsített implementáció az univerzális gomb ID rendszer segítségével.
- *          A teljes gombkezelési logika a CommonVerticalButtons osztályba került.
- *
- * **Változások a korábbi verzióhoz képest**:
- * - Template paraméter eltávolítva (ButtonIDStruct már nem szükséges)
- * - 5 paraméterről 4-re csökkentve (buttonIds paraméter eliminálva)
- * - ~25 sor duplikált kód eltávolítva (AMScreenButtonIDs, AMScreenButtonIDStruct)
- * - Közös gombkezelési logika az FMScreen-nel
- *
- * **Factory hívás**:
- * - createVerticalButtonBar(tft, screen, si4735Manager, screenManager)
- * - Automatikus gombkonfiguráció univerzális ID-kkal
- * - Band-független működés (Si4735Manager kezeli a rádió állapotokat)
- */
-void AMScreen::createVerticalButtonBar() {
-    // ===================================================================
-    // Univerzális factory metódus - Egyszerűsített hívás
-    // ===================================================================
-    verticalButtonBar = CommonVerticalButtons::createVerticalButtonBar(tft,            // TFT display referencia
-                                                                       this,           // Screen referencia (lambda capture-hez)
-                                                                       pSi4735Manager, // Si4735 rádió chip manager referencia
-                                                                       getManager()    // Screen manager referencia (navigációhoz)
-    );
-
-    // Gombsor hozzáadása a képernyő komponens hierarchiájához
-    addChild(verticalButtonBar);
+    createCommonVerticalButtons(pSi4735Manager, getManager()); // ButtonsGroupManager használata
+    createHorizontalButtonBar();                               // Alsó navigációs gombok
 }
 
 /**
@@ -287,36 +258,6 @@ void AMScreen::createHorizontalButtonBar() {
 // =====================================================================
 // EVENT-DRIVEN GOMBÁLLAPOT SZINKRONIZÁLÁS - Univerzális rendszer
 // =====================================================================
-
-/**
- * @brief Függőleges gombsor állapotainak szinkronizálása - Univerzális rendszer
- * @details REFACTORED implementáció az univerzális gomb ID rendszer használatával:
- *
- * **Korábbi implementáció problémái**:
- * - ~20 sor duplikált kód az FMScreen-nel
- * - Manuális ID átadás minden gombhoz
- * - Karbantartási nehézségek
- *
- * **Új univerzális megoldás**:
- * - CommonVerticalButtons::updateAllButtonStates() használata
- * - Automatikus univerzális ID kezelés
- * - Közös logika az FMScreen-nel
- * - Csak 3 sor kód a korábbi ~20 helyett
- *
- * **Szinkronizált állapotok**:
- * - MUTE: rtv::muteStat → VerticalButtonIDs::MUTE
- * - AGC: Si4735 AGC állapot → VerticalButtonIDs::AGC (TODO)
- * - ATTENUATOR: Si4735 attenuator → VerticalButtonIDs::ATT (TODO)
- */
-void AMScreen::updateVerticalButtonStates() {
-    if (!verticalButtonBar)
-        return;
-
-    // ===================================================================
-    // Univerzális állapot szinkronizáló - Egyszerűsített hívás
-    // ===================================================================
-    CommonVerticalButtons::updateAllButtonStates(verticalButtonBar.get(), pSi4735Manager, getManager());
-}
 
 /**
  * @brief Vízszintes gombsor állapotainak szinkronizálása - AM képernyő specifikus
