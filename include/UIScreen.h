@@ -12,24 +12,28 @@
 class UIScreen : public UIContainerComponent {
 
   private:
-    /** @brief A képernyő egyedi neve */
+    /**
+     * @brief A képernyő egyedi neve
+     */
     const char *name;
 
-    /** @brief ScreenManager referencia a képernyő váltásokhoz */
-    IScreenManager *manager = nullptr;
+    /**
+     * @brief ScreenManager referencia a képernyő váltásokhoz
+     */
+    IScreenManager *screenManager = nullptr;
 
     /**
      * @brief Dialógus stack gyors eléréshez (weak_ptr)
-     * */
+     */
     std::vector<std::weak_ptr<UIDialogBase>> dialogStack;
     /**
      * @brief Dialógus stack memória védelemhez (shared_ptr) - Dual stack rendszer
-     * */
+     */
     std::vector<std::shared_ptr<UIDialogBase>> dialogSharedStack;
 
     /**
      * @brief Jelenleg aktív dialógus referencia
-     * */
+     */
     std::shared_ptr<UIDialogBase> currentDialog;
 
   protected:
@@ -121,8 +125,12 @@ class UIScreen : public UIContainerComponent {
      * @brief ScreenManager beállítása
      * @param mgr ScreenManager referencia
      */
-    void setManager(IScreenManager *mgr) { manager = mgr; }
-    IScreenManager *getManager() const { return manager; }
+    void setScreenManager(IScreenManager *mgr) { screenManager = mgr; }
+    /**
+     * @brief ScreenManager referencia lekérése
+     * @return IScreenManager referencia
+     */
+    IScreenManager *getScreenManager() const { return screenManager; }
 
     /**
      * @brief TFT display referencia elkérése

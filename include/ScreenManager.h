@@ -146,7 +146,7 @@ class ScreenManager : public IScreenManager {
         // Új képernyő létrehozása
         currentScreen = it->second(tft);
         if (currentScreen) {
-            currentScreen->setManager(this);
+            currentScreen->setScreenManager(this);
             if (params) {
                 currentScreen->setParameters(params);
             }

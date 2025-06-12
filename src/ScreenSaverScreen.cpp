@@ -278,8 +278,8 @@ void ScreenSaverScreen::drawBatteryInfo() {
  */
 bool ScreenSaverScreen::handleTouch(const TouchEvent &event) {
     if (event.pressed) {
-        if (getManager()) {
-            getManager()->goBack(); // Visszatérés az előző képernyőre
+        if (getScreenManager()) {
+            getScreenManager()->goBack(); // Visszatérés az előző képernyőre
         }
         return true;
     }
@@ -294,8 +294,8 @@ bool ScreenSaverScreen::handleTouch(const TouchEvent &event) {
  */
 bool ScreenSaverScreen::handleRotary(const RotaryEvent &event) {
     // Bármilyen forgó encoder esemény (forgatás vagy kattintás) ébresztő hatású
-    if (getManager()) {
-        getManager()->goBack(); // Visszatérés az előző képernyőre
+    if (getScreenManager()) {
+        getScreenManager()->goBack(); // Visszatérés az előző képernyőre
     }
     return true;
 }

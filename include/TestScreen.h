@@ -104,8 +104,8 @@ class TestScreen : public UIScreen, public ButtonsGroupManager<TestScreen> {
                          // Back gomb kezelése
                          if (STREQ(event.label, "Back")) {
                              DEBUG("TestScreen: Back button clicked, going back to previous screen\n");
-                             if (getManager()) {
-                                 getManager()->goBack();
+                             if (getScreenManager()) {
+                                 getScreenManager()->goBack();
                              } else {
                                  DEBUG("TestScreen: Warning - No screen manager available for back navigation\n");
                              }

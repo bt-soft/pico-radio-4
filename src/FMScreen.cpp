@@ -129,8 +129,8 @@ void FMScreen::layoutComponents() {
     UIScreen::createSMeter(smeterBounds, smeterColors); // ===================================================================
     // Gombsorok létrehozása - Event-driven architektúra
     // ===================================================================
-    createCommonVerticalButtons(pSi4735Manager, getManager()); // ButtonsGroupManager alapú függőleges gombsor
-    createHorizontalButtonBar();                               // Alsó vízszintes gombsor
+    createCommonVerticalButtons(pSi4735Manager, getScreenManager()); // ButtonsGroupManager alapú függőleges gombsor
+    createHorizontalButtonBar();                                     // Alsó vízszintes gombsor
 }
 
 // ===================================================================
@@ -369,7 +369,7 @@ void FMScreen::handleAMButton(const UIButton::ButtonEvent &event) {
     if (event.state == UIButton::EventButtonState::Clicked) {
         DEBUG("FMScreen: Switching to AM band family screen\n");
         // ScreenManager-en keresztül AM képernyőre váltás
-        UIScreen::getManager()->switchToScreen(SCREEN_NAME_AM);
+        UIScreen::getScreenManager()->switchToScreen(SCREEN_NAME_AM);
     }
 }
 
@@ -384,7 +384,7 @@ void FMScreen::handleTestButton(const UIButton::ButtonEvent &event) {
     if (event.state == UIButton::EventButtonState::Clicked) {
         DEBUG("FMScreen: Switching to Test screen\n");
         // ScreenManager-en keresztül Test képernyőre váltás
-        UIScreen::getManager()->switchToScreen(SCREEN_NAME_TEST);
+        UIScreen::getScreenManager()->switchToScreen(SCREEN_NAME_TEST);
     }
 }
 
@@ -399,6 +399,6 @@ void FMScreen::handleSetupButtonHorizontal(const UIButton::ButtonEvent &event) {
     if (event.state == UIButton::EventButtonState::Clicked) {
         DEBUG("FMScreen: Switching to Setup screen (from horizontal button)\n");
         // ScreenManager-en keresztül Setup képernyőre váltás
-        UIScreen::getManager()->switchToScreen(SCREEN_NAME_SETUP);
+        UIScreen::getScreenManager()->switchToScreen(SCREEN_NAME_SETUP);
     }
 }

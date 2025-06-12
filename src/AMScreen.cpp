@@ -216,8 +216,8 @@ void AMScreen::activate() {
  */
 void AMScreen::layoutComponents() {
     // UI komponensek létrehozása
-    createCommonVerticalButtons(pSi4735Manager, getManager()); // ButtonsGroupManager használata
-    createHorizontalButtonBar();                               // Alsó navigációs gombok
+    createCommonVerticalButtons(pSi4735Manager, getScreenManager()); // ButtonsGroupManager használata
+    createHorizontalButtonBar();                                     // Alsó navigációs gombok
 }
 
 /**
@@ -309,7 +309,7 @@ void AMScreen::updateHorizontalButtonStates() {
 void AMScreen::handleFMButton(const UIButton::ButtonEvent &event) {
     if (event.state == UIButton::EventButtonState::Clicked) {
         // FM képernyőre váltás - keresztnavigáció
-        getManager()->switchToScreen(SCREEN_NAME_FM);
+        getScreenManager()->switchToScreen(SCREEN_NAME_FM);
     }
 }
 
@@ -319,7 +319,7 @@ void AMScreen::handleFMButton(const UIButton::ButtonEvent &event) {
 void AMScreen::handleTestButton(const UIButton::ButtonEvent &event) {
     if (event.state == UIButton::EventButtonState::Clicked) {
         // Test képernyőre váltás
-        getManager()->switchToScreen(SCREEN_NAME_TEST);
+        getScreenManager()->switchToScreen(SCREEN_NAME_TEST);
     }
 }
 
@@ -329,6 +329,6 @@ void AMScreen::handleTestButton(const UIButton::ButtonEvent &event) {
 void AMScreen::handleSetupButtonHorizontal(const UIButton::ButtonEvent &event) {
     if (event.state == UIButton::EventButtonState::Clicked) {
         // Setup képernyőre váltás (ugyanaz, mint a függőleges gomb)
-        getManager()->switchToScreen(SCREEN_NAME_SETUP);
+        getScreenManager()->switchToScreen(SCREEN_NAME_SETUP);
     }
 }

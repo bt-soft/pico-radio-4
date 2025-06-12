@@ -62,8 +62,8 @@ void SetupScreenBase::createCommonUI(const char *title) {
     exitButton =
         std::make_shared<UIButton>(tft, 0, exitButtonBounds, "Back", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, [this](const UIButton::ButtonEvent &event) {
             // Lambda callback: Back gomb megnyomásakor visszatérés az előző képernyőre
-            if (event.state == UIButton::EventButtonState::Clicked && getManager()) {
-                getManager()->goBack();
+            if (event.state == UIButton::EventButtonState::Clicked && getScreenManager()) {
+                getScreenManager()->goBack();
             }
         });
     addChild(exitButton);
@@ -157,8 +157,8 @@ bool SetupScreenBase::onItemClicked(int index) {
     // Almenü esetén navigáció
     if (item.isSubmenu && item.targetScreen) {
         DEBUG("SetupScreenBase: Navigating to submenu: %s\n", item.targetScreen);
-        if (getManager()) {
-            getManager()->switchToScreen(item.targetScreen);
+        if (getScreenManager()) {
+            getScreenManager()->switchToScreen(item.targetScreen);
         }
         return false;
     }

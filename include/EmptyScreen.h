@@ -100,7 +100,7 @@ class EmptyScreen : public UIScreen {
                                                   if (event.state == UIButton::EventButtonState::Clicked) {
                                                       DEBUG("EmptyScreen: Switching to AM screen\n");
                                                       // Képernyőváltás AM-re
-                                                      UIScreen::getManager()->switchToScreen(SCREEN_NAME_AM);
+                                                      UIScreen::getScreenManager()->switchToScreen(SCREEN_NAME_AM);
                                                   }
                                               });
         addChild(amButton);
@@ -117,7 +117,7 @@ class EmptyScreen : public UIScreen {
                                                   if (event.state == UIButton::EventButtonState::Clicked) {
                                                       DEBUG("EmptyScreen: Switching to FM screen\n");
                                                       // Képernyőváltás FM-re
-                                                      UIScreen::getManager()->switchToScreen(SCREEN_NAME_FM);
+                                                      UIScreen::getScreenManager()->switchToScreen(SCREEN_NAME_FM);
                                                   }
                                               });
         addChild(fmButton);
