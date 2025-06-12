@@ -6,6 +6,7 @@
 #include "FrequencyInputDialog.h"
 #include "Band.h"
 #include "UIColorPalette.h"
+#include "UIScreen.h"
 #include "defines.h"
 #include "utils.h"
 
@@ -569,13 +570,9 @@ bool FrequencyInputDialog::isFrequencyInBounds(uint16_t rawFreq) const { return 
  */
 void FrequencyInputDialog::updateOkButtonState() {
     if (_okButton) {
-        if (_isValid) {
-            _okButton->setEnabled(true); // Engedélyezett állapot
-        } else {
-            _okButton->setEnabled(false); // Letiltott állapot
-        }
-        _okButton->markForRedraw(); // Explicit újrarajzolás kérése
-        _okButton->draw();          // Azonnali rajzolás kényszerítése
+        // Ez beállítja a gomb needsRedraw flag-jét.
+        _okButton->setButtonState(_isValid ? UIButton::ButtonState::Off : UIButton::ButtonState::Disabled);
+        _okButton->draw(); // Frissítjük a gombot, hogy a színváltozás látszódjon
     }
 }
 
