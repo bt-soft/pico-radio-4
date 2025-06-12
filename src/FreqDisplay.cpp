@@ -30,6 +30,8 @@ constexpr int FREQ_7SEGMENT_HEIGHT = 38; ///< A 7-szegmenses font magassága pix
 // Ezek az értékek a 7-szegmenses kijelző jobb szélének X pozícióját jelentik
 // a komponens bal széléhez (bounds.x) viszonyítva. A tényleges sprite rajzolási
 // X pozíciója (spritePushX) ebből és a sprite szélességéből számolódik.
+// TODO: ezt majd javítani, ez így nem jó!!
+#warning "RefXDefault, RefXFmAm, RefXSeek, RefXBfo értékek hardcoded értékek, nem dinamikusan számoltak, javítani!"
 constexpr uint16_t RefXDefault = 222; ///< Alapértelmezett mód (SSB/CW normál)
 constexpr uint16_t RefXFmAm = 160;    ///< FM/AM módokban
 constexpr uint16_t RefXSeek = 144;    ///< SEEK mód során
