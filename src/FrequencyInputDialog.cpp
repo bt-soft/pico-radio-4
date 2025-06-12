@@ -32,9 +32,6 @@ FrequencyInputDialog::FrequencyInputDialog(UIScreen *parentScreen, TFT_eSPI &tft
 
     // Layout alkalmazása
     layoutDialogContent();
-
-    // OK gomb kezdeti állapotának beállítása (az inicializálás után)
-    updateOkButtonState();
 }
 
 /**
@@ -198,10 +195,13 @@ void FrequencyInputDialog::createOkCancelButtons() {
 
     // Statikus feliratok
     static const char *OK_LABEL = "OK";
-    static const char *CANCEL_LABEL = "Cancel";
-
-    // OK gomb
+    static const char *CANCEL_LABEL = "Cancel"; // OK gomb - proper ButtonColorScheme beállítással
     _okButton = std::make_shared<UIButton>(tft, 100, Rect(0, 0, 60, 30), OK_LABEL, UIButton::ButtonType::Pushable, UIButton::ButtonState::Off);
+
+    // Disabled színek beállítása az OK gomb számára
+    ButtonColorScheme okButtonScheme = UIColorPalette::createDefaultButtonScheme();
+    _okButton->setButtonColorScheme(okButtonScheme);
+
     _okButton->setEventCallback([this](const UIButton::ButtonEvent &event) {
         if (event.state == UIButton::EventButtonState::Clicked) {
             onOkClicked();
@@ -572,8 +572,10 @@ void FrequencyInputDialog::updateOkButtonState() {
         if (_isValid) {
             _okButton->setEnabled(true); // Engedélyezett állapot
         } else {
-            _okButton->setEnabled(false); // Letiltott állapot (vizuálisan is)
+            _okButton->setEnabled(false); // Letiltott állapot
         }
+        _okButton->markForRedraw(); // Explicit újrarajzolás kérése
+        _okButton->draw();          // Azonnali rajzolás kényszerítése
     }
 }
 

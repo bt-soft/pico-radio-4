@@ -110,12 +110,10 @@ class UIColorPalette {
     static constexpr uint16_t BUTTON_OK_BORDER = TFT_DARKGREEN;
     static constexpr uint16_t BUTTON_CANCEL_BACKGROUND = TFT_MAROON;
     static constexpr uint16_t BUTTON_CANCEL_TEXT = TFT_WHITE;
-    static constexpr uint16_t BUTTON_CANCEL_BORDER = TFT_MAROON;
-
-    // Letiltott gomb színek - nagyon finom, de még felismerhető
-    static constexpr uint16_t BUTTON_DISABLED_BACKGROUND = TFT_COLOR(72, 72, 75); // Halvány szürke
-    static constexpr uint16_t BUTTON_DISABLED_TEXT = TFT_COLOR(156, 156, 156);    // Világos szürke
-    static constexpr uint16_t BUTTON_DISABLED_BORDER = TFT_COLOR(156, 156, 156);  // Világos szürke
+    static constexpr uint16_t BUTTON_CANCEL_BORDER = TFT_MAROON;                  // Letiltott gomb színek - jól látható disabled állapot
+    static constexpr uint16_t BUTTON_DISABLED_BACKGROUND = TFT_COLOR(64, 64, 64); // Sötétebb szürke háttér
+    static constexpr uint16_t BUTTON_DISABLED_TEXT = TFT_COLOR(128, 128, 128);    // Közepes szürke szöveg
+    static constexpr uint16_t BUTTON_DISABLED_BORDER = TFT_COLOR(96, 96, 96);     // Sötétebb szürke keret
 
     // === KÉPERNYŐ SZÍNEK ===
 
