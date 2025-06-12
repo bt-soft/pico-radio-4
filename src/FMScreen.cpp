@@ -6,7 +6,6 @@
 #include "StatusLine.h"
 #include "UIColorPalette.h"
 #include "UIHorizontalButtonBar.h"
-#include "UIVerticalButtonBar.h"
 #include "rtVars.h"
 
 // ===================================================================
