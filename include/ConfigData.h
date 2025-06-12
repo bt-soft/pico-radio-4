@@ -38,7 +38,7 @@ struct Config_t {
 
     // AGC
     uint8_t agcGain;
-    uint8_t currentAGCgain;
+    uint8_t currentAGCgain; // AGC manual értéke
 
     //--- TFT
     uint16_t tftCalibrateData[5];    // TFT touch kalibrációs adatok

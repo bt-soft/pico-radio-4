@@ -126,6 +126,19 @@ class Band {
     inline const char *getCurrentBandModeDesc() { return bandModeDesc[getCurrentBand().currMod]; }
 
     /**
+     * @brief A sáv FM? (A többi úgy is AM, emiatt a tagadással egyszerűbb azt kezelni, ha kell)
+     */
+    inline bool isCurrentBandFM() { return getCurrentBand().bandType == FM_BAND_TYPE; }
+
+    // Demodulációs módok lekérdezése
+    inline bool isCurrentDemodFM() { return getCurrentBand().currMod == FM; }
+    inline bool isCurrentDemodAM() { return getCurrentBand().currMod == AM; }
+    inline bool isCurrentDemodLSB() { return getCurrentBand().currMod == LSB; }
+    inline bool isCurrentDemodUSB() { return getCurrentBand().currMod == USB; }
+    inline bool isCurrentDemodCW() { return getCurrentBand().currMod == CW; }
+    inline bool isCurrentDemodSSB() { return isCurrentDemodLSB() || isCurrentDemodUSB() || isCurrentDemodCW(); }
+
+    /**
      * A lehetséges AM demodulációs módok kigyűjtése
      */
     inline const char **getAmDemodulationModes(uint8_t &count) {

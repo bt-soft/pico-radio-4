@@ -106,9 +106,6 @@ void StatusLine::draw() {
     // Háttér törlése
     tft.fillRect(bounds.x, bounds.y, bounds.width, bounds.height, colors.screenBackground);
 
-    tft.setFreeFont();
-    tft.setTextSize(1);
-
     // Négyzetek kereteinek kirajzolása
     drawBoxFrames();
 
@@ -141,6 +138,8 @@ void StatusLine::drawBoxFrames() {
 void StatusLine::clearBoxContent(uint8_t boxIndex) {
     if (boxIndex >= STATUS_LINE_BOXES)
         return;
+
+    resetFont();
 
     tft.fillRect(statusBoxes[boxIndex].x + 1, bounds.y + 1, statusBoxes[boxIndex].width - 2, bounds.height - 2, colors.screenBackground);
 }
@@ -193,7 +192,6 @@ void StatusLine::updateBfo() {
  * @brief AGC értékének frissítése (1. négyzet)
  */
 void StatusLine::updateAgc() {
-
     Si4735Runtime::AgcGainMode currentMode = static_cast<Si4735Runtime::AgcGainMode>(config.data.agcGain);
 
     uint16_t agcColor = statusBoxes[1].color; // Alapértelmezett AGC szín
@@ -218,7 +216,6 @@ void StatusLine::updateAgc() {
  * @brief Demodulációs mód frissítése (2. négyzet)
  */
 void StatusLine::updateMode() {
-
     // Ha nincs Si4735Manager, akkor N/A-t írunk ki
     const char *modeText = pSi4735Manager ? (rtv::CWShift ? "CW" : pSi4735Manager->getCurrentBandModeDesc()) : "N/A";
     clearBoxContent(2);
@@ -229,7 +226,6 @@ void StatusLine::updateMode() {
  * @brief HF sávszélesség frissítése (3. négyzet)
  */
 void StatusLine::updateBandwidth() {
-
     // Ha nincs Si4735Manager, akkor N/A-t írunk ki
     String bandwidthText = pSi4735Manager ? pSi4735Manager->getCurrentBandWidthLabel() : "N/A";
     if (bandwidthText != "AUTO") {
@@ -308,6 +304,7 @@ void StatusLine::updateVoltage() {
 
     float voltage = PicoSensorUtils::readVBus();                      // Cache-olt érték
     String voltageText = isnan(voltage) ? "---" : String(voltage, 2); // 2 tizedesjegy
+
     clearBoxContent(8);
     drawTextInBox(8, (voltageText + "V").c_str(), statusBoxes[8].color);
 }

@@ -122,10 +122,16 @@ class UIScreen : public UIContainerComponent {
     const char *getName() const { return name; }
 
     /**
+     * @brief StatusLine komponens lekérése
+     */
+    std::shared_ptr<StatusLine> getStatusLineComp() const { return statusLineComp; }
+
+    /**
      * @brief ScreenManager beállítása
      * @param mgr ScreenManager referencia
      */
     void setScreenManager(IScreenManager *mgr) { screenManager = mgr; }
+
     /**
      * @brief ScreenManager referencia lekérése
      * @return IScreenManager referencia

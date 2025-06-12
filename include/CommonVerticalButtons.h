@@ -86,20 +86,20 @@ class CommonVerticalButtons {
 
         // ValueChangeDialog létrehozása a statikus változó pointerével
         auto volumeDialog = std::make_shared<ValueChangeDialog>(
-            screen, screen->getTFT(), "Volume Control", "Adjust radio volume (0-63):",
+            screen, screen->getTFT(),                                                  //
+            "Volume Control", "Adjust radio volume (0-63):",                           // Cím, felirat
             &config.data.currVolume,                                                   // Pointer a statikus változóra
             Si4735Constants::SI4735_MIN_VOLUME, Si4735Constants::SI4735_MAX_VOLUME, 1, // Min, Max, Step
-            [si4735Manager](const std::variant<int, float, bool> &newValue) {
+            [si4735Manager](const std::variant<int, float, bool> &newValue) {          // Callback a változásra
                 if (std::holds_alternative<int>(newValue)) {
                     int volume = std::get<int>(newValue);
                     DEBUG("Volume changed to: %d\n", volume);
                     si4735Manager->getSi4735().setVolume(static_cast<uint8_t>(volume));
                 }
             },
-            nullptr,             // Nincs külön dialog callback
+            nullptr,             // Nincs külön dialog bezárás callback
             Rect(-1, -1, 280, 0) // Auto-magasság
         );
-        // Aktuális hangerő beállítása a konstruktorban történik a valuePtr alapján
         screen->showDialog(volumeDialog);
     }
 
@@ -107,12 +107,30 @@ class CommonVerticalButtons {
      * @brief AGC gomb kezelő
      */
     static void handleAGCButton(const UIButton::ButtonEvent &event, Si4735Manager *si4735Manager, UIScreen *screen = nullptr) {
+
+        if (event.state != UIButton::EventButtonState::On && event.state != UIButton::EventButtonState::Off) {
+            return;
+        }
+
+        // Határozzuk meg az AGC gomb kezdeti állapotát és feliratát a config alapján
+        // Si4735Runtime::AgcGainMode currAgcMode = static_cast<Si4735Runtime::AgcGainMode>(config.data.agcGain);
+
         if (event.state == UIButton::EventButtonState::On) {
-            DEBUG("AGC ON\n");
-            // TODO: si4735Manager->setAGC(true);
+
+            // Az attenuátor gomb OFF állapotba helyezése, ha az AGC be van kapcsolva
+            // todo: hogyan?
+
+            config.data.agcGain = static_cast<uint8_t>(Si4735Runtime::AgcGainMode::Automatic); // AGC Automatic
         } else if (event.state == UIButton::EventButtonState::Off) {
-            DEBUG("AGC OFF\n");
-            // TODO: si4735Manager->setAGC(false);
+            config.data.agcGain = static_cast<uint8_t>(Si4735Runtime::AgcGainMode::Off); // AGC OFF
+        }
+
+        // AGC beállítása
+        si4735Manager->checkAGC();
+
+        // StatusLine update
+        if (screen->getStatusLineComp()) {
+            screen->getStatusLineComp()->updateAgc();
         }
     }
 
@@ -120,12 +138,51 @@ class CommonVerticalButtons {
      * @brief ATTENUATOR gomb kezelő
      */
     static void handleAttenuatorButton(const UIButton::ButtonEvent &event, Si4735Manager *si4735Manager, UIScreen *screen = nullptr) {
+
         if (event.state == UIButton::EventButtonState::On) {
-            DEBUG("Attenuator ON\n");
-            // TODO: si4735Manager->setAttenuator(true);
+
+            // Az AGC gomb OFF állapotba helyezése, ha az AGC be van kapcsolva
+            // todo: hogyan?
+
+            config.data.agcGain = static_cast<uint8_t>(Si4735Runtime::AgcGainMode::Manual); // AGC ->Manual
+
+            // ValueChangeDialog létrehozása a statikus változó pointerével
+            uint8_t maxGain = si4735Manager->isCurrentDemodFM() ? Si4735Constants::SI4735_MAX_ATTENNUATOR_FM : Si4735Constants::SI4735_MAX_ATTENNUATOR_AM;
+
+            auto attDialog = std::make_shared<ValueChangeDialog>(
+                screen, screen->getTFT(),                                                 //
+                "RF attenuation", "Adjust attenuation:",                                  // Cím, felirat
+                &config.data.currentAGCgain,                                              // Pointer a statikus változóra
+                Si4735Constants::SI4735_MIN_ATTENNUATOR, maxGain, 1,                      // Min, Max, Step
+                [si4735Manager, screen](const std::variant<int, float, bool> &newValue) { // Callback a változásra
+                    if (std::holds_alternative<int>(newValue)) {
+
+                        DEBUG("Attenuation changed to: %d\n", std::get<int>(newValue));
+
+                        // AGC beállítása
+                        si4735Manager->checkAGC();
+
+                        // StatusLine update
+                        if (screen->getStatusLineComp()) {
+                            screen->getStatusLineComp()->updateAgc();
+                        }
+                    }
+                },
+                nullptr,             // Nincs külön dialog bezárás callback
+                Rect(-1, -1, 280, 0) // Auto-magasság
+            );
+            screen->showDialog(attDialog);
+
         } else if (event.state == UIButton::EventButtonState::Off) {
-            DEBUG("Attenuator OFF\n");
-            // TODO: si4735Manager->setAttenuator(false);
+            config.data.agcGain = static_cast<uint8_t>(Si4735Runtime::AgcGainMode::Off); // AGC OFF
+
+            // AGC beállítása
+            si4735Manager->checkAGC();
+
+            // StatusLine update
+            if (screen->getStatusLineComp()) {
+                screen->getStatusLineComp()->updateAgc();
+            }
         }
     }
 

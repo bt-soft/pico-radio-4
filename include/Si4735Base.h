@@ -17,6 +17,12 @@ static constexpr int SI4735_MAX_VOLUME = 63;
 // Antenna kapacitás beállítások
 static constexpr int SI4735_MAX_ANT_CAP_FM = 191;
 static constexpr int SI4735_MAX_ANT_CAP_AM = 6143;
+
+// AGC
+static constexpr int SI4735_MIN_ATTENNUATOR = 1;     // Minimum attenuator érték
+static constexpr int SI4735_MAX_ATTENNUATOR_FM = 26; // FM: 0-26 közötti tartomány az LNA (Low Noise Amplifier) számára
+static constexpr int SI4735_MAX_ATTENNUATOR_AM = 37; // AM/SSB: 0-37+ATTN_BACKUP közötti tartomány
+
 }; // namespace Si4735Constants
 
 /**

@@ -29,6 +29,15 @@ class StatusLine : public UIComponent {
     void clearBoxContent(uint8_t boxIndex);
     void drawTextInBox(uint8_t boxIndex, const char *text, uint16_t textColor);
 
+    /**
+     * @brief Reseteli a betűtípust és a szöveg méretét
+     * @details Ez a metódus visszaállítja a TFT betűtípust az alapértelmezett értékre és a szöveg méretét 1-re.
+     */
+    void resetFont() {
+        tft.setFreeFont();
+        tft.setTextSize(1);
+    }
+
   public:
     /**
      * @brief StatusLine konstruktor
