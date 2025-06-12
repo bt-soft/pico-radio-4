@@ -277,6 +277,15 @@ class CommonVerticalButtons {
      */
     static void handleSetupButton(const UIButton::ButtonEvent &event, IScreenManager *screenManager, UIScreen *screen = nullptr) {
         if (event.state == UIButton::EventButtonState::Clicked) {
+            // Ha a screenManager null, próbáljuk meg a screen-ből lekérni
+            if (!screenManager && screen) {
+                screenManager = screen->getScreenManager();
+            }
+
+            if (!screenManager) {
+                DEBUG("ERROR: screenManager is still null in handleSetupButton!\n");
+                return;
+            }
             DEBUG("Switching to Setup screen\n");
             screenManager->switchToScreen(SCREEN_NAME_SETUP);
         }
@@ -345,14 +354,21 @@ class CommonVerticalButtons {
         std::vector<ButtonGroupDefinition> definitions;
         const auto &buttonDefs = getButtonDefinitions();
         definitions.reserve(buttonDefs.size());
-
         for (const auto &def : buttonDefs) {
             std::function<void(const UIButton::ButtonEvent &)> callback;
 
             if (def.si4735Handler != nullptr) {
                 callback = [si4735Manager, screen, handler = def.si4735Handler](const UIButton::ButtonEvent &e) { handler(e, si4735Manager, screen); };
             } else if (def.screenHandler != nullptr) {
-                callback = [screenManager, screen, handler = def.screenHandler](const UIButton::ButtonEvent &e) { handler(e, screenManager, screen); };
+                // Callback létrehozása - futási időben próbálja meg lekérni a screenManager-t
+                callback = [screenManager, screen, handler = def.screenHandler](const UIButton::ButtonEvent &e) {
+                    IScreenManager *actualScreenManager = screenManager;
+                    // Ha null a screenManager, próbáljuk meg a screen-ből lekérni
+                    if (!actualScreenManager && screen) {
+                        actualScreenManager = screen->getScreenManager();
+                    }
+                    handler(e, actualScreenManager, screen);
+                };
             } else if (def.dialogHandler != nullptr) {
                 callback = [si4735Manager, screen, handler = def.dialogHandler](const UIButton::ButtonEvent &e) { handler(e, si4735Manager, screen); };
             } else {
