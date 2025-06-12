@@ -151,6 +151,7 @@ void SMeter::setupTextTFT(uint16_t color, uint16_t background) {
  * Ezt általában egyszer kell meghívni a képernyő inicializálásakor.
  */
 void SMeter::drawSmeterScale() {
+
     using namespace SMeterConstants;
 
     // Ha már inicializáltuk a pozíciókat, ne rajzoljuk újra (opcionális optimalizáció)
@@ -221,10 +222,10 @@ void SMeter::drawSmeterScale() {
  * @param snr Aktuális SNR érték (0–127 dB).
  * @param isFMMode Igaz, ha FM módban vagyunk, hamis egyébként (AM/SSB/CW).
  */
-void SMeter::showRSSI(uint8_t rssi, uint8_t snr, bool isFMMode) { 
-    
+void SMeter::showRSSI(uint8_t rssi, uint8_t snr, bool isFMMode) {
+
     // 1. Dinamikus S-Meter sávok kirajzolása az aktuális RSSI alapján
-    drawMeterBars(rssi, isFMMode);                                // Ez már tartalmazza a prev_spoint_bars optimalizációt
+    drawMeterBars(rssi, isFMMode); // Ez már tartalmazza a prev_spoint_bars optimalizációt
 
     // 2. Ellenőrizzük, hogy a pozíciók inicializálva vannak-e
     if (!textLayout.initialized) {
@@ -281,4 +282,18 @@ void SMeter::draw() {
         drawSmeterScale();
         needsRedraw = false;
     }
+}
+
+/**
+ * @brief Újrarajzolásra jelölés - reset-eli az initialized flag-et
+ * @details Dialóg bezárása vagy képernyő törlése után szükséges a statikus skála újrarajzolása.
+ * Ez a metódus biztosítja, hogy a drawSmeterScale() újra kirajzolja a statikus elemeket.
+ */
+void SMeter::markForRedraw() {
+    // Szülő implementáció meghívása (beállítja a needsRedraw flag-et)
+    UIComponent::markForRedraw();
+
+    // SMeter specifikus: reset-eljük az initialized flag-et
+    // Ez kikényszeríti a statikus skála újrarajzolását
+    textLayout.initialized = false;
 }

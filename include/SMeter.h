@@ -187,13 +187,17 @@ class SMeter : public UIComponent {
      * @param snr Aktuális SNR érték (0–127 dB).
      * @param isFMMode Igaz, ha FM módban vagyunk, hamis egyébként (AM/SSB/CW).
      */
-    void showRSSI(uint8_t rssi, uint8_t snr, bool isFMMode);
-
-    // === UIComponent felülírt metódusok ===
+    void showRSSI(uint8_t rssi, uint8_t snr, bool isFMMode); // === UIComponent felülírt metódusok ===
     /**
      * @brief Rajzolja a komponenst (UIComponent override)
      */
     virtual void draw() override;
+
+    /**
+     * @brief Újrarajzolásra jelölés - reset-eli az initialized flag-et
+     * @details Dialóg bezárása vagy képernyő törlése után szükséges a statikus skála újrarajzolása
+     */
+    virtual void markForRedraw() override;
 
     /**
      * @brief Nem kezeli az érintést (UIComponent override)
