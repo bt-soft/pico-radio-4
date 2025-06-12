@@ -124,7 +124,12 @@ class UIScreen : public UIContainerComponent {
     /**
      * @brief StatusLine komponens lekérése
      */
-    std::shared_ptr<StatusLine> getStatusLineComp() const { return statusLineComp; }
+    inline std::shared_ptr<StatusLine> getStatusLineComp() const { return statusLineComp; }
+
+    /**
+     * @brief Frekvencia kijelző komponens lekérése
+     */
+    inline std::shared_ptr<FreqDisplay> getFreqDisplayComp() const { return freqDisplayComp; }
 
     /**
      * @brief ScreenManager beállítása

@@ -246,11 +246,11 @@ class CommonVerticalButtons {
             Rect(-1, -1, 250, 220),                               // Méret
             "Frequency Input", nullptr,                           // Cím és üzenet
             si4735Manager,                                        // Si4735Manager referencia
-            [si4735Manager](uint16_t newFrequency) {              // Frekvencia változás callback
+            [si4735Manager, screen](uint16_t newFrequency) {      // Frekvencia változás callback
                 DEBUG("Frequency changed to: %d\n", newFrequency);
-
                 config.data.currentFrequency = newFrequency;
                 si4735Manager->getSi4735().setFrequency(config.data.currentFrequency);
+                screen->getFreqDisplayComp()->setFrequency(config.data.currentFrequency);
             });
 
         screen->showDialog(freqDialog);
