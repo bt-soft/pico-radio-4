@@ -27,24 +27,21 @@ constexpr int ANIMATION_BORDER_WIDTH = 210; // Animált keret szélessége (még
 constexpr int ANIMATION_BORDER_HEIGHT = 45; // Animált keret magassága (kompaktabb)
 
 // FreqDisplay pozíció - jobb felső sarokhoz igazítva (negatív offset = jobb oldaltól számítva)
-constexpr int FREQ_DISPLAY_X_OFFSET_FROM_RIGHT = -250; // FreqDisplay jobb szélétől a keret jobb széléig (-180 - 5px gap)
-constexpr int FREQ_DISPLAY_Y_OFFSET_FROM_TOP = -18;    // FreqDisplay Y eltolás a keret tetejétől (kompenzálja a belső SpriteYOffset = 20-at)
-constexpr int FREQ_DISPLAY_WIDTH = 180;                // FreqDisplay szélessége
-constexpr int FREQ_DISPLAY_HEIGHT = 30;                // FreqDisplay magassága
+constexpr int FREQ_DISPLAY_X_OFFSET_FROM_RIGHT = -1 * FreqDisplay::FREQDISPLAY_WIDTH + 35;
+constexpr int FREQ_DISPLAY_Y_OFFSET_FROM_TOP = 0;
+// Konvertált pozíciók (bal felső sarokhoz képest) - ezeket használja a kód
+constexpr int FREQ_DISPLAY_X_OFFSET = ANIMATION_BORDER_WIDTH + FREQ_DISPLAY_X_OFFSET_FROM_RIGHT;
+constexpr int FREQ_DISPLAY_Y_OFFSET = FREQ_DISPLAY_Y_OFFSET_FROM_TOP;
 
 // Akkumulátor szimbólum pozíció - jobb felső sarokhoz igazítva
-constexpr int BATTERY_X_OFFSET_FROM_RIGHT = -43; // Akkumulátor jobb szélétől a keret jobb széléig (-38 - 5px gap)
+constexpr int BATTERY_X_OFFSET_FROM_RIGHT = -43; // Akkumulátor jobb szélétől a keret jobb széléig
 constexpr int BATTERY_Y_OFFSET_FROM_TOP = 3;     // Akkumulátor Y pozíció a keret tetejétől
-
-// Konvertált pozíciók (bal felső sarokhoz képest) - ezeket használja a kód
-constexpr int FREQ_DISPLAY_X_OFFSET = ANIMATION_BORDER_WIDTH + FREQ_DISPLAY_X_OFFSET_FROM_RIGHT; // 210 + (-185) = 25
-constexpr int FREQ_DISPLAY_Y_OFFSET = FREQ_DISPLAY_Y_OFFSET_FROM_TOP;                            // -18
-constexpr int BATTERY_BASE_X_OFFSET = ANIMATION_BORDER_WIDTH + BATTERY_X_OFFSET_FROM_RIGHT;      // 210 + (-43) = 167
-constexpr int BATTERY_BASE_Y_OFFSET = BATTERY_Y_OFFSET_FROM_TOP;                                 // 3
-constexpr int BATTERY_RECT_W = 38;                                                               // Akkumulátor téglalap szélessége
-constexpr int BATTERY_RECT_H = 18;                                                               // Akkumulátor téglalap magassága
-constexpr int BATTERY_NUB_W = 2;                                                                 // Akkumulátor "Dudor" (+ érintkező) szélessége
-constexpr int BATTERY_NUB_H = 10;                                                                // Akkumulátor "Dudor" (+ érintkező) magassága
+constexpr int BATTERY_BASE_X_OFFSET = ANIMATION_BORDER_WIDTH + BATTERY_X_OFFSET_FROM_RIGHT;
+constexpr int BATTERY_BASE_Y_OFFSET = BATTERY_Y_OFFSET_FROM_TOP;
+constexpr uint8_t BATTERY_RECT_W = 38; // Akkumulátor téglalap szélessége
+constexpr uint8_t BATTERY_RECT_H = 18; // Akkumulátor téglalap magassága
+constexpr uint8_t BATTERY_NUB_W = 2;   // Akkumulátor "Dudor" (+ érintkező) szélessége
+constexpr uint8_t BATTERY_NUB_H = 10;  // Akkumulátor "Dudor" (+ érintkező) magassága
 } // namespace ScreenSaverConstants
 
 /**

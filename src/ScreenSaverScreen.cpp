@@ -35,7 +35,7 @@ ScreenSaverScreen::ScreenSaverScreen(TFT_eSPI &tft_ref, Si4735Manager &si4735Man
     // FreqDisplay inicializálása
     // A kezdeti határok helyőrzők, frissítésre kerülnek az updateFrequencyAndBatteryDisplay-ben
     using namespace ScreenSaverConstants;
-    Rect initialFreqBounds(0, 0, FREQ_DISPLAY_WIDTH, FREQ_DISPLAY_HEIGHT); // Kezdeti frekvencia kijelző határok
+    Rect initialFreqBounds(0, 0, FreqDisplay::FREQDISPLAY_WIDTH, FreqDisplay::FREQDISPLAY_HEIGHT); // Kezdeti frekvencia kijelző határok
     UIScreen::createFreqDisplay(initialFreqBounds);
 }
 
@@ -144,7 +144,7 @@ void ScreenSaverScreen::updateFrequencyAndBatteryDisplay() {
     // Aktuális frekvencia beállítása és FreqDisplay frissítése
     currentFrequencyValue = pSi4735Manager->getCurrentBand().currFreq;
     if (freqDisplayComp) {
-        freqDisplayComp->setBounds(Rect(freqDisplayX, freqDisplayY, FREQ_DISPLAY_WIDTH, FREQ_DISPLAY_HEIGHT));
+        freqDisplayComp->setBounds(Rect(freqDisplayX, freqDisplayY, FreqDisplay::FREQDISPLAY_WIDTH, FreqDisplay::FREQDISPLAY_HEIGHT));
         freqDisplayComp->setFrequency(currentFrequencyValue);
         freqDisplayComp->markForRedraw(); // FreqDisplay újrarajzolásának biztosítása
     }

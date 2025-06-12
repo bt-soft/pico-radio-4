@@ -39,6 +39,7 @@ class FreqDisplay : public UIComponent {
 
   public:
     constexpr static uint16_t FREQDISPLAY_HEIGHT = 45;
+    constexpr static uint16_t FREQDISPLAY_WIDTH = 240;
 
   private:
     // === Referenciák és alapobjektumok ===

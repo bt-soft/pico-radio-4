@@ -128,7 +128,6 @@ void SetupSystemScreen::handleSaverTimeoutDialog(int index) {
             if (std::holds_alternative<int>(liveNewValue)) {
                 int currentDialogVal = std::get<int>(liveNewValue);
                 config.data.screenSaverTimeoutMinutes = static_cast<uint8_t>(currentDialogVal);
-                config.checkSave();
             }
         },
         [this, index](UIDialogBase *sender, MessageDialog::DialogResult dialogResult) {
@@ -149,7 +148,6 @@ void SetupSystemScreen::handleSaverTimeoutDialog(int index) {
  */
 void SetupSystemScreen::handleToggleItem(int index, bool &configValue) {
     configValue = !configValue;
-    config.checkSave();
 
     if (index >= 0 && index < settingItems.size()) {
         settingItems[index].value = String(configValue ? "ON" : "OFF");
