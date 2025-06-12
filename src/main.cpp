@@ -183,11 +183,15 @@ void setup() {
     splash.updateProgress(5, 6, "Setting up radio...");
     rtv::freqstep = 1000; // hz
     rtv::freqDec = config.data.currentBFO;
-    delay(100); // Kezdő képernyőtípus beállítása
+
+    delay(100);
+
+    // Kezdő képernyőtípus beállítása
     splash.updateProgress(6, 6, "Preparing display...");
     const char *startScreeName = si4735Manager->getCurrentBandType() == FM_BAND_TYPE ? SCREEN_NAME_FM : SCREEN_NAME_AM;
-    delay(100); //--------------------------------------------------------------------
+    delay(100);
 
+    //--------------------------------------------------------------------
     // Lépés 7: Finalizálás
     splash.updateProgress(7, 7, "Starting up...");
 
