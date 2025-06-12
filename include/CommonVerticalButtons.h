@@ -247,7 +247,6 @@ class CommonVerticalButtons {
             "Frequency Input", nullptr,                           // Cím és üzenet
             si4735Manager,                                        // Si4735Manager referencia
             [si4735Manager, screen](uint16_t newFrequency) {      // Frekvencia változás callback
-                DEBUG("Frequency changed to: %d\n", newFrequency);
                 config.data.currentFrequency = newFrequency;
                 si4735Manager->getSi4735().setFrequency(config.data.currentFrequency);
                 screen->getFreqDisplayComp()->setFrequency(config.data.currentFrequency);
@@ -325,9 +324,10 @@ class CommonVerticalButtons {
         return maxWidth;
     }
 
-  private: /**
-            * @brief Belső gombdefiníció létrehozó metódus
-            */
+  private:
+    /**
+     * @brief Belső gombdefiníció létrehozó metódus
+     */
     static std::vector<ButtonGroupDefinition> createButtonDefinitionsInternal(Si4735Manager *si4735Manager, IScreenManager *screenManager, UIScreen *screen, uint16_t buttonWidth) {
 
         std::vector<ButtonGroupDefinition> definitions;
@@ -400,8 +400,6 @@ class CommonVerticalButtons {
          * @param si4735Manager Si4735Manager példány, amely a rádió állapotát kezeli
          */
         void updateAllVerticalButtonStates(Si4735Manager *si4735Manager) {
-
-            DEBUG("Updating vertical button states\n");
 
             updateVerticalButtonState(VerticalButtonIDs::MUTE, rtv::muteStat ? UIButton::ButtonState::On : UIButton::ButtonState::Off);
 
