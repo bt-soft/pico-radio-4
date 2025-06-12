@@ -106,6 +106,9 @@ void StatusLine::draw() {
     // Háttér törlése
     tft.fillRect(bounds.x, bounds.y, bounds.width, bounds.height, colors.screenBackground);
 
+    tft.setFreeFont();
+    tft.setTextSize(1);
+
     // Négyzetek kereteinek kirajzolása
     drawBoxFrames();
 

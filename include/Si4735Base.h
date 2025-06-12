@@ -9,10 +9,15 @@
 #include "defines.h"
 #include "rtVars.h"
 
-namespace si4735Constants {
+namespace Si4735Constants {
+// Hangerő beállítások
+static constexpr int SI4735_MIN_VOLUME = 0;
+static constexpr int SI4735_MAX_VOLUME = 63;
+
+// Antenna kapacitás beállítások
 static constexpr int SI4735_MAX_ANT_CAP_FM = 191;
 static constexpr int SI4735_MAX_ANT_CAP_AM = 6143;
-}; // namespace si4735Constants
+}; // namespace Si4735Constants
 
 /**
  * @brief Si4735Base osztály
