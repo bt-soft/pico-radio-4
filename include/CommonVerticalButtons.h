@@ -397,7 +397,9 @@ class CommonVerticalButtons {
         }
 
         /**
-         *
+         *  @brief Egy adott függőleges gomb állapotának frissítése
+         *  @param buttonId A gomb azonosítója
+         * @param state Az új állapot, amelyet beállítunk
          */
         void updateVerticalButtonState(uint8_t buttonId, UIButton::ButtonState state) {
             for (auto &button : createdVerticalButtons) {
@@ -408,6 +410,10 @@ class CommonVerticalButtons {
             }
         }
 
+        /**
+         * @brief Minden függőleges gomb állapotának frissítése
+         * @param si4735Manager Si4735Manager példány, amely a rádió állapotát kezeli
+         */
         void updateAllVerticalButtonStates(Si4735Manager *si4735Manager) {
             updateVerticalButtonState(VerticalButtonIDs::MUTE, rtv::muteStat ? UIButton::ButtonState::On : UIButton::ButtonState::Off);
         }
