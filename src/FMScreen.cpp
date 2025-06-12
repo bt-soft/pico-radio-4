@@ -65,24 +65,20 @@ void FMScreen::layoutComponents() {
     // ===================================================================
     // Frekvencia kijelző pozicionálás (képernyő közép)
     // ===================================================================
-    uint16_t freqDisplayHeight = 38 + 20 + 10;                    // 7-szegmenses + mértékegység + aláhúzás + margók
-    uint16_t freqDisplayWidth = 240;                              // Optimális szélesség a képernyő közepén
-    uint16_t freqDisplayX = (tft.width() - freqDisplayWidth) / 2; // Vízszintes középre igazítás
-    uint16_t freqDisplayY = 60;                                   // Állapotsor alatti pozíció
-    Rect freqBounds(freqDisplayX, freqDisplayY, freqDisplayWidth, freqDisplayHeight);
+    uint16_t FreqDisplayY = 20;
+    Rect freqBounds(30, FreqDisplayY, 200, FreqDisplay::FREQDISPLAY_HEIGHT);
     UIScreen::createFreqDisplay(freqBounds);
+    freqDisplayComp->setHideUnderline(true); // Alulvonás elrejtése a frekvencia kijelzőn
 
     // ===================================================================
     // S-Meter (jelerősség mérő) pozicionálás
     // ===================================================================
-    uint16_t smeterX = 2;                                     // Kis margó a bal szélről
-    uint16_t smeterY = freqDisplayY + freqDisplayHeight + 10; // Frekvencia kijelző alatti pozíció
-    uint16_t smeterWidth = 240;                               // S-Meter szélessége
-    uint16_t smeterHeight = 60;                               // S-Meter optimális magassága
-    Rect smeterBounds(smeterX, smeterY, smeterWidth, smeterHeight);
+    Rect smeterBounds(2, FreqDisplayY + FreqDisplay::FREQDISPLAY_HEIGHT + 20, 240, 60);
     ColorScheme smeterColors = ColorScheme::defaultScheme();
-    smeterColors.background = TFT_COLOR_BACKGROUND;     // Fekete háttér a designhoz
-    UIScreen::createSMeter(smeterBounds, smeterColors); // ===================================================================
+    smeterColors.background = TFT_COLOR_BACKGROUND; // Fekete háttér a designhoz
+    UIScreen::createSMeter(smeterBounds, smeterColors);
+
+    // ===================================================================
     // Gombsorok létrehozása - Event-driven architektúra
     // ===================================================================
     createCommonVerticalButtons(pSi4735Manager, getScreenManager()); // ButtonsGroupManager alapú függőleges gombsor

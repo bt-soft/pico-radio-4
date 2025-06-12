@@ -36,6 +36,10 @@ struct FreqSegmentColors {
  * érintéses interakciós lehetőségekkel.
  */
 class FreqDisplay : public UIComponent {
+
+  public:
+    constexpr static uint16_t FREQDISPLAY_HEIGHT = 45;
+
   private:
     // === Referenciák és alapobjektumok ===
     Si4735Manager *pSi4735Manager;  ///< Hivatkozás a Si4735Manager objektumra
@@ -182,21 +186,13 @@ class FreqDisplay : public UIComponent {
      * @param datum Szöveg igazítási pont
      * @param color Szöveg színe
      */
-    void drawTextAtPosition(const String &text, uint16_t x, uint16_t y, uint8_t textSize, uint8_t datum, uint16_t color);
-
-    // === Érintés kezelő metódusok ===
+    void drawTextAtPosition(const String &text, uint16_t x, uint16_t y, uint8_t textSize, uint8_t datum, uint16_t color); // === Érintés kezelő metódusok ===
     /**
-     * @brief Ellenőrzi, hogy a komponens kezelheti-e az érintést
-     * @return true ha kezelhető az érintés
-     */
-    bool canHandleTouch();
-
-    /**
-     * @brief Validálja az érintés pozícióját
+     * @brief Ellenőrzi az érintés kezelhetőségét és pozíció érvényességét
      * @param event Az érintési esemény
-     * @return true ha érvényes pozíció
+     * @return true ha kezelhető
      */
-    bool isValidTouchPosition(const TouchEvent &event);
+    bool canHandleTouch(const TouchEvent &event);
 
     /**
      * @brief Feldolgozza a digit érintést

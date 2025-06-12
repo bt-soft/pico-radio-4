@@ -26,32 +26,33 @@ namespace FreqDisplayConstants {
 // === 7-szegmenses kijelző alapadatok ===
 constexpr int FREQ_7SEGMENT_HEIGHT = 38; ///< A 7-szegmenses font magassága pixelben
 
-// === Digit pozíciók és méretek az érintéses aláhúzáshoz ===
-// Megjegyzés: Minden pozíció a komponens bounds.x, bounds.y koordinátájához relatív
-constexpr int DigitXStart[] = {141, 171, 200};                  ///< Digitek X kezdőpozíciói (komponens bal szélétől)
-constexpr int DigitWidth = 25;                                  ///< Egy digit szélessége pixelben
-constexpr int DigitHeight = FREQ_7SEGMENT_HEIGHT;               ///< Digitek magassága (azonos a font magasságával)
-constexpr int DigitYStart = 20;                                 ///< Digitek Y kezdőpozíciója (komponens tetejétől)
-constexpr int UnderlineYOffset = DigitYStart + DigitHeight + 2; ///< Aláhúzás Y pozíciója
-constexpr int UnderlineHeight = 5;                              ///< Aláhúzás magassága pixelben
-
-// === Sprite és egység pozicionálás ===
-constexpr uint16_t SpriteYOffset = 20; ///< 7-szegmenses kijelző Y eltolása a komponens tetejétől
-constexpr uint16_t UnitXOffset = 5;    ///< Egység ("kHz", "MHz") X eltolása a frekvencia jobb szélétől
-
 // === Referencia X pozíciók különböző módokhoz (jobb igazításhoz) ===
 // Ezek az értékek a 7-szegmenses kijelző jobb szélének X pozícióját jelentik
 // a komponens bal széléhez (bounds.x) viszonyítva. A tényleges sprite rajzolási
 // X pozíciója (spritePushX) ebből és a sprite szélességéből számolódik.
 constexpr uint16_t RefXDefault = 222; ///< Alapértelmezett mód (SSB/CW normál)
+constexpr uint16_t RefXFmAm = 160;    ///< FM/AM módokban
 constexpr uint16_t RefXSeek = 144;    ///< SEEK mód során
 constexpr uint16_t RefXBfo = 115;     ///< BFO mód során
-constexpr uint16_t RefXFmAm = 190;    ///< FM/AM módokban
+
+// === Digit pozíciók és méretek az érintéses aláhúzáshoz ===
+// Megjegyzés: Minden pozíció a komponens bounds.x, bounds.y koordinátájához relatív
+constexpr int DigitWidth = 25;                    ///< Egy digit szélessége pixelben
+constexpr int DigitHeight = FREQ_7SEGMENT_HEIGHT; ///< Digitek magassága (azonos a font magasságával)
+constexpr int DigitYStart = 0;                    ///< Digitek Y kezdőpozíciója (komponens tetejétől)
+
+constexpr int FreqStepDigitXPositions[] = {141, 171, 200};      ///< Frekvencia lépésköz digitek X pozíciói (komponens bal szélétől)
+constexpr int UnderlineYOffset = DigitYStart + DigitHeight + 2; ///< Aláhúzás Y pozíciója
+constexpr int UnderlineHeight = 5;                              ///< Aláhúzás magassága pixelben
+
+// === Sprite és egység pozicionálás ===
+constexpr uint16_t SpriteYOffset = 0; ///< 7-szegmenses kijelző Y eltolása a komponens tetejétől
+constexpr uint16_t UnitXOffset = 5;   ///< Egység ("kHz", "MHz") X eltolása a frekvencia jobb szélétől
 
 // === BFO mód specifikus pozíciók és méretek ===
 // Minden pozíció relatív a komponens bounds.x, bounds.y koordinátájához
 constexpr uint16_t BfoLabelRectXOffset = 156; ///< "BFO" címke téglalap X pozíciója
-constexpr uint16_t BfoLabelRectYOffset = 21;  ///< "BFO" címke téglalap Y pozíciója
+constexpr uint16_t BfoLabelRectYOffset = 1;   ///< "BFO" címke téglalap Y pozíciója
 constexpr uint16_t BfoLabelRectW = 42;        ///< "BFO" címke téglalap szélessége
 constexpr uint16_t BfoLabelRectH = 20;        ///< "BFO" címke téglalap magassága
 
@@ -295,12 +296,10 @@ void FreqDisplay::drawFrequencyInternal(const String &freq_str, const __FlashStr
  * @param colors A színkonfiguráció (az indikátor szín használatával)
  */
 void FreqDisplay::drawStepUnderline(const FreqSegmentColors &colors) {
-    using namespace FreqDisplayConstants;
-
-    // Az aláhúzás teljes területének számítása
-    const int underlineAreaX_abs = bounds.x + DigitXStart[0];                      // Bal oldali szél
-    const int underlineAreaWidth = (DigitXStart[2] + DigitWidth) - DigitXStart[0]; // Teljes szélesség
-    const int underlineAreaY_abs = bounds.y + UnderlineYOffset;                    // Y pozíció
+    using namespace FreqDisplayConstants;                                                                  // Az aláhúzás teljes területének számítása
+    const int underlineAreaX_abs = bounds.x + FreqStepDigitXPositions[0];                                  // Bal oldali szél
+    const int underlineAreaWidth = (FreqStepDigitXPositions[2] + DigitWidth) - FreqStepDigitXPositions[0]; // Teljes szélesség
+    const int underlineAreaY_abs = bounds.y + UnderlineYOffset;                                            // Y pozíció
 
     // Ha a komponens le van tiltva, BFO mód aktív, vagy az aláhúzás el van rejtve, töröljük az aláhúzást
     if (isDisabled() || rtv::bfoOn || hideUnderline) {
@@ -309,10 +308,8 @@ void FreqDisplay::drawStepUnderline(const FreqSegmentColors &colors) {
     }
 
     // Először töröljük a teljes aláhúzási területet
-    tft.fillRect(underlineAreaX_abs, underlineAreaY_abs, underlineAreaWidth, UnderlineHeight, this->colors.background);
-
-    // Majd kirajzoljuk az aktív lépés aláhúzását
-    const int activeUnderlineX = bounds.x + DigitXStart[rtv::freqstepnr];
+    tft.fillRect(underlineAreaX_abs, underlineAreaY_abs, underlineAreaWidth, UnderlineHeight, this->colors.background); // Majd kirajzoljuk az aktív lépés aláhúzását
+    const int activeUnderlineX = bounds.x + FreqStepDigitXPositions[rtv::freqstepnr];
     tft.fillRect(activeUnderlineX, underlineAreaY_abs, DigitWidth, UnderlineHeight, colors.indicator);
 }
 
@@ -653,10 +650,12 @@ void FreqDisplay::draw() {
 
     if (canUseOptimizedDraw()) {
         performOptimizedDraw();
-        return;
+    } else {
+        performFullDraw();
     }
 
-    performFullDraw();
+    // Debug: Piros keret rajzolás a komponens határainak vizualizálásához
+    tft.drawRect(bounds.x, bounds.y, bounds.width, bounds.height, TFT_RED);
 }
 
 /**
@@ -776,11 +775,7 @@ void FreqDisplay::finishDraw() {
  * @return true ha az érintés kezelve lett, false egyébként
  */
 bool FreqDisplay::handleTouch(const TouchEvent &event) {
-    if (!canHandleTouch()) {
-        return false;
-    }
-
-    if (!isValidTouchPosition(event)) {
+    if (!canHandleTouch(event)) {
         return false;
     }
 
@@ -788,26 +783,26 @@ bool FreqDisplay::handleTouch(const TouchEvent &event) {
 }
 
 /**
- * @brief Ellenőrzi, hogy a komponens képes-e érintést kezelni
+ * @brief Ellenőrzi, hogy a komponens képes-e érintést kezelni és a pozíció érvényes-e
  *
  * Az érintéskezelés csak akkor engedélyezett, ha:
  * - A komponens nincs letiltva (isDisabled() == false)
  * - BFO mód nincs aktív (rtv::bfoOn == false)
- *
- * @return true ha az érintés kezelhető, false egyébként
- */
-bool FreqDisplay::canHandleTouch() { return !isDisabled() && !rtv::bfoOn; }
-
-/**
- * @brief Validálja az érintési pozíciót
- *
- * Ellenőrzi, hogy az érintés a komponens határain belül van-e,
- * és a frekvencia digitek érintésre érzékeny területén belül található-e.
+ * - Az aláhúzás nincs elrejtve (hideUnderline == false)
+ * - Az érintés a komponens határain belül van
+ * - Az érintés a frekvencia digitek érintésre érzékeny területén belül található
  *
  * @param event Az érintési esemény adatai
- * @return true ha a pozíció érvényes, false egyébként
+ * @return true ha az érintés kezelhető, false egyébként
  */
-bool FreqDisplay::isValidTouchPosition(const TouchEvent &event) {
+bool FreqDisplay::canHandleTouch(const TouchEvent &event) {
+
+    // Alapvető feltételek ellenőrzése
+    if (isDisabled() || rtv::bfoOn || hideUnderline) {
+        return false;
+    }
+
+    // Pozíció validálás
     if (!bounds.contains(event.x, event.y)) {
         return false;
     }
@@ -829,6 +824,8 @@ bool FreqDisplay::isValidTouchPosition(const TouchEvent &event) {
 bool FreqDisplay::processDigitTouch(const TouchEvent &event) {
     using namespace FreqDisplayConstants;
 
+    DEBUG("FreqDisplay::processDigitTouch: event.x=%d, event.y=%d", event.x, event.y);
+
     for (int digitIndex = 0; digitIndex <= 2; ++digitIndex) {
         if (isTouchOnDigit(event, digitIndex)) {
             return handleDigitSelection(digitIndex);
@@ -841,7 +838,7 @@ bool FreqDisplay::processDigitTouch(const TouchEvent &event) {
 /**
  * @brief Ellenőrzi, hogy az érintés egy adott digit területén van-e
  *
- * A digit területek X pozíciója DigitXStart[digitIndex] és szélessége DigitWidth.
+ * A digit területek X pozíciója FreqStepDigitXPositions[digitIndex] és szélessége DigitWidth.
  *
  * @param event Az érintési esemény adatai
  * @param digitIndex A vizsgálandó digit indexe (0, 1, vagy 2)
@@ -850,7 +847,7 @@ bool FreqDisplay::processDigitTouch(const TouchEvent &event) {
 bool FreqDisplay::isTouchOnDigit(const TouchEvent &event, int digitIndex) {
     using namespace FreqDisplayConstants;
 
-    uint16_t digitStartX = bounds.x + DigitXStart[digitIndex];
+    uint16_t digitStartX = bounds.x + FreqStepDigitXPositions[digitIndex];
     return event.x >= digitStartX && event.x < digitStartX + DigitWidth;
 }
 
