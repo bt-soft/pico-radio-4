@@ -29,6 +29,12 @@ class UIContainerComponent : public UIComponent {
     void removeChild(std::shared_ptr<UIComponent> child) { children.erase(std::remove(children.begin(), children.end(), child), children.end()); }
 
     /**
+     * @brief Gyerek komponensek listájának lekérése
+     * @return A gyerek komponensek konstans referenciája
+     */
+    const std::vector<std::shared_ptr<UIComponent>> &getChildren() const { return children; }
+
+    /**
      * @brief Touch esemény kezelése, amely először a gyerek komponenseken próbálkozik,
      * majd ha egyik sem, akkor maga a UIContainerComponent kezeli.
      * @param event A touch esemény, amely tartalmazza a koordinátákat és a lenyomás állapotát.
@@ -94,7 +100,8 @@ class UIContainerComponent : public UIComponent {
     virtual void markForRedraw() override {
         UIComponent::markForRedraw(); // Mark the container itself
         for (auto &child : children) {
-            if (child) child->markForRedraw(); // Mark all children
+            if (child)
+                child->markForRedraw(); // Mark all children
         }
     }
     /**

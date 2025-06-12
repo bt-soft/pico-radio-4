@@ -2,16 +2,6 @@
  * @file FMScreen.h
  * @brief FM rádió vezérlő képernyő osztály definíció
  * @details Event-driven gombállapot kezeléssel és optimalizált teljesítménnyel
- *
- * Fő komponensek:
- * - FM frekvencia hangolás és megjelenítés
- * - S-Meter (jelerősség) valós idejű frissítés
- * - Függőleges gombsor (8 funkcionális gomb)
- * - Vízszintes gombsor (3 navigációs gomb)
- * - Event-driven architektúra (nincs folyamatos polling)
- *
- * @author Rádió projekt
- * @version 2.0 - Event-driven architecture
  */
 
 #ifndef __FM_SCREEN_H
@@ -21,22 +11,6 @@
 #include "UIHorizontalButtonBar.h"
 #include "UIScreen.h"
 
-/**
- * @class FMScreen
- * @brief FM rádió vezérlő képernyő implementáció
- * @details Ez az osztály kezeli az FM rádió összes vezérlő funkcióját:
- *
- * **Event-driven architektúra:**
- * - Gombállapotok CSAK aktiváláskor szinkronizálódnak
- * - NINCS folyamatos polling a loop ciklusban
- * - Optimalizált teljesítmény és hatékonyság
- *
- * **UI komponensek:**
- * - Frekvencia kijelző (közép)
- * - S-Meter jelerősség mérő (alul)
- * - 8 funkcionális gomb (jobb oldal)
- * - 3 navigációs gomb (alsó sor)
- */
 class FMScreen : public UIScreen, public CommonVerticalButtons::Mixin<FMScreen> {
 
   public:
@@ -170,7 +144,9 @@ class FMScreen : public UIScreen, public CommonVerticalButtons::Mixin<FMScreen> 
      * @param event Gomb esemény (Clicked)
      * @details Pushable gomb: Setup képernyőre navigálás (duplikáció a függőleges gombbal)
      */
-    void handleSetupButtonHorizontal(const UIButton::ButtonEvent &event); // ===================================================================
+    void handleSetupButtonHorizontal(const UIButton::ButtonEvent &event);
+
+    // ===================================================================
     // UI komponens objektumok - Smart pointer kezelés
     // ===================================================================
 

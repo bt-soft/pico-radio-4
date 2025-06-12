@@ -66,6 +66,29 @@ class CommonVerticalButtons {
     // =====================================================================
 
     /**
+     * @brief Segédmetódus gombállapot frissítéséhez UIScreen-en keresztül (RTTI-mentes)
+     */
+    static void updateButtonStateInScreen(UIScreen *screen, uint8_t buttonId, UIButton::ButtonState state) {
+        if (!screen)
+            return;
+
+        // Vegigmegyünk a screen összes gyerek komponensén
+        auto &components = screen->getChildren();
+        for (auto &component : components) {
+
+            // Próbáljuk meg UIButton-ként kezelni (raw pointer cast)
+            UIButton *button = reinterpret_cast<UIButton *>(component.get());
+
+            // Ellenőrizzük, hogy valóban UIButton-e az ID alapján
+            // (Az UIButton ID-k a VerticalButtonIDs tartományban vannak)
+            if (button && button->getId() == buttonId) {
+                button->setButtonState(state);
+                break;
+            }
+        }
+    }
+
+    /**
      * @brief MUTE gomb kezelő
      */
     static void handleMuteButton(const UIButton::ButtonEvent &event, Si4735Manager *si4735Manager, UIScreen *screen = nullptr) {
@@ -112,14 +135,9 @@ class CommonVerticalButtons {
             return;
         }
 
-        // Határozzuk meg az AGC gomb kezdeti állapotát és feliratát a config alapján
-        // Si4735Runtime::AgcGainMode currAgcMode = static_cast<Si4735Runtime::AgcGainMode>(config.data.agcGain);
-
         if (event.state == UIButton::EventButtonState::On) {
-
             // Az attenuátor gomb OFF állapotba helyezése, ha az AGC be van kapcsolva
-            // todo: hogyan?
-
+            updateButtonStateInScreen(screen, VerticalButtonIDs::ATT, UIButton::ButtonState::Off);
             config.data.agcGain = static_cast<uint8_t>(Si4735Runtime::AgcGainMode::Automatic); // AGC Automatic
         } else if (event.state == UIButton::EventButtonState::Off) {
             config.data.agcGain = static_cast<uint8_t>(Si4735Runtime::AgcGainMode::Off); // AGC OFF
@@ -138,11 +156,10 @@ class CommonVerticalButtons {
      * @brief ATTENUATOR gomb kezelő
      */
     static void handleAttenuatorButton(const UIButton::ButtonEvent &event, Si4735Manager *si4735Manager, UIScreen *screen = nullptr) {
-
         if (event.state == UIButton::EventButtonState::On) {
 
-            // Az AGC gomb OFF állapotba helyezése, ha az AGC be van kapcsolva
-            // todo: hogyan?
+            // Az AGC gomb OFF állapotba helyezése, ha az Attenuator be van kapcsolva
+            updateButtonStateInScreen(screen, VerticalButtonIDs::AGC, UIButton::ButtonState::Off);
 
             config.data.agcGain = static_cast<uint8_t>(Si4735Runtime::AgcGainMode::Manual); // AGC ->Manual
 
@@ -379,6 +396,9 @@ class CommonVerticalButtons {
             ButtonsGroupManager<ScreenType>::layoutVerticalButtonGroup(buttonDefs, &createdVerticalButtons, 0, 0, 5, 60, 32, 3, 4);
         }
 
+        /**
+         *
+         */
         void updateVerticalButtonState(uint8_t buttonId, UIButton::ButtonState state) {
             for (auto &button : createdVerticalButtons) {
                 if (button && button->getId() == buttonId) {
@@ -392,7 +412,6 @@ class CommonVerticalButtons {
             updateVerticalButtonState(VerticalButtonIDs::MUTE, rtv::muteStat ? UIButton::ButtonState::On : UIButton::ButtonState::Off);
         }
     };
-
 }; // CommonVerticalButtons osztály bezárása
 
 #endif // __COMMON_VERTICAL_BUTTONS_H
