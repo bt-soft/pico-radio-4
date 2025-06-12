@@ -96,8 +96,24 @@ static constexpr uint8_t MEMO = 17;    ///< Memória funkciók (univerzális)
  */
 class CommonVerticalButtons {
   public: // =====================================================================
-    // GOMBDEFINÍCIÓK LÉTREHOZÁSA - ButtonsGroupManager formátumban
-    // =====================================================================
+          // GOMBDEFINÍCIÓK LÉTREHOZÁSA - ButtonsGroupManager formátumban
+          // =====================================================================
+    /**
+     * @brief Kiszámítja a maximális szélességet az összes gomb számára egységes megjelenés érdekében
+     * @param tft TFT kijelző referencia a szövegméret kalkulációhoz
+     * @param buttonHeight A gombok magassága
+     * @return A legnagyobb szükséges gombszélesség
+     */
+    template <typename TFTType> static uint16_t calculateUniformButtonWidth(TFTType &tft, uint16_t buttonHeight = 32) {
+        const char *buttonLabels[] = {"Mute", "Vol", "AGC", "Att", "Sql", "Freq", "Setup", "Memo"};
+        uint16_t maxWidth = 0;
+
+        for (const char *label : buttonLabels) {
+            uint16_t width = UIButton::calculateWidthForText(tft, label, false /*useMiniFont*/, buttonHeight);
+            maxWidth = std::max(maxWidth, width);
+        }
+        return maxWidth;
+    }
 
     static std::vector<ButtonGroupDefinition> createButtonDefinitions(Si4735Manager *si4735Manager, IScreenManager *screenManager) {
         return {{VerticalButtonIDs::MUTE, "Mute", UIButton::ButtonType::Toggleable, [si4735Manager](const UIButton::ButtonEvent &e) { handleMuteButton(e, si4735Manager); },
@@ -125,17 +141,59 @@ class CommonVerticalButtons {
                  UIButton::ButtonState::Off, 0, 32}};
     }
 
-    // =====================================================================
+    /**
+     * @brief Egységes szélességű gombdefiníciók létrehozása
+     * @param si4735Manager A rádió kezelő pointer
+     * @param screenManager A képernyő kezelő pointer
+     * @param tft TFT kijelző referencia a szélességkalkulációhoz
+     * @return ButtonGroupDefinition vektor egységes szélességű gombokkal
+     */
+    template <typename TFTType>
+    static std::vector<ButtonGroupDefinition> createUniformButtonDefinitions(Si4735Manager *si4735Manager, IScreenManager *screenManager, TFTType &tft) {
+        uint16_t uniformWidth = calculateUniformButtonWidth(tft, 32);
+
+        return {{VerticalButtonIDs::MUTE, "Mute", UIButton::ButtonType::Toggleable, [si4735Manager](const UIButton::ButtonEvent &e) { handleMuteButton(e, si4735Manager); },
+                 UIButton::ButtonState::Off, uniformWidth, 32},
+
+                {VerticalButtonIDs::VOLUME, "Vol", UIButton::ButtonType::Pushable, [si4735Manager](const UIButton::ButtonEvent &e) { handleVolumeButton(e, si4735Manager); },
+                 UIButton::ButtonState::Off, uniformWidth, 32},
+
+                {VerticalButtonIDs::AGC, "AGC", UIButton::ButtonType::Toggleable, [si4735Manager](const UIButton::ButtonEvent &e) { handleAGCButton(e, si4735Manager); },
+                 UIButton::ButtonState::Off, uniformWidth, 32},
+
+                {VerticalButtonIDs::ATT, "Att", UIButton::ButtonType::Toggleable, [si4735Manager](const UIButton::ButtonEvent &e) { handleAttenuatorButton(e, si4735Manager); },
+                 UIButton::ButtonState::Off, uniformWidth, 32},
+
+                {VerticalButtonIDs::SQUELCH, "Sql", UIButton::ButtonType::Pushable, [si4735Manager](const UIButton::ButtonEvent &e) { handleSquelchButton(e, si4735Manager); },
+                 UIButton::ButtonState::Off, uniformWidth, 32},
+
+                {VerticalButtonIDs::FREQ, "Freq", UIButton::ButtonType::Pushable, [si4735Manager](const UIButton::ButtonEvent &e) { handleFrequencyButton(e, si4735Manager); },
+                 UIButton::ButtonState::Off, uniformWidth, 32},
+
+                {VerticalButtonIDs::SETUP, "Setup", UIButton::ButtonType::Pushable, [screenManager](const UIButton::ButtonEvent &e) { handleSetupButton(e, screenManager); },
+                 UIButton::ButtonState::Off, uniformWidth, 32},
+
+                {VerticalButtonIDs::MEMO, "Memo", UIButton::ButtonType::Pushable, [si4735Manager](const UIButton::ButtonEvent &e) { handleMemoryButton(e, si4735Manager); },
+                 UIButton::ButtonState::Off, uniformWidth, 32}};
+    } // =====================================================================
     // MIXIN TEMPLATE - Screen osztályok kiegészítéséhez
     // =====================================================================
 
     template <typename ScreenType> class Mixin : public ButtonsGroupManager<ScreenType> {
       protected:
         std::vector<std::shared_ptr<UIButton>> createdVerticalButtons;
+
+        /**
+         * @brief Közös függőleges gombok létrehozása egységes szélességgel
+         * @param si4735Manager A rádió kezelő pointer
+         * @param screenManager A képernyő kezelő pointer
+         */
         void createCommonVerticalButtons(Si4735Manager *si4735Manager, IScreenManager *screenManager) {
-            auto buttonDefs = CommonVerticalButtons::createButtonDefinitions(si4735Manager, screenManager);
+            ScreenType *self = static_cast<ScreenType *>(this);
+            auto buttonDefs = CommonVerticalButtons::createUniformButtonDefinitions(si4735Manager, screenManager, self->getTFT());
             this->layoutVerticalButtonGroup(buttonDefs, &createdVerticalButtons, 0, 0, 5, 60, 32, 3, 4);
         }
+
         void updateVerticalButtonState(uint8_t buttonId, UIButton::ButtonState state) {
             for (auto &button : createdVerticalButtons) {
                 if (button && button->getId() == buttonId) {
@@ -358,9 +416,10 @@ class CommonVerticalButtons {
             //     showFMSquelchDialog(si4735Manager);
             // } else {
             //     // AM RSSI alapú squelch
-            //     showAMSquelchDialog(si4735Manager);            // }
+            //     showAMSquelchDialog(si4735Manager);
+            // }
         }
     }
-};
+}; // CommonVerticalButtons osztály bezárása
 
 #endif // __COMMON_VERTICAL_BUTTONS_H

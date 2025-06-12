@@ -614,10 +614,31 @@ class UIButton : public UIComponent {
             tft.setTextColor(currentDrawColors.text);
             tft.setTextDatum(MC_DATUM); // Middle Center
 
+            // Ellenőrizzük, hogy lesz-e LED
+            bool willHaveLed = (buttonType == ButtonType::Toggleable && !useMiniFont && currentDrawColors.led != TFT_BLACK);
+
             // Szöveg pozíció finomhangolása
             int16_t textY = bounds.centerY();
-            if (useMiniFont)
+            if (useMiniFont) {
                 textY += 1; // Mini font esetén kicsit lejjebb
+            }
+
+            // Ha van LED, akkor a szöveget feljebb toljuk, hogy 3 pixel gap legyen
+            if (willHaveLed) {
+                constexpr uint8_t LED_HEIGHT = 5;
+                constexpr uint8_t LED_GAP = 3;                               // Kívánt gap a szöveg és LED között
+                int16_t ledTopY = bounds.y + bounds.height - LED_HEIGHT - 3; // LED teteje
+                int16_t desiredTextBottomY = ledTopY - LED_GAP;              // Szöveg alja a gap-pel
+
+                // A szöveg magasságának becslése (font függő)
+                int16_t textHeight = useMiniFont ? 8 : 12;                     // Becsült szövegmagasság
+                int16_t adjustedTextY = desiredTextBottomY - (textHeight / 2); // Middle center pozíció
+
+                // Csak akkor módosítjuk, ha feljebb van, mint az eredeti középpozíció
+                if (adjustedTextY < textY) {
+                    textY = adjustedTextY;
+                }
+            }
 
             tft.drawString(label, bounds.centerX(), textY);
         }
