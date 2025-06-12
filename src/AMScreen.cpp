@@ -223,10 +223,9 @@ void AMScreen::onDialogClosed(UIDialogBase *closedDialog) {
 /**
  * @brief UI komponensek létrehozása és képernyőn való elhelyezése
  */
-void AMScreen::layoutComponents() {
-    // UI komponensek létrehozása
-    createCommonVerticalButtons(pSi4735Manager, getScreenManager()); // ButtonsGroupManager használata
-    createHorizontalButtonBar();                                     // Alsó navigációs gombok
+void AMScreen::layoutComponents() {              // UI komponensek létrehozása
+    createCommonVerticalButtons(pSi4735Manager); // ButtonsGroupManager használata
+    createHorizontalButtonBar();                 // Alsó navigációs gombok
 }
 
 /**

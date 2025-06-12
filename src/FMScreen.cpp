@@ -78,11 +78,10 @@ void FMScreen::layoutComponents() {
     smeterColors.background = TFT_COLOR_BACKGROUND; // Fekete háttér a designhoz
     UIScreen::createSMeter(smeterBounds, smeterColors);
 
+    // ===================================================================    // Gombsorok létrehozása - Event-driven architektúra
     // ===================================================================
-    // Gombsorok létrehozása - Event-driven architektúra
-    // ===================================================================
-    createCommonVerticalButtons(pSi4735Manager, getScreenManager()); // ButtonsGroupManager alapú függőleges gombsor
-    createHorizontalButtonBar();                                     // Alsó vízszintes gombsor
+    createCommonVerticalButtons(pSi4735Manager); // ButtonsGroupManager alapú függőleges gombsor
+    createHorizontalButtonBar();                 // Alsó vízszintes gombsor
 }
 
 // ===================================================================

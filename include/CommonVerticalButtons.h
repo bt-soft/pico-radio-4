@@ -40,14 +40,14 @@ static constexpr uint8_t MEMO = 17;    ///< Memória funkciók (univerzális)
  */
 class CommonVerticalButtons {
   public: // =====================================================================
-    // HANDLER FÜGGVÉNY TÍPUSOK - UIScreen pointerrel kiegészítve dialógusokhoz
+    // HANDLER FÜGGVÉNY TÍPUSOK - Egységes UIScreen alapú megközelítés
     // =====================================================================
-    using CommonHandlerFunc = void (*)(const UIButton::ButtonEvent &, Si4735Manager *, UIScreen *);
-    using ScreenHandlerFunc = void (*)(const UIButton::ButtonEvent &, IScreenManager *, UIScreen *);
+    using HandlerFunc = void (*)(const UIButton::ButtonEvent &, Si4735Manager *, UIScreen *);
 
-    // Kompatibilitás miatt megtartjuk a régi neveket, de azonos típusra mutatnak
-    using Si4735HandlerFunc = CommonHandlerFunc;
-    using DialogHandlerFunc = CommonHandlerFunc;
+    // Kompatibilitás miatt megtartjuk a régi neveket, de mind azonos típusra mutatnak
+    using CommonHandlerFunc = HandlerFunc;
+    using Si4735HandlerFunc = HandlerFunc;
+    using DialogHandlerFunc = HandlerFunc;
 
     /**
      * @brief Gomb statikus adatok struktúrája
@@ -58,9 +58,7 @@ class CommonVerticalButtons {
         UIButton::ButtonType type;          ///< Gomb típusa
         UIButton::ButtonState initialState; ///< Kezdeti állapot
         uint16_t height;                    ///< Gomb magassága
-        Si4735HandlerFunc si4735Handler;    ///< Handler Si4735Manager-rel
-        ScreenHandlerFunc screenHandler;    ///< Handler IScreenManager-rel
-        DialogHandlerFunc dialogHandler;    ///< Handler dialógusokhoz
+        HandlerFunc handler;                ///< Egységes handler függvény
     };
 
     // =====================================================================
@@ -270,20 +268,14 @@ class CommonVerticalButtons {
             nullptr, Rect(-1, -1, 300, 0));
         // Aktuális frekvencia beállítása a konstruktorban történik a valuePtr alapján
         screen->showDialog(freqDialog);
-    }
-
-    /**
-     * @brief SETUP gomb kezelő
-     */
-    static void handleSetupButton(const UIButton::ButtonEvent &event, IScreenManager *screenManager, UIScreen *screen = nullptr) {
-        if (event.state == UIButton::EventButtonState::Clicked) {
-            // Ha a screenManager null, próbáljuk meg a screen-ből lekérni
-            if (!screenManager && screen) {
-                screenManager = screen->getScreenManager();
-            }
-
+    } /**
+       * @brief SETUP gomb kezelő - Képernyőváltás Setup képernyőre
+       */
+    static void handleSetupButton(const UIButton::ButtonEvent &event, Si4735Manager *si4735Manager, UIScreen *screen) {
+        if (event.state == UIButton::EventButtonState::Clicked && screen) {
+            IScreenManager *screenManager = screen->getScreenManager();
             if (!screenManager) {
-                DEBUG("ERROR: screenManager is still null in handleSetupButton!\n");
+                DEBUG("ERROR: Could not get screenManager from screen in handleSetupButton!\n");
                 return;
             }
             DEBUG("Switching to Setup screen\n");
@@ -315,15 +307,15 @@ class CommonVerticalButtons {
      */
     static const std::vector<ButtonDefinition> &getButtonDefinitions() {
         static const std::vector<ButtonDefinition> BUTTON_DEFINITIONS = {
-            // ID, Label, Type, InitialState, Height, Si4735Handler, ScreenHandler, DialogHandler
-            {VerticalButtonIDs::MUTE, "Mute", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off, 32, handleMuteButton, nullptr, nullptr},
-            {VerticalButtonIDs::VOLUME, "Vol", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, 32, nullptr, nullptr, handleVolumeButton},
-            {VerticalButtonIDs::AGC, "AGC", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off, 32, handleAGCButton, nullptr, nullptr},
-            {VerticalButtonIDs::ATT, "Att", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off, 32, handleAttenuatorButton, nullptr, nullptr},
-            {VerticalButtonIDs::SQUELCH, "Sql", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off, 32, nullptr, nullptr, handleSquelchButton},
-            {VerticalButtonIDs::FREQ, "Freq", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, 32, nullptr, nullptr, handleFrequencyButton},
-            {VerticalButtonIDs::SETUP, "Setup", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, 32, nullptr, handleSetupButton, nullptr},
-            {VerticalButtonIDs::MEMO, "Memo", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, 32, nullptr, nullptr, handleMemoryButton}};
+            // ID, Label, Type, InitialState, Height, Handler
+            {VerticalButtonIDs::MUTE, "Mute", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off, 32, handleMuteButton},
+            {VerticalButtonIDs::VOLUME, "Vol", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, 32, handleVolumeButton},
+            {VerticalButtonIDs::AGC, "AGC", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off, 32, handleAGCButton},
+            {VerticalButtonIDs::ATT, "Att", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off, 32, handleAttenuatorButton},
+            {VerticalButtonIDs::SQUELCH, "Sql", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off, 32, handleSquelchButton},
+            {VerticalButtonIDs::FREQ, "Freq", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, 32, handleFrequencyButton},
+            {VerticalButtonIDs::SETUP, "Setup", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, 32, handleSetupButton},
+            {VerticalButtonIDs::MEMO, "Memo", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, 32, handleMemoryButton}};
         return BUTTON_DEFINITIONS;
     }
 
@@ -345,32 +337,21 @@ class CommonVerticalButtons {
         return maxWidth;
     }
 
-  private:
-    /**
-     * @brief Belső gombdefiníció létrehozó metódus
-     */
+  private: /**
+            * @brief Belső gombdefiníció létrehozó metódus
+            */
     static std::vector<ButtonGroupDefinition> createButtonDefinitionsInternal(Si4735Manager *si4735Manager, IScreenManager *screenManager, UIScreen *screen, uint16_t buttonWidth) {
 
         std::vector<ButtonGroupDefinition> definitions;
         const auto &buttonDefs = getButtonDefinitions();
         definitions.reserve(buttonDefs.size());
+
         for (const auto &def : buttonDefs) {
             std::function<void(const UIButton::ButtonEvent &)> callback;
 
-            if (def.si4735Handler != nullptr) {
-                callback = [si4735Manager, screen, handler = def.si4735Handler](const UIButton::ButtonEvent &e) { handler(e, si4735Manager, screen); };
-            } else if (def.screenHandler != nullptr) {
-                // Callback létrehozása - futási időben próbálja meg lekérni a screenManager-t
-                callback = [screenManager, screen, handler = def.screenHandler](const UIButton::ButtonEvent &e) {
-                    IScreenManager *actualScreenManager = screenManager;
-                    // Ha null a screenManager, próbáljuk meg a screen-ből lekérni
-                    if (!actualScreenManager && screen) {
-                        actualScreenManager = screen->getScreenManager();
-                    }
-                    handler(e, actualScreenManager, screen);
-                };
-            } else if (def.dialogHandler != nullptr) {
-                callback = [si4735Manager, screen, handler = def.dialogHandler](const UIButton::ButtonEvent &e) { handler(e, si4735Manager, screen); };
+            if (def.handler != nullptr) {
+                // Egységes callback létrehozása - minden handler megkapja a Si4735Manager-t és a Screen-t
+                callback = [si4735Manager, screen, handler = def.handler](const UIButton::ButtonEvent &e) { handler(e, si4735Manager, screen); };
             } else {
                 callback = [](const UIButton::ButtonEvent &e) { /* no-op */ };
             }
@@ -385,17 +366,16 @@ class CommonVerticalButtons {
     /**
      * @brief Gombdefiníciók létrehozása automatikus szélességgel
      */
-    static std::vector<ButtonGroupDefinition> createButtonDefinitions(Si4735Manager *si4735Manager, IScreenManager *screenManager, UIScreen *screen) {
-        return createButtonDefinitionsInternal(si4735Manager, screenManager, screen, 0);
+    static std::vector<ButtonGroupDefinition> createButtonDefinitions(Si4735Manager *si4735Manager, UIScreen *screen) {
+        return createButtonDefinitionsInternal(si4735Manager, nullptr, screen, 0);
     }
 
     /**
      * @brief Egységes szélességű gombdefiníciók létrehozása
      */
-    template <typename TFTType>
-    static std::vector<ButtonGroupDefinition> createUniformButtonDefinitions(Si4735Manager *si4735Manager, IScreenManager *screenManager, UIScreen *screen, TFTType &tft) {
+    template <typename TFTType> static std::vector<ButtonGroupDefinition> createUniformButtonDefinitions(Si4735Manager *si4735Manager, UIScreen *screen, TFTType &tft) {
         uint16_t uniformWidth = calculateUniformButtonWidth(tft, 32);
-        return createButtonDefinitionsInternal(si4735Manager, screenManager, screen, uniformWidth);
+        return createButtonDefinitionsInternal(si4735Manager, nullptr, screen, uniformWidth);
     }
 
     // =====================================================================
@@ -404,14 +384,12 @@ class CommonVerticalButtons {
 
     template <typename ScreenType> class Mixin : public ButtonsGroupManager<ScreenType> {
       protected:
-        std::vector<std::shared_ptr<UIButton>> createdVerticalButtons;
-
-        /**
-         * @brief Közös függőleges gombok létrehozása egységes szélességgel
-         */
-        void createCommonVerticalButtons(Si4735Manager *si4735Manager, IScreenManager *screenManager) {
+        std::vector<std::shared_ptr<UIButton>> createdVerticalButtons; /**
+                                                                        * @brief Közös függőleges gombok létrehozása egységes szélességgel
+                                                                        */
+        void createCommonVerticalButtons(Si4735Manager *si4735Manager) {
             ScreenType *self = static_cast<ScreenType *>(this);
-            auto buttonDefs = CommonVerticalButtons::createUniformButtonDefinitions(si4735Manager, screenManager, self, self->getTFT());
+            auto buttonDefs = CommonVerticalButtons::createUniformButtonDefinitions(si4735Manager, self, self->getTFT());
             ButtonsGroupManager<ScreenType>::layoutVerticalButtonGroup(buttonDefs, &createdVerticalButtons, 0, 0, 5, 60, 32, 3, 4);
         }
 
