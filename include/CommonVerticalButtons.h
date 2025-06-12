@@ -66,26 +66,41 @@ static constexpr uint8_t MEMO = 17;    ///< Memória funkciók (univerzális)
 class CommonVerticalButtons {
   public:
     // =====================================================================
-    // KÖZPONTI GOMB FELIRATOK DEFINÍCIÓ - Egyetlen forrás az összes metódushoz
+    // KÖZPONTI GOMB DEFINÍCIÓK STRUKTÚRA - Egyetlen forrás minden gomb adatához
     // =====================================================================
 
     /**
-     * @brief Központi gomb feliratok definíció - minden metódus innen veszi a feliratokat
-     * @details Ez a statikus tömb tartalmazza az összes függőleges gomb feliratát.
-     *          Módosítás esetén csak itt kell változtatni, automatikusan frissül minden metódusban.
+     * @brief Gomb statikus adatok struktúrája
+     * @details Minden gomb statikus tulajdonságait tartalmazza egy helyen
      */
-    static constexpr const char *BUTTON_LABELS[] = {
-        "Mute",  // VerticalButtonIDs::MUTE (10)
-        "Vol",   // VerticalButtonIDs::VOLUME (11)
-        "AGC",   // VerticalButtonIDs::AGC (12)
-        "Att",   // VerticalButtonIDs::ATT (13)
-        "Sql",   // VerticalButtonIDs::SQUELCH (14)
-        "Freq",  // VerticalButtonIDs::FREQ (15)
-        "Setup", // VerticalButtonIDs::SETUP (16)
-        "Memo"   // VerticalButtonIDs::MEMO (17)
+    struct ButtonDefinition {
+        uint8_t id;                         ///< Gomb azonosító (VerticalButtonIDs namespace-ből)
+        const char *label;                  ///< Gomb felirata
+        UIButton::ButtonType type;          ///< Gomb típusa (Toggleable/Pushable)
+        UIButton::ButtonState initialState; ///< Kezdeti állapot
+        uint16_t height;                    ///< Gomb magassága
     };
 
-    static constexpr size_t BUTTON_COUNT = sizeof(BUTTON_LABELS) / sizeof(BUTTON_LABELS[0]); // =====================================================================
+    /**
+     * @brief Központi gomb definíciók tömb - minden gomb statikus adata egy helyen
+     * @details Ez a statikus tömb tartalmazza az összes függőleges gomb definícióját.
+     *          Módosítás esetén csak itt kell változtatni, automatikusan frissül minden metódusban.
+     */
+    static constexpr ButtonDefinition BUTTON_DEFINITIONS[] = {
+        //
+        {VerticalButtonIDs::MUTE, "Mute", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off, 32},
+        {VerticalButtonIDs::VOLUME, "Vol", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, 32},
+        {VerticalButtonIDs::AGC, "AGC", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off, 32},
+        {VerticalButtonIDs::ATT, "Att", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off, 32},
+        {VerticalButtonIDs::SQUELCH, "Sql", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, 32},
+        {VerticalButtonIDs::FREQ, "Freq", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, 32},
+        {VerticalButtonIDs::SETUP, "Setup", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, 32},
+        {VerticalButtonIDs::MEMO, "Memo", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, 32}
+        //
+    };
+    static constexpr size_t BUTTON_COUNT = ARRAY_ITEM_COUNT(BUTTON_DEFINITIONS);
+
+    // =====================================================================
     // GOMBDEFINÍCIÓK LÉTREHOZÁSA - ButtonsGroupManager formátumban
     // =====================================================================
 
@@ -99,7 +114,7 @@ class CommonVerticalButtons {
         uint16_t maxWidth = 0;
 
         for (size_t i = 0; i < BUTTON_COUNT; i++) {
-            uint16_t width = UIButton::calculateWidthForText(tft, BUTTON_LABELS[i], false /*useMiniFont*/, buttonHeight);
+            uint16_t width = UIButton::calculateWidthForText(tft, BUTTON_DEFINITIONS[i].label, false /*useMiniFont*/, buttonHeight);
             maxWidth = std::max(maxWidth, width);
         }
         return maxWidth;
@@ -114,29 +129,49 @@ class CommonVerticalButtons {
      * @return ButtonGroupDefinition vektor
      */
     static std::vector<ButtonGroupDefinition> createButtonDefinitionsInternal(Si4735Manager *si4735Manager, IScreenManager *screenManager, uint16_t buttonWidth) {
-        return {{VerticalButtonIDs::MUTE, BUTTON_LABELS[0], UIButton::ButtonType::Toggleable,
-                 [si4735Manager](const UIButton::ButtonEvent &e) { handleMuteButton(e, si4735Manager); }, UIButton::ButtonState::Off, buttonWidth, 32},
+        std::vector<ButtonGroupDefinition> definitions;
+        definitions.reserve(BUTTON_COUNT);
 
-                {VerticalButtonIDs::VOLUME, BUTTON_LABELS[1], UIButton::ButtonType::Pushable,
-                 [si4735Manager](const UIButton::ButtonEvent &e) { handleVolumeButton(e, si4735Manager); }, UIButton::ButtonState::Off, buttonWidth, 32},
+        for (size_t i = 0; i < BUTTON_COUNT; i++) {
+            const auto &def = BUTTON_DEFINITIONS[i];
 
-                {VerticalButtonIDs::AGC, BUTTON_LABELS[2], UIButton::ButtonType::Toggleable, [si4735Manager](const UIButton::ButtonEvent &e) { handleAGCButton(e, si4735Manager); },
-                 UIButton::ButtonState::Off, buttonWidth, 32},
+            // Lambda callback kiválasztása a gomb ID alapján
+            std::function<void(const UIButton::ButtonEvent &)> callback;
+            switch (def.id) {
+                case VerticalButtonIDs::MUTE:
+                    callback = [si4735Manager](const UIButton::ButtonEvent &e) { handleMuteButton(e, si4735Manager); };
+                    break;
+                case VerticalButtonIDs::VOLUME:
+                    callback = [si4735Manager](const UIButton::ButtonEvent &e) { handleVolumeButton(e, si4735Manager); };
+                    break;
+                case VerticalButtonIDs::AGC:
+                    callback = [si4735Manager](const UIButton::ButtonEvent &e) { handleAGCButton(e, si4735Manager); };
+                    break;
+                case VerticalButtonIDs::ATT:
+                    callback = [si4735Manager](const UIButton::ButtonEvent &e) { handleAttenuatorButton(e, si4735Manager); };
+                    break;
+                case VerticalButtonIDs::SQUELCH:
+                    callback = [si4735Manager](const UIButton::ButtonEvent &e) { handleSquelchButton(e, si4735Manager); };
+                    break;
+                case VerticalButtonIDs::FREQ:
+                    callback = [si4735Manager](const UIButton::ButtonEvent &e) { handleFrequencyButton(e, si4735Manager); };
+                    break;
+                case VerticalButtonIDs::SETUP:
+                    callback = [screenManager](const UIButton::ButtonEvent &e) { handleSetupButton(e, screenManager); };
+                    break;
+                case VerticalButtonIDs::MEMO:
+                    callback = [si4735Manager](const UIButton::ButtonEvent &e) { handleMemoryButton(e, si4735Manager); };
+                    break;
+                default:
+                    // Fallback - nem kellene előfordulnia
+                    callback = [](const UIButton::ButtonEvent &e) { /* no-op */ };
+                    break;
+            }
 
-                {VerticalButtonIDs::ATT, BUTTON_LABELS[3], UIButton::ButtonType::Toggleable,
-                 [si4735Manager](const UIButton::ButtonEvent &e) { handleAttenuatorButton(e, si4735Manager); }, UIButton::ButtonState::Off, buttonWidth, 32},
+            definitions.push_back({def.id, def.label, def.type, callback, def.initialState, buttonWidth, def.height});
+        }
 
-                {VerticalButtonIDs::SQUELCH, BUTTON_LABELS[4], UIButton::ButtonType::Pushable,
-                 [si4735Manager](const UIButton::ButtonEvent &e) { handleSquelchButton(e, si4735Manager); }, UIButton::ButtonState::Off, buttonWidth, 32},
-
-                {VerticalButtonIDs::FREQ, BUTTON_LABELS[5], UIButton::ButtonType::Pushable,
-                 [si4735Manager](const UIButton::ButtonEvent &e) { handleFrequencyButton(e, si4735Manager); }, UIButton::ButtonState::Off, buttonWidth, 32},
-
-                {VerticalButtonIDs::SETUP, BUTTON_LABELS[6], UIButton::ButtonType::Pushable,
-                 [screenManager](const UIButton::ButtonEvent &e) { handleSetupButton(e, screenManager); }, UIButton::ButtonState::Off, buttonWidth, 32},
-
-                {VerticalButtonIDs::MEMO, BUTTON_LABELS[7], UIButton::ButtonType::Pushable,
-                 [si4735Manager](const UIButton::ButtonEvent &e) { handleMemoryButton(e, si4735Manager); }, UIButton::ButtonState::Off, buttonWidth, 32}};
+        return definitions;
     }
 
   public:
