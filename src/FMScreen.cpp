@@ -40,8 +40,8 @@ static constexpr uint8_t SETUP_BUTTON = 22; ///< Setup képernyőre váltás (pu
  * - Event-driven gombkezelés beállítása
  */
 FMScreen::FMScreen(TFT_eSPI &tft, Si4735Manager &si4735Manager) : UIScreen(tft, SCREEN_NAME_FM, &si4735Manager) {
-    si4735Manager.init(); // Si4735 rádió chip inicializálása
-    layoutComponents();   // UI komponensek elhelyezése
+    // Si4735 chip már inicializálva a main.cpp-ben
+    layoutComponents(); // UI komponensek elhelyezése
 }
 
 // ===================================================================
@@ -171,18 +171,9 @@ void FMScreen::handleOwnLoop() {
             // RSSI és SNR megjelenítése FM módban
             smeterComp->showRSSI(signalCache.rssi, signalCache.snr, true /* FM mód */);
         }
-    } // ===================================================================
-    // RDS adatok valós idejű frissítése
+    } // ===================================================================    // RDS adatok valós idejű frissítése
     // ===================================================================
     if (rdsComponent) {
-        static uint32_t debugCounter = 0;
-        debugCounter++;
-
-        // Debug üzenet minden 2000. híváskor
-        if (debugCounter % 2000 == 1) {
-            DEBUG("FMScreen: updateRDS() hívás #%lu\n", debugCounter);
-        }
-
         rdsComponent->updateRDS();
     } else {
         static bool warnOnce = true;
