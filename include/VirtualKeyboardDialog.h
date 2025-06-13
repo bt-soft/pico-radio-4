@@ -24,10 +24,9 @@ class VirtualKeyboardDialog : public UIDialogBase {
      * @param onChanged Callback, amikor a szöveg megváltozik
      */
     VirtualKeyboardDialog(UIScreen *parent, TFT_eSPI &tft, const char *title, const String &initialText = "", uint8_t maxLength = 15, OnTextChangedCallback onChanged = nullptr);
-
     virtual ~VirtualKeyboardDialog(); // UIDialogBase interface
     virtual void drawSelf() override;
-    virtual bool handleTouch(const TouchEvent &event) override;
+    virtual bool handleTouch(const TouchEvent &event) override; // Visszahozzuk debug célból
     virtual void handleOwnLoop() override;
 
     /**

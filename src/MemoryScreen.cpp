@@ -45,11 +45,9 @@ void MemoryScreen::layoutComponents() {
     const int16_t margin = 5;
     const int16_t buttonHeight = UIButton::DEFAULT_BUTTON_HEIGHT;
     const int16_t listTopMargin = 30;                            // Hely a címnek
-    const int16_t listBottomPadding = buttonHeight + margin * 2; // Hely az Exit gombnak
-
-    // Görgethető lista komponens létrehozása és hozzáadása a gyermek komponensekhez
+    const int16_t listBottomPadding = buttonHeight + margin * 2; // Hely az Exit gombnak    // Görgethető lista komponens létrehozása és hozzáadása a gyermek komponensekhez
     Rect listBounds(margin, listTopMargin, UIComponent::SCREEN_W - (2 * margin), UIComponent::SCREEN_H - listTopMargin - listBottomPadding);
-    memoryList = std::make_shared<UIScrollableListComponent>(tft, listBounds, this, 6, 20);
+    memoryList = std::make_shared<UIScrollableListComponent>(tft, listBounds, this, 6, 27); // itemHeight megnövelve 20-ról 26-ra
     addChild(memoryList);
 
     // Vízszintes gombsor létrehozása
@@ -246,8 +244,7 @@ void MemoryScreen::handleBackButton(const UIButton::ButtonEvent &event) {
     if (event.state == UIButton::EventButtonState::Clicked) {
         // Visszatérés az előző képernyőre
         if (getScreenManager()) {
-            String prevScreen = isFmMode ? SCREEN_NAME_FM : SCREEN_NAME_AM;
-            getScreenManager()->switchToScreen(prevScreen.c_str());
+            getScreenManager()->goBack();
         }
     }
 }
