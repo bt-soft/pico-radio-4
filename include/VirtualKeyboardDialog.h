@@ -44,8 +44,8 @@ class VirtualKeyboardDialog : public UIDialogBase {
     // Billentyűzet konstansok
     static constexpr uint8_t KEYBOARD_ROWS = 4;
     static constexpr uint8_t MAX_KEYS_PER_ROW = 10;
-    static constexpr uint16_t KEY_WIDTH = 30;
-    static constexpr uint16_t KEY_HEIGHT = 25;
+    static constexpr uint16_t KEY_WIDTH = 32;  // 2px-el nagyobb (30->32)
+    static constexpr uint16_t KEY_HEIGHT = 27; // 2px-el nagyobb (25->27)
     static constexpr uint16_t KEY_SPACING = 2;
     static constexpr uint16_t INPUT_HEIGHT = 30;
     static constexpr uint16_t INPUT_MARGIN = 5;

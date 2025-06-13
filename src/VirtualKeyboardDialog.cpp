@@ -43,12 +43,17 @@ void VirtualKeyboardDialog::createKeyboard() {
                 keyLabelStorage[keyLabelCount][0] = keyChar;
                 keyLabelStorage[keyLabelCount][1] = '\0';
 
-                auto keyButton = std::make_shared<UIButton>(tft, buttonId++, Rect(currentX, currentY, KEY_WIDTH, KEY_HEIGHT), keyLabelStorage[keyLabelCount],
-                                                            UIButton::ButtonType::Pushable, [this, keyChar](const UIButton::ButtonEvent &event) {
-                                                                if (event.state == UIButton::EventButtonState::Clicked) {
-                                                                    handleKeyPress(keyChar);
-                                                                }
-                                                            });
+                auto keyButton = std::make_shared<UIButton>(         //
+                    tft,                                             //
+                    buttonId++,                                      //
+                    Rect(currentX, currentY, KEY_WIDTH, KEY_HEIGHT), //
+                    keyLabelStorage[keyLabelCount],                  //
+                    UIButton::ButtonType::Pushable,                  //
+                    [this, keyChar](const UIButton::ButtonEvent &event) {
+                        if (event.state == UIButton::EventButtonState::Clicked) {
+                            handleKeyPress(keyChar);
+                        }
+                    });
 
                 keyButtons.push_back(keyButton);
                 addChild(keyButton);
@@ -57,45 +62,74 @@ void VirtualKeyboardDialog::createKeyboard() {
 
             currentX += KEY_WIDTH + KEY_SPACING;
         }
-    }
-
-    // Speciális gombok létrehozása az utolsó sor alatt
+    } // Speciális gombok létrehozása az utolsó sor alatt
     uint16_t specialY = startY + KEYBOARD_ROWS * (KEY_HEIGHT + KEY_SPACING) + 5;
-    uint16_t specialStartX = keyboardRect.x;
+
+    // Speciális gombok méretei
+    uint16_t shiftWidth = 45;
+    uint16_t spaceWidth = 80;
+    uint16_t backspaceWidth = 40;
+    uint16_t clearWidth = 40;
+    uint16_t specialSpacing = 5;
+
+    // Teljes sor szélessége
+    uint16_t specialRowWidth = shiftWidth + spaceWidth + backspaceWidth + clearWidth + (3 * specialSpacing);
+
+    // Középre igazítás
+    uint16_t specialStartX = keyboardRect.x + (keyboardRect.width - specialRowWidth) / 2;
 
     // Shift gomb
-    shiftButton = std::make_shared<UIButton>(tft, buttonId++, Rect(specialStartX, specialY, 45, KEY_HEIGHT), "Shift", UIButton::ButtonType::Toggleable,
-                                             [this](const UIButton::ButtonEvent &event) {
-                                                 if (event.state == UIButton::EventButtonState::Clicked) {
-                                                     shiftActive = !shiftActive;
-                                                     updateButtonLabels();
-                                                 }
-                                             });
+    shiftButton = std::make_shared<UIButton>(                  //
+        tft,                                                   //
+        buttonId++,                                            //
+        Rect(specialStartX, specialY, shiftWidth, KEY_HEIGHT), //
+        "Shift",                                               //
+        UIButton::ButtonType::Toggleable,                      //
+        [this](const UIButton::ButtonEvent &event) {
+            if (event.state == UIButton::EventButtonState::Clicked) {
+                shiftActive = !shiftActive;
+                updateButtonLabels();
+            }
+        });
     addChild(shiftButton);
 
     // Space gomb
-    spaceButton = std::make_shared<UIButton>(tft, buttonId++, Rect(specialStartX + 50, specialY, 80, KEY_HEIGHT), "Space", UIButton::ButtonType::Pushable,
-                                             [this](const UIButton::ButtonEvent &event) {
-                                                 if (event.state == UIButton::EventButtonState::Clicked) {
-                                                     handleKeyPress(' ');
-                                                 }
-                                             });
+    spaceButton = std::make_shared<UIButton>(                                                //
+        tft,                                                                                 //
+        buttonId++,                                                                          //
+        Rect(specialStartX + shiftWidth + specialSpacing, specialY, spaceWidth, KEY_HEIGHT), //
+        "Space",                                                                             //
+        UIButton::ButtonType::Pushable, [this](const UIButton::ButtonEvent &event) {
+            if (event.state == UIButton::EventButtonState::Clicked) {
+                handleKeyPress(' ');
+            }
+        });
     addChild(spaceButton);
 
-    // Backspace gomb
-    backspaceButton = std::make_shared<UIButton>(tft, buttonId++, Rect(specialStartX + 135, specialY, 40, KEY_HEIGHT), "<--", UIButton::ButtonType::Pushable,
-                                                 [this](const UIButton::ButtonEvent &event) {
-                                                     if (event.state == UIButton::EventButtonState::Clicked) {
-                                                         handleSpecialKey("Backspace");
-                                                     }
-                                                 });
-    addChild(backspaceButton); // Clear gomb
-    clearButton = std::make_shared<UIButton>(tft, buttonId++, Rect(specialStartX + 180, specialY, 40, KEY_HEIGHT), "Clr", UIButton::ButtonType::Pushable,
-                                             [this](const UIButton::ButtonEvent &event) {
-                                                 if (event.state == UIButton::EventButtonState::Clicked) {
-                                                     handleSpecialKey("Clear");
-                                                 }
-                                             });
+    // Backspace gomb    // Backspace gomb
+    backspaceButton = std::make_shared<UIButton>(                                                                   //
+        tft,                                                                                                        //
+        buttonId++,                                                                                                 //
+        Rect(specialStartX + shiftWidth + spaceWidth + (2 * specialSpacing), specialY, backspaceWidth, KEY_HEIGHT), //
+        "<--",                                                                                                      //
+        UIButton::ButtonType::Pushable,                                                                             //
+        [this](const UIButton::ButtonEvent &event) {
+            if (event.state == UIButton::EventButtonState::Clicked) {
+                handleSpecialKey("backspace");
+            }
+        });
+    addChild(backspaceButton);                // Clear gomb
+    clearButton = std::make_shared<UIButton>( //
+        tft,                                  //
+        buttonId++,                           //
+        Rect(specialStartX + shiftWidth + spaceWidth + backspaceWidth + (3 * specialSpacing), specialY, clearWidth, KEY_HEIGHT),
+        "Clr",                          //
+        UIButton::ButtonType::Pushable, //
+        [this](const UIButton::ButtonEvent &event) {
+            if (event.state == UIButton::EventButtonState::Clicked) {
+                handleSpecialKey("clear");
+            }
+        });
     addChild(clearButton);
 
     // OK és Cancel gombok a speciális sor alatt
@@ -104,21 +138,30 @@ void VirtualKeyboardDialog::createKeyboard() {
     uint16_t okCancelStartX = keyboardRect.x + (keyboardRect.width - 2 * okCancelWidth - 10) / 2;
 
     // OK gomb
-    auto okButton = std::make_shared<UIButton>(tft, buttonId++, Rect(okCancelStartX, okCancelY, okCancelWidth, KEY_HEIGHT), "OK", UIButton::ButtonType::Pushable,
-                                               [this](const UIButton::ButtonEvent &event) {
-                                                   if (event.state == UIButton::EventButtonState::Clicked) {
-                                                       close(UIDialogBase::DialogResult::Accepted);
-                                                   }
-                                               });
+    auto okButton = std::make_shared<UIButton>(                     //
+        tft,                                                        //
+        buttonId++,                                                 //
+        Rect(okCancelStartX, okCancelY, okCancelWidth, KEY_HEIGHT), //
+        "OK",                                                       //
+        UIButton::ButtonType::Pushable,                             //
+        [this](const UIButton::ButtonEvent &event) {
+            if (event.state == UIButton::EventButtonState::Clicked) {
+                close(UIDialogBase::DialogResult::Accepted);
+            }
+        });
     addChild(okButton);
 
     // Cancel gomb
-    auto cancelButton = std::make_shared<UIButton>(tft, buttonId++, Rect(okCancelStartX + okCancelWidth + 10, okCancelY, okCancelWidth, KEY_HEIGHT), "Cancel",
-                                                   UIButton::ButtonType::Pushable, [this](const UIButton::ButtonEvent &event) {
-                                                       if (event.state == UIButton::EventButtonState::Clicked) {
-                                                           close(UIDialogBase::DialogResult::Rejected);
-                                                       }
-                                                   });
+    auto cancelButton = std::make_shared<UIButton>(                                      //
+        tft,                                                                             //
+        buttonId++,                                                                      //
+        Rect(okCancelStartX + okCancelWidth + 10, okCancelY, okCancelWidth, KEY_HEIGHT), //
+        "Cancel",                                                                        //
+        UIButton::ButtonType::Pushable, [this](const UIButton::ButtonEvent &event) {
+            if (event.state == UIButton::EventButtonState::Clicked) {
+                close(UIDialogBase::DialogResult::Rejected);
+            }
+        });
     addChild(cancelButton);
 }
 
@@ -178,44 +221,11 @@ void VirtualKeyboardDialog::drawCursor() {
 }
 
 bool VirtualKeyboardDialog::handleTouch(const TouchEvent &event) {
-    // Először próbáljuk a szülő osztály touch kezelését (pl. close gomb)
+    // Először próbáljuk a szülő osztály touch kezelését (pl. close gomb, gyerek komponensek)
     if (UIDialogBase::handleTouch(event)) {
         return true;
     }
-
-    uint16_t x = event.x;
-    uint16_t y = event.y; // Karakteres gombok ellenőrzése
-    for (auto &keyButton : keyButtons) {
-        if (keyButton->getBounds().contains(x, y)) {
-            char keyChar = keyButton->getLabel()[0];
-            handleKeyPress(keyChar);
-            return true;
-        }
-    }
-
-    // Speciális gombok ellenőrzése
-    if (shiftButton->getBounds().contains(x, y)) {
-        shiftActive = !shiftActive;
-        shiftButton->setButtonState(shiftActive ? UIButton::ButtonState::On : UIButton::ButtonState::Off);
-        updateButtonLabels();
-        return true;
-    }
-
-    if (spaceButton->getBounds().contains(x, y)) {
-        handleKeyPress(' ');
-        return true;
-    }
-
-    if (backspaceButton->getBounds().contains(x, y)) {
-        handleSpecialKey("backspace");
-        return true;
-    }
-
-    if (clearButton->getBounds().contains(x, y)) {
-        handleSpecialKey("clear");
-        return true;
-    }
-
+    // Ha a szülő nem kezelte, akkor a dialógus kezelte
     return false;
 }
 
