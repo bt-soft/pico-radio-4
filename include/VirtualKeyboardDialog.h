@@ -76,6 +76,7 @@ class VirtualKeyboardDialog : public UIDialogBase {
     void createKeyboard();
     void drawInputField();
     void drawCursor();
+    void redrawCursorArea();
     void handleKeyPress(char key);
     void handleSpecialKey(const String &keyType);
     void updateButtonLabels();

@@ -169,7 +169,10 @@ void VirtualKeyboardDialog::createKeyboard() {
     addChild(cancelButton);
 
     // OK gomb állapot beállítása a kezdeti szöveg alapján
-    updateOkButtonState();
+    if (okButton) {
+        bool shouldEnable = currentText.length() >= 3;
+        okButton->setEnabled(shouldEnable);
+    }
 }
 
 void VirtualKeyboardDialog::drawSelf() {
@@ -178,9 +181,6 @@ void VirtualKeyboardDialog::drawSelf() {
 
     // Input mező rajzolása
     drawInputField();
-
-    // Minden gomb már hozzá van adva a gyerekekhez,
-    // az UIDialogBase::draw() automatikusan kirajzolja őket
 }
 
 void VirtualKeyboardDialog::drawInputField() {
@@ -352,7 +352,35 @@ void VirtualKeyboardDialog::handleOwnLoop() {
     if (now - lastCursorBlink >= CURSOR_BLINK_INTERVAL) {
         cursorVisible = !cursorVisible;
         lastCursorBlink = now;
-        markForRedraw();
+
+        // Csak a kurzor területét rajzoljuk újra
+        redrawCursorArea();
+    }
+}
+
+void VirtualKeyboardDialog::redrawCursorArea() {
+    // Kurzor pozíció számítása
+    tft.setFreeFont(&FreeSansBold9pt7b);
+    tft.setTextSize(1);
+
+    String displayText = currentText;
+    if (displayText.length() > 18) {
+        displayText = "..." + displayText.substring(displayText.length() - 15);
+    }
+
+    uint16_t textWidth = tft.textWidth(displayText);
+    uint16_t cursorX = inputRect.x + 5 + textWidth;
+    uint16_t cursorY = inputRect.y + 3;
+    uint16_t cursorHeight = inputRect.height - 6;
+
+    if (cursorX < inputRect.x + inputRect.width - 3) {
+        // Kurzor területének törlése (fekete háttér)
+        tft.fillRect(cursorX, cursorY, 2, cursorHeight, TFT_BLACK);
+
+        // Kurzor rajzolása csak ha látható
+        if (cursorVisible) {
+            tft.drawFastVLine(cursorX, cursorY, cursorHeight, TFT_WHITE);
+        }
     }
 }
 
