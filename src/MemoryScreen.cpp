@@ -133,6 +133,14 @@ void MemoryScreen::refreshList() {
     updateHorizontalButtonStates();
 }
 
+void MemoryScreen::refreshCurrentTunedIndication() {
+    // Csak a lista megjelenítését frissítjük, nem töltjük újra az adatokat
+    if (memoryList) {
+        memoryList->markForRedraw();
+    }
+    updateHorizontalButtonStates();
+}
+
 // ===================================================================
 // IScrollableListDataSource interface
 // ===================================================================
@@ -143,9 +151,18 @@ String MemoryScreen::getItemLabelAt(int index) const {
     if (index < 0 || index >= stations.size()) {
         return "";
     }
-
     const StationData &station = stations[index];
-    return String(station.name);
+
+    // Fix formátum: mindig ugyanolyan pozícióban kezdődik a szöveg
+    String label = "";
+    if (const_cast<MemoryScreen *>(this)->isStationCurrentlyTuned(station)) {
+        label = String(CURRENT_TUNED_ICON) + String(station.name);
+    } else {
+        // Szóközök ugyanolyan hosszban mint a CURRENT_TUNED_ICON ("> ")
+        label = "   " + String(station.name); // 2 szóköz a "> " helyett
+    }
+
+    return label;
 }
 
 String MemoryScreen::getItemValueAt(int index) const {
@@ -164,6 +181,8 @@ bool MemoryScreen::onItemClicked(int index) {
     selectedIndex = index;
     tuneToStation(index);
     updateHorizontalButtonStates();
+    // Frissítjük a behangolt állomás jelzését a listában
+    refreshCurrentTunedIndication();
     return false; // Nincs szükség teljes újrarajzolásra
 }
 
@@ -190,12 +209,16 @@ void MemoryScreen::handleOwnLoop() {
 }
 
 void MemoryScreen::drawContent() {
-    // Cím kirajzolása
+    // Cím kirajzolása memória állapottal
     tft.setFreeFont(&FreeSansBold12pt7b);
     tft.setTextSize(1);
     tft.setTextColor(TFT_YELLOW, TFT_COLOR_BACKGROUND);
     tft.setTextDatum(TC_DATUM);
-    String title = isFmMode ? "FM Memory" : "AM Memory";
+
+    // Memória állapot hozzáadása a címhez
+    uint8_t currentCount = getCurrentStationCount();
+    uint8_t maxCount = getMaxStationCount();
+    String title = String(isFmMode ? "FM Memory" : "AM Memory") + " (" + String(currentCount) + "/" + String(maxCount) + ")";
     tft.drawString(title, UIComponent::SCREEN_W / 2, 5);
 
     // Komponensek már automatikusan kirajzolódnak
@@ -209,6 +232,9 @@ void MemoryScreen::activate() {
     if (newFmMode != isFmMode) {
         isFmMode = newFmMode;
         refreshList();
+    } else {
+        // Ha a sáv típus nem változott, csak a behangolt állomás jelzését frissítjük
+        refreshCurrentTunedIndication();
     }
 
     updateHorizontalButtonStates();
@@ -370,6 +396,13 @@ void MemoryScreen::tuneToStation(int index) {
 }
 
 void MemoryScreen::addCurrentStation(const String &name) {
+    // Memória telített ellenőrzése
+    if (isMemoryFull()) {
+        auto dialog = std::make_shared<MessageDialog>(this, tft, Rect(-1, -1, 300, 120), "Hiba", "Memória megtelt!\nTöröljön állomásokat.");
+        showDialog(dialog);
+        return;
+    }
+
     StationData newStation = getCurrentStationData();
     strncpy(newStation.name, name.c_str(), MAX_STATION_NAME_LEN);
     newStation.name[MAX_STATION_NAME_LEN] = '\0'; // Store-ba mentés
@@ -502,11 +535,12 @@ void MemoryScreen::updateHorizontalButtonStates() {
     bool hasSelection = (selectedIndex >= 0 && selectedIndex < stations.size());
 
     horizontalButtonBar->setButtonState(EDIT_BUTTON, hasSelection ? UIButton::ButtonState::Off : UIButton::ButtonState::Disabled);
-    horizontalButtonBar->setButtonState(DELETE_BUTTON, hasSelection ? UIButton::ButtonState::Off : UIButton::ButtonState::Disabled);
-
-    // Add Current gomb állapota - letiltva, ha az aktuális állomás már a memóriában van
+    horizontalButtonBar->setButtonState(
+        DELETE_BUTTON, hasSelection ? UIButton::ButtonState::Off
+                                    : UIButton::ButtonState::Disabled); // Add Current gomb állapota - letiltva, ha az aktuális állomás már a memóriában van VAGY a memória tele van
     bool currentStationExists = isCurrentStationInMemory();
-    horizontalButtonBar->setButtonState(ADD_CURRENT_BUTTON, currentStationExists ? UIButton::ButtonState::Disabled : UIButton::ButtonState::Off);
+    bool memoryFull = isMemoryFull();
+    horizontalButtonBar->setButtonState(ADD_CURRENT_BUTTON, (currentStationExists || memoryFull) ? UIButton::ButtonState::Disabled : UIButton::ButtonState::Off);
 }
 
 bool MemoryScreen::isCurrentStationInMemory() {
@@ -521,3 +555,27 @@ bool MemoryScreen::isCurrentStationInMemory() {
 
     return false;
 }
+
+bool MemoryScreen::isStationCurrentlyTuned(const StationData &station) {
+    StationData currentStation = getCurrentStationData();
+
+    // Alapvető összehasonlítás: frekvencia és moduláció
+    bool basicMatch = (station.frequency == currentStation.frequency && station.modulation == currentStation.modulation);
+
+    if (!basicMatch) {
+        return false;
+    }
+
+    // SSB/CW módoknál a BFO offset is egyeznie kell
+    if (station.modulation == LSB || station.modulation == USB || station.modulation == CW) {
+        return (station.bfoOffset == currentStation.bfoOffset);
+    }
+    // AM/FM módoknál csak frekvencia és moduláció kell egyezzen
+    return true;
+}
+
+uint8_t MemoryScreen::getCurrentStationCount() const { return isFmMode ? fmStationStore.getStationCount() : amStationStore.getStationCount(); }
+
+uint8_t MemoryScreen::getMaxStationCount() const { return isFmMode ? MAX_FM_STATIONS : MAX_AM_STATIONS; }
+
+bool MemoryScreen::isMemoryFull() const { return getCurrentStationCount() >= getMaxStationCount(); }

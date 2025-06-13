@@ -65,6 +65,7 @@ class MemoryScreen : public UIScreen, public IScrollableListDataSource {
     void updateHorizontalButtonStates();
     void loadStations();
     void refreshList();
+    void refreshCurrentTunedIndication();
 
     // Gomb eseménykezelők
     void handleAddCurrentButton(const UIButton::ButtonEvent &event);
@@ -81,9 +82,17 @@ class MemoryScreen : public UIScreen, public IScrollableListDataSource {
     void deleteStation(int index); // Segéd metódusok
     StationData getCurrentStationData();
     bool isCurrentStationInMemory();
+    bool isStationCurrentlyTuned(const StationData &station);
     String formatFrequency(uint16_t frequency, bool isFm) const;
     String getModulationName(uint8_t modulation) const;
     bool isCurrentBandFm();
+    uint8_t getCurrentStationCount() const;
+    uint8_t getMaxStationCount() const;
+    bool isMemoryFull() const;
+
+  private:
+    // Konstansok
+    static constexpr const char *CURRENT_TUNED_ICON = "> ";
 };
 
 #endif // __MEMORY_SCREEN_H
