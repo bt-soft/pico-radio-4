@@ -114,8 +114,15 @@ void MemoryScreen::loadStations() {
             }
         }
     }
-
     DEBUG("Loaded %d stations for %s mode\n", stations.size(), isFmMode ? "FM" : "AM");
+
+    // Első elem automatikus kiválasztása, ha van állomás
+    if (stations.size() > 0) {
+        selectedIndex = 0;
+        // A UIScrollableListComponent automatikusan 0-ra állítja a selectedItemIndex-et
+    } else {
+        selectedIndex = -1;
+    }
 }
 
 void MemoryScreen::refreshList() {
@@ -224,7 +231,13 @@ void MemoryScreen::onDialogClosed(UIDialogBase *closedDialog) {
 
 void MemoryScreen::handleAddCurrentButton(const UIButton::ButtonEvent &event) {
     if (event.state == UIButton::EventButtonState::Clicked) {
-        showAddStationDialog();
+        // Ellenőrizzük, hogy az aktuális állomás már létezik-e
+        if (isCurrentStationInMemory()) {
+            // Figyelmeztető dialógus megjelenítése
+            showStationExistsDialog();
+        } else {
+            showAddStationDialog();
+        }
     }
 }
 
@@ -319,6 +332,22 @@ void MemoryScreen::showDeleteConfirmDialog() {
     });
 
     showDialog(confirmDialog);
+}
+
+void MemoryScreen::showStationExistsDialog() {
+    StationData currentStation = getCurrentStationData();
+    String freqStr = formatFrequency(currentStation.frequency, isFmMode);
+    String modStr = getModulationName(currentStation.modulation);
+
+    String message = "Station already exists in memory:\n" + freqStr + " " + modStr;
+
+    auto infoDialog = std::make_shared<MessageDialog>(this, tft, Rect(-1, -1, 280, 0), "Station Exists", message.c_str(), MessageDialog::ButtonsType::Ok);
+
+    infoDialog->setDialogCallback([this](UIDialogBase *dialog, UIDialogBase::DialogResult result) {
+        // Nincs teendő, csak tájékoztatás
+    });
+
+    showDialog(infoDialog);
 }
 
 // ===================================================================
@@ -473,6 +502,22 @@ void MemoryScreen::updateHorizontalButtonStates() {
     bool hasSelection = (selectedIndex >= 0 && selectedIndex < stations.size());
 
     horizontalButtonBar->setButtonState(EDIT_BUTTON, hasSelection ? UIButton::ButtonState::Off : UIButton::ButtonState::Disabled);
-
     horizontalButtonBar->setButtonState(DELETE_BUTTON, hasSelection ? UIButton::ButtonState::Off : UIButton::ButtonState::Disabled);
+
+    // Add Current gomb állapota - letiltva, ha az aktuális állomás már a memóriában van
+    bool currentStationExists = isCurrentStationInMemory();
+    horizontalButtonBar->setButtonState(ADD_CURRENT_BUTTON, currentStationExists ? UIButton::ButtonState::Disabled : UIButton::ButtonState::Off);
+}
+
+bool MemoryScreen::isCurrentStationInMemory() {
+    StationData currentStation = getCurrentStationData();
+
+    // Ellenőrizzük, hogy az aktuális frekvencia és moduláció már létezik-e a memóriában
+    for (const StationData &station : stations) {
+        if (station.frequency == currentStation.frequency && station.modulation == currentStation.modulation) {
+            return true;
+        }
+    }
+
+    return false;
 }

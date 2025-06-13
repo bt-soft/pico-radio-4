@@ -6,16 +6,11 @@
 VirtualKeyboardDialog::VirtualKeyboardDialog(UIScreen *parent, TFT_eSPI &tft, const char *title, const String &initialText, uint8_t maxLength, OnTextChangedCallback onChanged)
     : UIDialogBase(parent, tft, Rect(-1, -1, 350, 260), title), currentText(initialText), maxTextLength(maxLength), textChangedCallback(onChanged), lastCursorBlink(millis()) {
 
-    DEBUG("VirtualKeyboardDialog: Dialog bounds: x=%d, y=%d, w=%d, h=%d\n", bounds.x, bounds.y, bounds.width, bounds.height);
-    DEBUG("VirtualKeyboardDialog: Screen size: %dx%d\n", UIComponent::SCREEN_W, UIComponent::SCREEN_H);
-
     // Input mező pozíció számítása
     inputRect = Rect(bounds.x + INPUT_MARGIN, bounds.y + getHeaderHeight() + INPUT_MARGIN, bounds.width - (INPUT_MARGIN * 2), INPUT_HEIGHT);
-    DEBUG("VirtualKeyboardDialog: Input rect: x=%d, y=%d, w=%d, h=%d\n", inputRect.x, inputRect.y, inputRect.width, inputRect.height);
 
     // Billentyűzet terület pozíció számítása
     keyboardRect = Rect(bounds.x + 5, inputRect.y + inputRect.height + 10, bounds.width - 10, bounds.height - getHeaderHeight() - INPUT_HEIGHT - 60);
-    DEBUG("VirtualKeyboardDialog: Keyboard rect: x=%d, y=%d, w=%d, h=%d\n", keyboardRect.x, keyboardRect.y, keyboardRect.width, keyboardRect.height);
 
     createKeyboard();
 }
@@ -45,7 +40,6 @@ void VirtualKeyboardDialog::createKeyboard() {
             if (keyLabelCount < 50) {
                 keyLabelStorage[keyLabelCount][0] = keyChar;
                 keyLabelStorage[keyLabelCount][1] = '\0';
-                DEBUG("VirtualKeyboardDialog: Creating button '%c' at (%d,%d) size %dx%d\n", keyChar, currentX, currentY, KEY_WIDTH, KEY_HEIGHT);
 
                 auto keyButton = std::make_shared<UIButton>(         //
                     tft,                                             //
@@ -54,9 +48,7 @@ void VirtualKeyboardDialog::createKeyboard() {
                     keyLabelStorage[keyLabelCount],                  //
                     UIButton::ButtonType::Pushable,                  //
                     [this, keyChar](const UIButton::ButtonEvent &event) {
-                        DEBUG("VirtualKeyboardDialog: Button callback called for key: %c, state: %d\n", keyChar, (int)event.state);
                         if (event.state == UIButton::EventButtonState::Clicked) {
-                            DEBUG("VirtualKeyboardDialog: Calling handleKeyPress for key: %c\n", keyChar);
                             handleKeyPress(keyChar);
                         }
                     });
@@ -72,7 +64,7 @@ void VirtualKeyboardDialog::createKeyboard() {
     uint16_t specialY = startY + KEYBOARD_ROWS * (KEY_HEIGHT + KEY_SPACING) + 5;
 
     // Speciális gombok méretei
-    uint16_t shiftWidth = 45;
+    uint16_t shiftWidth = 50;
     uint16_t spaceWidth = 80;
     uint16_t backspaceWidth = 40;
     uint16_t clearWidth = 40;
@@ -81,9 +73,6 @@ void VirtualKeyboardDialog::createKeyboard() {
     // Teljes sor szélessége
     uint16_t specialRowWidth = shiftWidth + spaceWidth + backspaceWidth + clearWidth + (3 * specialSpacing); // Középre igazítás
     uint16_t specialStartX = keyboardRect.x + (keyboardRect.width - specialRowWidth) / 2;
-
-    DEBUG("VirtualKeyboardDialog: Special row - specialStartX=%d, specialY=%d\n", specialStartX, specialY);
-    DEBUG("VirtualKeyboardDialog: Shift button bounds: x=%d, y=%d, w=%d, h=%d\n", specialStartX, specialY, shiftWidth, KEY_HEIGHT);
 
     // Shift gomb
     shiftButton = std::make_shared<UIButton>(                  //
@@ -96,22 +85,16 @@ void VirtualKeyboardDialog::createKeyboard() {
         [this](const UIButton::ButtonEvent &event) {
             if (event.state == UIButton::EventButtonState::On || event.state == UIButton::EventButtonState::Off) {
                 shiftActive = !shiftActive;
-                DEBUG("VirtualKeyboardDialog: Shift button clicked, shiftActive now: %s\n", shiftActive ? "true" : "false");
-
                 // Gomb állapot beállítása
                 shiftButton->setButtonState(shiftActive ? UIButton::ButtonState::On : UIButton::ButtonState::Off);
-                DEBUG("VirtualKeyboardDialog: Shift button state set to: %s\n", shiftActive ? "On" : "Off");
-
+                shiftButton->draw(); // Gomb újrarajzolása
                 updateButtonLabels();
-                markForRedraw(); // Dialógus újrarajzolása
             }
         });
     addChild(shiftButton);
 
     // Space gomb
     uint16_t spaceX = specialStartX + shiftWidth + specialSpacing;
-    DEBUG("VirtualKeyboardDialog: Space button bounds: x=%d, y=%d, w=%d, h=%d\n", spaceX, specialY, spaceWidth, KEY_HEIGHT);
-
     spaceButton = std::make_shared<UIButton>(           //
         tft,                                            //
         buttonId++,                                     //
@@ -126,8 +109,7 @@ void VirtualKeyboardDialog::createKeyboard() {
 
     // Backspace gomb
     uint16_t backspaceX = specialStartX + shiftWidth + spaceWidth + (2 * specialSpacing);
-    DEBUG("VirtualKeyboardDialog: Backspace button bounds: x=%d, y=%d, w=%d, h=%d\n", backspaceX, specialY, backspaceWidth, KEY_HEIGHT);
-
+    
     backspaceButton = std::make_shared<UIButton>(               //
         tft,                                                    //
         buttonId++,                                             //
@@ -143,9 +125,7 @@ void VirtualKeyboardDialog::createKeyboard() {
 
     // Clear gomb
     uint16_t clearX = specialStartX + shiftWidth + spaceWidth + backspaceWidth + (3 * specialSpacing);
-    DEBUG("VirtualKeyboardDialog: Clear button bounds: x=%d, y=%d, w=%d, h=%d\n", clearX, specialY, clearWidth, KEY_HEIGHT);
-
-    clearButton = std::make_shared<UIButton>( //
+        clearButton = std::make_shared<UIButton>( //
         tft,                                  //
         buttonId++,                           //
         Rect(clearX, specialY, clearWidth, KEY_HEIGHT),
@@ -203,9 +183,7 @@ void VirtualKeyboardDialog::drawSelf() {
 }
 
 void VirtualKeyboardDialog::drawInputField() {
-    DEBUG("VirtualKeyboardDialog::drawInputField - drawing text: '%s'\n", currentText.c_str());
-    DEBUG("VirtualKeyboardDialog::drawInputField - input rect: x=%d, y=%d, w=%d, h=%d\n", inputRect.x, inputRect.y, inputRect.width, inputRect.height);
-
+    
     // Input mező háttér
     tft.fillRect(inputRect.x, inputRect.y, inputRect.width, inputRect.height, TFT_BLACK);
     tft.drawRect(inputRect.x, inputRect.y, inputRect.width, inputRect.height, TFT_WHITE);
@@ -249,41 +227,19 @@ void VirtualKeyboardDialog::drawCursor() {
     }
 }
 
-// Touch kezelés debug verzió
-bool VirtualKeyboardDialog::handleTouch(const TouchEvent &event) {
-    DEBUG("VirtualKeyboardDialog::handleTouch called at (%d,%d) pressed=%d\n", event.x, event.y, event.pressed);
-
-    // Először próbáljuk a szülő osztály touch kezelését (pl. close gomb, gyerek komponensek)
-    bool handled = UIDialogBase::handleTouch(event);
-    DEBUG("VirtualKeyboardDialog::handleTouch - UIDialogBase handled: %d\n", handled);
-
-    return handled;
-}
-
 void VirtualKeyboardDialog::handleKeyPress(char key) {
-    DEBUG("VirtualKeyboardDialog::handleKeyPress called with key: %c\n", key);
 
     if (currentText.length() >= maxTextLength) {
-        DEBUG("VirtualKeyboardDialog::handleKeyPress - max length reached\n");
         return; // Max hossz elérve
     }
-
     char actualKey = getKeyChar(key, shiftActive);
     currentText += actualKey;
-    DEBUG("VirtualKeyboardDialog::handleKeyPress - text now: %s\n", currentText.c_str());
 
-    // Shift automatikus kikapcsolása betű után
-    if (shiftActive && isalpha(key)) {
-        shiftActive = false;
-        shiftButton->setButtonState(UIButton::ButtonState::Off);
-        updateButtonLabels();
-    }
-
+    // Shift állapot megmarad - csak manuális kikapcsolással kapcsol ki
     notifyTextChanged();
     markForRedraw();
 
     // Azonnali újrarajzolás az input mezőnek
-    DEBUG("VirtualKeyboardDialog::handleKeyPress - forcing input field redraw\n");
     drawInputField();
 }
 
@@ -295,7 +251,6 @@ void VirtualKeyboardDialog::handleSpecialKey(const String &keyType) {
             markForRedraw();
 
             // Azonnali újrarajzolás az input mezőnek
-            DEBUG("VirtualKeyboardDialog::handleSpecialKey(backspace) - forcing input field redraw\n");
             drawInputField();
         }
     } else if (keyType == "clear") {
@@ -305,33 +260,31 @@ void VirtualKeyboardDialog::handleSpecialKey(const String &keyType) {
             markForRedraw();
 
             // Azonnali újrarajzolás az input mezőnek
-            DEBUG("VirtualKeyboardDialog::handleSpecialKey(clear) - forcing input field redraw\n");
             drawInputField();
         }
     }
 }
 
 void VirtualKeyboardDialog::updateButtonLabels() {
-    DEBUG("VirtualKeyboardDialog::updateButtonLabels - shiftActive: %s\n", shiftActive ? "true" : "false");
+
     for (size_t i = 0; i < keyButtons.size() && i < keyLabelCount; i++) {
         const char *currentLabel = keyButtons[i]->getLabel();
+
         if (strlen(currentLabel) == 1) {
             char baseChar = currentLabel[0];
             char newChar = getKeyChar(baseChar, shiftActive);
             keyLabelStorage[i][0] = newChar;
             keyLabelStorage[i][1] = '\0';
             keyButtons[i]->setLabel(keyLabelStorage[i]);
-            DEBUG("VirtualKeyboardDialog::updateButtonLabels - button %zu: '%c' -> '%c'\n", i, baseChar, newChar);
+            keyButtons[i]->draw();
         }
     }
 }
 
 char VirtualKeyboardDialog::getKeyChar(char baseChar, bool shifted) {
-    DEBUG("VirtualKeyboardDialog::getKeyChar - baseChar: '%c', shifted: %s\n", baseChar, shifted ? "true" : "false");
-
+    
     if (isalpha(baseChar)) {
         char result = shifted ? toupper(baseChar) : tolower(baseChar);
-        DEBUG("VirtualKeyboardDialog::getKeyChar - alpha result: '%c'\n", result);
         return result;
     }
 
@@ -379,7 +332,6 @@ void VirtualKeyboardDialog::setText(const String &text) {
     markForRedraw();
 
     // Azonnali újrarajzolás az input mezőnek
-    DEBUG("VirtualKeyboardDialog::setText - forcing input field redraw\n");
     drawInputField();
 }
 

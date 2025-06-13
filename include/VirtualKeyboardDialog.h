@@ -26,7 +26,6 @@ class VirtualKeyboardDialog : public UIDialogBase {
     VirtualKeyboardDialog(UIScreen *parent, TFT_eSPI &tft, const char *title, const String &initialText = "", uint8_t maxLength = 15, OnTextChangedCallback onChanged = nullptr);
     virtual ~VirtualKeyboardDialog(); // UIDialogBase interface
     virtual void drawSelf() override;
-    virtual bool handleTouch(const TouchEvent &event) override; // Visszahozzuk debug célból
     virtual void handleOwnLoop() override;
 
     /**
@@ -43,8 +42,8 @@ class VirtualKeyboardDialog : public UIDialogBase {
     // Billentyűzet konstansok
     static constexpr uint8_t KEYBOARD_ROWS = 4;
     static constexpr uint8_t MAX_KEYS_PER_ROW = 10;
-    static constexpr uint16_t KEY_WIDTH = 32;  // 2px-el nagyobb (30->32)
-    static constexpr uint16_t KEY_HEIGHT = 27; // 2px-el nagyobb (25->27)
+    static constexpr uint16_t KEY_WIDTH = 32;
+    static constexpr uint16_t KEY_HEIGHT = 27;
     static constexpr uint16_t KEY_SPACING = 2;
     static constexpr uint16_t INPUT_HEIGHT = 30;
     static constexpr uint16_t INPUT_MARGIN = 5;

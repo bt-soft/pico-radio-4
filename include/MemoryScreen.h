@@ -70,19 +70,17 @@ class MemoryScreen : public UIScreen, public IScrollableListDataSource {
     void handleAddCurrentButton(const UIButton::ButtonEvent &event);
     void handleEditButton(const UIButton::ButtonEvent &event);
     void handleDeleteButton(const UIButton::ButtonEvent &event);
-    void handleBackButton(const UIButton::ButtonEvent &event);
-
-    // Dialógus kezelők
+    void handleBackButton(const UIButton::ButtonEvent &event); // Dialógus kezelők
     void showAddStationDialog();
     void showEditStationDialog();
     void showDeleteConfirmDialog();
-
-    // Állomás műveletek
+    void showStationExistsDialog(); // Állomás műveletek
     void tuneToStation(int index);
     void addCurrentStation(const String &name);
     void updateStationName(int index, const String &newName);
     void deleteStation(int index); // Segéd metódusok
     StationData getCurrentStationData();
+    bool isCurrentStationInMemory();
     String formatFrequency(uint16_t frequency, bool isFm) const;
     String getModulationName(uint8_t modulation) const;
     bool isCurrentBandFm();
