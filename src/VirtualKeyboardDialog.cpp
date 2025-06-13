@@ -4,10 +4,15 @@
 #include "utils.h"
 
 VirtualKeyboardDialog::VirtualKeyboardDialog(UIScreen *parent, TFT_eSPI &tft, const String &title, const String &initialText, uint8_t maxLength, OnTextChangedCallback onChanged)
-    : UIDialogBase(parent, tft, Rect(-1, -1, 350, 260), title.c_str()), currentText(initialText), maxTextLength(maxLength), textChangedCallback(onChanged),
+    : UIDialogBase(parent, tft, Rect(-1, -1, 350, 260), ""), currentText(initialText), dialogTitle(title), maxTextLength(maxLength), textChangedCallback(onChanged),
       lastCursorBlink(millis()) {
 
-    DEBUG("VirtualKeyboardDialog constructor\n"); // Input mező pozíció számítása
+    DEBUG("VirtualKeyboardDialog constructor\n");
+
+    // A dialógus címének beállítása a tárolt String objektumból
+    this->title = dialogTitle.c_str();
+
+    // Input mező pozíció számítása
     inputRect = Rect(bounds.x + INPUT_MARGIN, bounds.y + getHeaderHeight() + INPUT_MARGIN, bounds.width - (INPUT_MARGIN * 2), INPUT_HEIGHT);
 
     // Billentyűzet terület pozíció számítása
@@ -19,12 +24,11 @@ VirtualKeyboardDialog::VirtualKeyboardDialog(UIScreen *parent, TFT_eSPI &tft, co
 VirtualKeyboardDialog::~VirtualKeyboardDialog() {
     DEBUG("VirtualKeyboardDialog destructor\n");
     keyButtons.clear();
-    keyLabels.clear();
 }
 
 void VirtualKeyboardDialog::createKeyboard() {
     keyButtons.clear();
-    keyLabels.clear();
+    keyLabelCount = 0;
 
     uint8_t buttonId = 100; // Kezdő ID
 
@@ -40,23 +44,25 @@ void VirtualKeyboardDialog::createKeyboard() {
 
         uint16_t currentX = startX;
         uint16_t currentY = startY + row * (KEY_HEIGHT + KEY_SPACING);
-
         for (uint8_t col = 0; col < keysInRow; ++col) {
             char keyChar = rowKeys[col];
 
-            // Felirat tárolása a vektorban
-            keyLabels.push_back(String(keyChar));
-            const String &keyLabel = keyLabels.back();
+            // Felirat tárolása a char tömbben
+            if (keyLabelCount < 50) {
+                keyLabelStorage[keyLabelCount][0] = keyChar;
+                keyLabelStorage[keyLabelCount][1] = '\0';
 
-            auto keyButton = std::make_shared<UIButton>(tft, buttonId++, Rect(currentX, currentY, KEY_WIDTH, KEY_HEIGHT), keyLabel.c_str(), UIButton::ButtonType::Pushable,
-                                                        [this, keyChar](const UIButton::ButtonEvent &event) {
-                                                            if (event.state == UIButton::EventButtonState::Clicked) {
-                                                                handleKeyPress(keyChar);
-                                                            }
-                                                        });
+                auto keyButton = std::make_shared<UIButton>(tft, buttonId++, Rect(currentX, currentY, KEY_WIDTH, KEY_HEIGHT), keyLabelStorage[keyLabelCount],
+                                                            UIButton::ButtonType::Pushable, [this, keyChar](const UIButton::ButtonEvent &event) {
+                                                                if (event.state == UIButton::EventButtonState::Clicked) {
+                                                                    handleKeyPress(keyChar);
+                                                                }
+                                                            });
 
-            keyButtons.push_back(keyButton);
-            addChild(keyButton);
+                keyButtons.push_back(keyButton);
+                addChild(keyButton);
+                keyLabelCount++;
+            }
 
             currentX += KEY_WIDTH + KEY_SPACING;
         }
@@ -256,13 +262,14 @@ void VirtualKeyboardDialog::handleSpecialKey(const String &keyType) {
 }
 
 void VirtualKeyboardDialog::updateButtonLabels() {
-    for (size_t i = 0; i < keyButtons.size() && i < keyLabels.size(); i++) {
+    for (size_t i = 0; i < keyButtons.size() && i < keyLabelCount; i++) {
         const char *currentLabel = keyButtons[i]->getLabel();
         if (strlen(currentLabel) == 1) {
             char baseChar = currentLabel[0];
             char newChar = getKeyChar(baseChar, shiftActive);
-            keyLabels[i] = String(newChar);
-            keyButtons[i]->setLabel(keyLabels[i].c_str());
+            keyLabelStorage[i][0] = newChar;
+            keyLabelStorage[i][1] = '\0';
+            keyButtons[i]->setLabel(keyLabelStorage[i]);
         }
     }
 }
