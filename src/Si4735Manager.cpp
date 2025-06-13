@@ -135,6 +135,7 @@ const char *RDS_PTY_NAMES[] = {
  */
 String Si4735Manager::getRdsStationName() {
     if (!isRdsAvailable()) {
+        DEBUG("Si4735Manager::getRdsStationName() - RDS nem elérhető\n");
         return "";
     }
 
@@ -144,9 +145,12 @@ String Si4735Manager::getRdsStationName() {
         strncpy(tempName, rdsStationName, sizeof(tempName) - 1);
         tempName[sizeof(tempName) - 1] = '\0';
         Utils::trimSpaces(tempName);
-        return String(tempName);
+        String result = String(tempName);
+        DEBUG("Si4735Manager::getRdsStationName() - Állomásnév: %s\n", result.c_str());
+        return result;
     }
 
+    DEBUG("Si4735Manager::getRdsStationName() - Üres vagy null állomásnév\n");
     return "";
 }
 
@@ -173,6 +177,7 @@ String Si4735Manager::getRdsProgramType() {
  */
 String Si4735Manager::getRdsRadioText() {
     if (!isRdsAvailable()) {
+        DEBUG("Si4735Manager::getRdsRadioText() - RDS nem elérhető\n");
         return "";
     }
 
@@ -182,9 +187,12 @@ String Si4735Manager::getRdsRadioText() {
         strncpy(tempText, rdsText, sizeof(tempText) - 1);
         tempText[sizeof(tempText) - 1] = '\0';
         Utils::trimSpaces(tempText);
-        return String(tempText);
+        String result = String(tempText);
+        DEBUG("Si4735Manager::getRdsRadioText() - Radio text: %s\n", result.c_str());
+        return result;
     }
 
+    DEBUG("Si4735Manager::getRdsRadioText() - Üres vagy null radio text\n");
     return "";
 }
 
@@ -218,7 +226,21 @@ bool Si4735Manager::isRdsAvailable() {
 
     // RDS státusz lekérdezése
     si4735.getRdsStatus();
-    return si4735.getRdsReceived() && si4735.getRdsSync() && si4735.getRdsSyncFound();
+
+    // Kevésbé szigorú ellenőrzés - elég ha RDS fogadás történik
+    // Az eredeti túl szigorú volt: si4735.getRdsReceived() && si4735.getRdsSync() && si4735.getRdsSyncFound()
+    bool rdsReceived = si4735.getRdsReceived();
+    bool rdsSync = si4735.getRdsSync();
+
+    // Debug logolás csak ritkán, hogy ne spammelje a konzolt
+    static unsigned long lastDebugLog = 0;
+    if (millis() - lastDebugLog > 10000) { // 10 másodpercenként
+        DEBUG("Si4735Manager::isRdsAvailable() - RdsReceived: %s, RdsSync: %s\n", rdsReceived ? "true" : "false", rdsSync ? "true" : "false");
+        lastDebugLog = millis();
+    }
+
+    // Ha van RDS vétel, akkor elérhető (sync nélkül is)
+    return rdsReceived;
 }
 
 /**
@@ -242,7 +264,26 @@ void Si4735Manager::loop() {
 
     // Hardver némítás kezelése
     manageHardwareAudioMute();
-    
+
     // Signal quality cache frissítése, ha szükséges
-    updateSignalCacheIfNeeded();
+    updateSignalCacheIfNeeded(); // RDS status debug - csak FM módban és 5 másodpercenként
+    static unsigned long lastRdsDebug = 0;
+    if (millis() - lastRdsDebug > 5000) {
+        BandTable &band = getCurrentBand();
+        if (band.bandType == FM_BAND_TYPE) {
+            si4735.getRdsStatus();
+            bool rdsReceived = si4735.getRdsReceived();
+            bool rdsSync = si4735.getRdsSync();
+            bool rdsSyncFound = si4735.getRdsSyncFound();
+
+            // Signal quality információ
+            SignalQualityData signalData = getSignalQuality();
+            uint16_t currentFreq = band.currFreq;
+
+            DEBUG("Si4735Manager::loop() - Freq: %d kHz (%.2f MHz), Signal: RSSI=%d SNR=%d\n", currentFreq, currentFreq / 100.0, signalData.rssi, signalData.snr);
+            DEBUG("Si4735Manager::loop() - RDS Status: Received=%s, Sync=%s, SyncFound=%s\n", rdsReceived ? "true" : "false", rdsSync ? "true" : "false",
+                  rdsSyncFound ? "true" : "false");
+        }
+        lastRdsDebug = millis();
+    }
 }

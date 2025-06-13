@@ -75,8 +75,10 @@ void FMScreen::layoutComponents() {
     uint16_t smeterWidth = UIComponent::SCREEN_W - 90; // 90px helyet hagyunk a jobb oldalon
     Rect smeterBounds(2, FreqDisplayY + FreqDisplay::FREQDISPLAY_HEIGHT + 20, smeterWidth, 60);
     ColorScheme smeterColors = ColorScheme::defaultScheme();
-    smeterColors.background = TFT_COLOR_BACKGROUND;     // Fekete háttér a designhoz
-    UIScreen::createSMeter(smeterBounds, smeterColors); // ===================================================================
+    smeterColors.background = TFT_COLOR_BACKGROUND; // Fekete háttér a designhoz
+    UIScreen::createSMeter(
+        smeterBounds,
+        smeterColors); // ===================================================================    // ===================================================================
     // RDS komponens létrehozása és pozicionálása
     // ===================================================================
     uint16_t rdsY = smeterBounds.y + smeterBounds.height + 10;
@@ -84,8 +86,12 @@ void FMScreen::layoutComponents() {
     uint16_t rdsWidth = UIComponent::SCREEN_W - 90; // 90px helyet hagyunk a jobb oldalon
     Rect rdsBounds(5, rdsY, rdsWidth, RDSComponent::DEFAULT_HEIGHT);
 
+    DEBUG("FMScreen: RDS komponens létrehozása - bounds: x=%d, y=%d, w=%d, h=%d\n", rdsBounds.x, rdsBounds.y, rdsBounds.width, rdsBounds.height);
+
     rdsComponent = std::make_shared<RDSComponent>(tft, rdsBounds, *pSi4735Manager);
     addChild(rdsComponent);
+
+    DEBUG("FMScreen: RDS komponens hozzáadva a gyerekekhez\n");
 
     // RDS területek finomhangolása (opcionális - alapértelmezett layout elfogadható)
     // rdsComponent->setStationNameArea(Rect(10, rdsY, 200, 18));
@@ -117,10 +123,13 @@ void FMScreen::layoutComponents() {
 bool FMScreen::handleRotary(const RotaryEvent &event) {
 
     // Biztonsági ellenőrzés: csak aktív dialógus nélkül és nem klikk eseménykor
-    if (!isDialogActive() && event.buttonState != RotaryEvent::ButtonState::Clicked) {
-
-        // Frekvencia léptetés és automatikus mentés a band táblába
+    if (!isDialogActive() && event.buttonState != RotaryEvent::ButtonState::Clicked) { // Frekvencia léptetés és automatikus mentés a band táblába
         pSi4735Manager->stepFrequency(event.value);
+
+        // RDS cache törlése frekvencia változás miatt
+        if (rdsComponent) {
+            rdsComponent->clearRdsOnFrequencyChange();
+        }
 
         // Frekvencia kijelző azonnali frissítése
         if (freqDisplayComp) {
@@ -162,13 +171,25 @@ void FMScreen::handleOwnLoop() {
             // RSSI és SNR megjelenítése FM módban
             smeterComp->showRSSI(signalCache.rssi, signalCache.snr, true /* FM mód */);
         }
-    }
-
-    // ===================================================================
+    } // ===================================================================
     // RDS adatok valós idejű frissítése
     // ===================================================================
     if (rdsComponent) {
+        static uint32_t debugCounter = 0;
+        debugCounter++;
+
+        // Debug üzenet minden 2000. híváskor
+        if (debugCounter % 2000 == 1) {
+            DEBUG("FMScreen: updateRDS() hívás #%lu\n", debugCounter);
+        }
+
         rdsComponent->updateRDS();
+    } else {
+        static bool warnOnce = true;
+        if (warnOnce) {
+            DEBUG("FMScreen: HIBA - rdsComponent nullptr!\n");
+            warnOnce = false;
+        }
     }
 }
 
@@ -200,16 +221,15 @@ void FMScreen::drawContent() {
  * - További állapotok szinkronizálása (AGC, Attenuator, stb.)
  */
 void FMScreen::activate() {
-    DEBUG("FMScreen activated - syncing button states\n");
+    DEBUG("FMScreen: activate() - FM képernyő aktiválás, RDS cache törlése\n");
 
-    // Szülő osztály activate() hívása (UIScreen lifecycle)
+    // RDS cache törlése képernyő váltáskor
+    if (rdsComponent) {
+        rdsComponent->clearRdsOnFrequencyChange();
+    }
+
+    // Szülő osztály aktiválása
     UIScreen::activate();
-
-    // ===================================================================
-    // Event-driven gombállapot szinkronizálás - CSAK AKTIVÁLÁSKOR!
-    // ===================================================================
-    updateAllVerticalButtonStates(pSi4735Manager); // Függőleges gombsor szinkronizálás (mixin method)
-    updateHorizontalButtonStates();                // Vízszintes gombsor szinkronizálás
 }
 
 /**

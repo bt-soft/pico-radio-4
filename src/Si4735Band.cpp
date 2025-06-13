@@ -12,10 +12,16 @@ void Si4735Band::bandInit(bool sysStart) {
 
     DEBUG("Si4735Band::BandInit() ->currentBandIdx: %d\n", config.data.currentBandIdx);
     BandTable &curretBand = getCurrentBand();
-
     if (getCurrentBandType() == FM_BAND_TYPE) {
         si4735.setup(PIN_SI4735_RESET, FM_BAND_TYPE);
-        si4735.setFM();
+        si4735.setFM(); // RDS is typically automatically enabled for FM mode in Si4735
+        DEBUG("Si4735Band::bandInit() - FM mód beállítva (RDS automatikusan elérhető)\n");
+
+        // RDS inicializálás és konfiguráció RÖGTÖN az FM setup után
+        DEBUG("Si4735Band::bandInit() - RDS inicializálás...\n");
+        si4735.RdsInit();
+        si4735.setRdsConfig(1, 2, 2, 2, 2); // enable=1, threshold=2 (mint a working projektben)
+        DEBUG("Si4735Band::bandInit() - RDS konfiguráció beállítva\n");
 
         // Seek beállítások
         si4735.setSeekFmRssiThreshold(2); // 2dB RSSI threshold
@@ -23,6 +29,12 @@ void Si4735Band::bandInit(bool sysStart) {
         si4735.setSeekFmSpacing(10);      // 10kHz seek lépésköz
                                           // 87.5MHz - 108MHz között
         si4735.setSeekFmLimits(curretBand.minimumFreq, curretBand.maximumFreq);
+
+        // RDS status lekérdezése a setup után
+        delay(100); // Kis várakozás, hogy a chip beálljon
+        si4735.getRdsStatus();
+        DEBUG("Si4735Band::bandInit() - Kezdeti RDS status: Received=%s, Sync=%s, SyncFound=%s\n", si4735.getRdsReceived() ? "true" : "false",
+              si4735.getRdsSync() ? "true" : "false", si4735.getRdsSyncFound() ? "true" : "false");
 
     } else {
         si4735.setup(PIN_SI4735_RESET, MW_BAND_TYPE);
@@ -166,14 +178,22 @@ void Si4735Band::useBand() {
             // Antenna tuning capacitor beállítása (FM esetén antenna tuning capacitor nem kell)
             currentBand.antCap = getDefaultAntCapValue();
             si4735.setTuneFrequencyAntennaCapacitor(currentBand.antCap);
-            // delay(100);
-
-            si4735.setFM(currentBand.minimumFreq, currentBand.maximumFreq, currentBand.currFreq, currentBand.currStep);
+            // delay(100);            si4735.setFM(currentBand.minimumFreq, currentBand.maximumFreq, currentBand.currFreq, currentBand.currStep);
             si4735.setFMDeEmphasis(1); // 1 = 50 μs. Usedin Europe, Australia, Japan;  2 = 75 μs. Used in USA (default)
+
+            // RDS inicializálás és konfiguráció
+            DEBUG("Si4735Band::bandSet() - RDS inicializálás kezdése...\n");
             si4735.RdsInit();
 #define RDS_ENABLE 1
 #define RDS_BLOCK_ERROR_TRESHOLD 2
             si4735.setRdsConfig(RDS_ENABLE, RDS_BLOCK_ERROR_TRESHOLD, RDS_BLOCK_ERROR_TRESHOLD, RDS_BLOCK_ERROR_TRESHOLD, RDS_BLOCK_ERROR_TRESHOLD);
+            DEBUG("Si4735Band::bandSet() - RDS konfiguráció beállítva: enable=%d, threshold=%d\n", RDS_ENABLE, RDS_BLOCK_ERROR_TRESHOLD);
+
+            // RDS státusz ellenőrzése a konfiguráció után
+            delay(200); // Várakozás hogy a chip feldolgozza
+            si4735.getRdsStatus();
+            DEBUG("Si4735Band::bandSet() - RDS státusz konfig után: Received=%s, Sync=%s, SyncFound=%s\n", si4735.getRdsReceived() ? "true" : "false",
+                  si4735.getRdsSync() ? "true" : "false", si4735.getRdsSyncFound() ? "true" : "false");
         } else {                                          // AM-ben vagyunk
             currentBand.antCap = getDefaultAntCapValue(); // Sima AM esetén antenna tuning capacitor nem kell
             si4735.setTuneFrequencyAntennaCapacitor(currentBand.antCap);

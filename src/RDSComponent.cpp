@@ -9,18 +9,28 @@
  * @brief RDSComponent konstruktor
  */
 RDSComponent::RDSComponent(TFT_eSPI &tft, const Rect &bounds, Si4735Manager &manager)
-    : UIComponent(tft, bounds, ColorScheme::defaultScheme()), si4735Manager(manager), lastRdsUpdate(0), lastScrollUpdate(0), dataChanged(false), scrollSprite(nullptr),
-      scrollOffset(0), radioTextPixelWidth(0), needsScrolling(false), scrollSpriteCreated(false), rdsAvailable(false) {
+    : UIComponent(tft, bounds, ColorScheme::defaultScheme()), si4735Manager(manager), lastRdsUpdate(0), lastScrollUpdate(0), lastValidRdsData(0), dataChanged(false),
+      scrollSprite(nullptr), scrollOffset(0), radioTextPixelWidth(0), needsScrolling(false), scrollSpriteCreated(false), rdsAvailable(false) {
+
+    DEBUG("RDSComponent: Konstruktor hívása - bounds: x=%d, y=%d, w=%d, h=%d\n", bounds.x, bounds.y, bounds.width, bounds.height);
 
     // Alapértelmezett színek beállítása
     stationNameColor = TFT_CYAN;   // Állomásnév - cián
     programTypeColor = TFT_ORANGE; // Program típus - narancs
     radioTextColor = TFT_WHITE;    // Radio text - fehér
     dateTimeColor = TFT_YELLOW;    // Dátum/idő - sárga
-    backgroundColor = TFT_BLACK;   // Háttér - fekete
-
-    // Alapértelmezett layout számítása
+    backgroundColor = TFT_BLACK;   // Háttér - fekete    // Alapértelmezett layout számítása
     calculateDefaultLayout();
+
+    // TESZT MODEOT KIKAPCSOLJUK - Valós RDS adatok használata
+    // Kezdetben nincs RDS adat
+    rdsAvailable = false;
+    dataChanged = false;
+
+    // Inicializáljuk az időzítőt az aktuális időre, hogy ne legyen azonnali timeout
+    lastValidRdsData = millis();
+
+    DEBUG("RDSComponent: Konstruktor befejezve - Valós RDS mód aktiválva\n");
 }
 
 /**
@@ -158,72 +168,72 @@ void RDSComponent::updateRdsData() {
     if (currentTime - lastRdsUpdate < RDS_UPDATE_INTERVAL_MS) {
         return;
     }
-    lastRdsUpdate = currentTime;
-
-    // TESZT RDS ADATOK - Ideiglenesen az RDS funkció tesztelésére
-    static bool testDataSet = false;
-    if (!testDataSet) {
-        cachedStationName = "TEST FM";
-        cachedProgramType = "Rock Music";
-        cachedRadioText = "Ez egy teszt radio text üzenet amely hosszabb mint a kijelző szélessége";
-        cachedDateTime = "12:34 2025-06-13";
-        rdsAvailable = true;
-        dataChanged = true;
-        testDataSet = true;
-        return;
-    }
-
-    // RDS elérhetőség ellenőrzése - eredeti kód
-    bool newRdsAvailable = si4735Manager.isRdsAvailable();
-
-    if (!newRdsAvailable) {
-        // Nincs RDS - töröljük az adatokat ha voltak
-        if (rdsAvailable || !cachedStationName.isEmpty() || !cachedProgramType.isEmpty() || !cachedRadioText.isEmpty() || !cachedDateTime.isEmpty()) {
-
-            cachedStationName = "";
-            cachedProgramType = "";
-            cachedRadioText = "";
-            cachedDateTime = "";
-            rdsAvailable = false;
+    lastRdsUpdate = currentTime;  // TESZT MÓD KIKAPCSOLVA - Valós RDS adatok használata
+    static bool testMode = false; // Teszt mód kikapcsolva
+    if (testMode) {
+        // Teszt adatok újrabeállítása, ha elvesztek
+        if (cachedStationName.isEmpty()) {
+            DEBUG("RDSComponent: updateRdsData() - Teszt adatok újrabeállítása\n");
+            cachedStationName = "TEST FM";
+            cachedProgramType = "Rock Music";
+            cachedRadioText = "Ez egy teszt radio text üzenet amely hosszabb mint a kijelző szélessége";
+            cachedDateTime = "12:34 2025-06-13";
+            rdsAvailable = true;
             dataChanged = true;
         }
-        return;
-    }
+        return; // Teszt módban nem használjuk az eredeti RDS logikát
+    } // EREDETI RDS LOGIKA (csak testMode = false esetén)
+    bool newRdsAvailable = si4735Manager.isRdsAvailable();
 
-    rdsAvailable = true;
+    // Az RDS elérhetőség csak informatív - NE töröljük a cached adatokat!
+    // A timeout logika kezelje az adatok törlését
+    rdsAvailable = newRdsAvailable;
+
     dataChanged = false;
 
-    // Állomásnév frissítése
+    // Ha bármelyik RDS adat nem üres, frissítjük a "last valid" időt
+    bool hasValidData = false;
+
+    // Állomásnév frissítése - csak ha nem üres vagy ha explicit törölni kell
     String newStationName = si4735Manager.getRdsStationName();
-    if (newStationName != cachedStationName) {
+    if (!newStationName.isEmpty() && newStationName != cachedStationName) {
+        // Új, nem üres állomásnév érkezett
         cachedStationName = newStationName;
         dataChanged = true;
+        hasValidData = true;
+        DEBUG("RDSComponent: Állomásnév frissítve: '%s'\n", cachedStationName.c_str());
     }
+    if (!newStationName.isEmpty())
+        hasValidData = true;
 
-    // Program típus frissítése
+    // Program típus frissítése - csak ha nem üres
     String newProgramType = si4735Manager.getRdsProgramType();
-    if (newProgramType != cachedProgramType) {
+    if (!newProgramType.isEmpty() && newProgramType != cachedProgramType) {
         cachedProgramType = newProgramType;
         dataChanged = true;
+        hasValidData = true;
+        DEBUG("RDSComponent: Program típus frissítve: '%s'\n", cachedProgramType.c_str());
     }
+    if (!newProgramType.isEmpty())
+        hasValidData = true;
 
-    // Radio text frissítése
+    // Radio text frissítése - csak ha nem üres
     String newRadioText = si4735Manager.getRdsRadioText();
-    if (newRadioText != cachedRadioText) {
+    if (!newRadioText.isEmpty() && newRadioText != cachedRadioText) {
         cachedRadioText = newRadioText;
         dataChanged = true;
+        hasValidData = true;
+        DEBUG("RDSComponent: Radio text frissítve: '%s'\n", cachedRadioText.c_str());
 
         // Radio text változott - scroll újraszámítás
-        if (!cachedRadioText.isEmpty()) {
-            tft.setFreeFont();
-            tft.setTextSize(1);
-            radioTextPixelWidth = tft.textWidth(cachedRadioText);
-            needsScrolling = (radioTextPixelWidth > radioTextArea.width);
-            scrollOffset = 0; // Scroll restart
-        } else {
-            needsScrolling = false;
-        }
+        tft.setFreeFont();
+        tft.setTextSize(1);
+        radioTextPixelWidth = tft.textWidth(cachedRadioText);
+        needsScrolling = (radioTextPixelWidth > radioTextArea.width);
+        scrollOffset = 0; // Scroll restart
     }
+    if (!newRadioText.isEmpty())
+        hasValidData = true;
 
     // Dátum/idő frissítése
     uint16_t year, month, day, hour, minute;
@@ -232,8 +242,49 @@ void RDSComponent::updateRdsData() {
         if (newDateTime != cachedDateTime) {
             cachedDateTime = newDateTime;
             dataChanged = true;
+            hasValidData = true;
         }
     }
+
+    // Ha volt valid adat, frissítsük az időzítőt
+    if (hasValidData) {
+        lastValidRdsData = currentTime;
+    } // Timeout ellenőrzés - különböző időzítés a különböző RDS adatokhoz
+    const uint32_t STATION_INFO_TIMEOUT = 90000; // 90 másodperc az állomásnév és programtípus számára
+    const uint32_t RADIO_TEXT_TIMEOUT = 60000;   // 60 másodperc a radio text számára
+    const uint32_t DATETIME_TIMEOUT = 30000;     // 30 másodperc a dátum/idő számára (ez a leginstabilabb)
+
+    if (currentTime - lastValidRdsData > STATION_INFO_TIMEOUT) {
+        // Hosszú timeout után töröljük az állomásnevet és programtípust
+        if (!cachedStationName.isEmpty() || !cachedProgramType.isEmpty()) {
+            DEBUG("RDSComponent: RDS állomásinfó timeout (%d sec) - állomásnév és programtípus törlése\n", STATION_INFO_TIMEOUT / 1000);
+            cachedStationName = "";
+            cachedProgramType = "";
+            dataChanged = true;
+        }
+    }
+
+    if (currentTime - lastValidRdsData > RADIO_TEXT_TIMEOUT) {
+        // Közepes timeout után töröljük a radio textet
+        if (!cachedRadioText.isEmpty()) {
+            DEBUG("RDSComponent: RDS radio text timeout (%d sec) - radio text törlése\n", RADIO_TEXT_TIMEOUT / 1000);
+            cachedRadioText = "";
+            dataChanged = true;
+            needsScrolling = false;
+        }
+    }
+
+    if (currentTime - lastValidRdsData > DATETIME_TIMEOUT) {
+        // Rövid timeout után töröljük a dátum/időt
+        if (!cachedDateTime.isEmpty()) {
+            DEBUG("RDSComponent: RDS dátum/idő timeout (%d sec) - dátum/idő törlése\n", DATETIME_TIMEOUT / 1000);
+            cachedDateTime = "";
+            dataChanged = true;
+        }
+    }
+
+    // Debug állapot naplózás
+    debugCacheState("updateRdsData_end");
 }
 
 // ===================================================================
@@ -244,7 +295,11 @@ void RDSComponent::updateRdsData() {
  * @brief Állomásnév kirajzolása
  */
 void RDSComponent::drawStationName() {
+    DEBUG("RDSComponent: drawStationName() - cachedStationName: '%s', area: x=%d, y=%d, w=%d, h=%d\n", cachedStationName.c_str(), stationNameArea.x, stationNameArea.y,
+          stationNameArea.width, stationNameArea.height);
+
     if (cachedStationName.isEmpty()) {
+        DEBUG("RDSComponent: drawStationName() - üres állomásnév, terület törlése\n");
         // Terület törlése ha nincs adat
         tft.fillRect(stationNameArea.x, stationNameArea.y, stationNameArea.width, stationNameArea.height, backgroundColor);
         return;
@@ -260,6 +315,8 @@ void RDSComponent::drawStationName() {
 
     // Szöveg kirajzolása
     tft.drawString(cachedStationName, stationNameArea.x, stationNameArea.y);
+
+    DEBUG("RDSComponent: drawStationName() - szöveg kirajzolva: '%s' pozícióra (%d, %d)\n", cachedStationName.c_str(), stationNameArea.x, stationNameArea.y);
 }
 
 /**
@@ -388,6 +445,8 @@ void RDSComponent::handleRadioTextScroll() {
  * @brief Komponens teljes újrarajzolása
  */
 void RDSComponent::draw() {
+    DEBUG("RDSComponent: draw() metódus hívása - bounds: x=%d, y=%d, w=%d, h=%d\n", bounds.x, bounds.y, bounds.width, bounds.height);
+
     // Teljes háttér törlése
     tft.fillRect(bounds.x, bounds.y, bounds.width, bounds.height, backgroundColor);
 
@@ -396,11 +455,15 @@ void RDSComponent::draw() {
     // Második vonal a szebb hatás érdekében
     tft.drawRect(bounds.x + 1, bounds.y + 1, bounds.width - 2, bounds.height - 2, TFT_LIGHTGREY);
 
+    DEBUG("RDSComponent: Keret rajzolása kész, rajzoljuk az RDS elemeket\n");
+
     // Minden elem újrarajzolása
     drawStationName();
     drawProgramType();
     drawRadioText();
     drawDateTime();
+
+    DEBUG("RDSComponent: draw() metódus befejezve\n");
 }
 
 /**
@@ -420,10 +483,27 @@ void RDSComponent::markForRedraw(bool markChildren) {
  * @brief RDS adatok frissítése (loop-ban hívandó)
  */
 void RDSComponent::updateRDS() {
+    static uint32_t debugCounter = 0;
+    debugCounter++;
+
+    // Debug üzenet minden 1000. híváskor
+    if (debugCounter % 1000 == 1) {
+        DEBUG("RDSComponent: updateRDS() hívás #%lu - dataChanged: %s, rdsAvailable: %s\n", debugCounter, dataChanged ? "true" : "false", rdsAvailable ? "true" : "false");
+    }
+
     updateRdsData();
+
+    // TESZT: Kényszerítsük ki a rajzolást, ha van teszt adat
+    static bool firstTime = true;
+    if (firstTime && rdsAvailable && !cachedStationName.isEmpty()) {
+        DEBUG("RDSComponent: Első alkalommal kényszerítjük a markForRedraw()-t\n");
+        markForRedraw(); // Kényszerített teljes újrarajzolás
+        firstTime = false;
+    }
 
     // Ha a UIComponent szintjén újrarajzolás szükséges, akkor teljes újrarajzolás
     if (isRedrawNeeded()) {
+        DEBUG("RDSComponent: Teljes újrarajzolás (draw()) szükséges\n");
         draw();
         needsRedraw = false; // Fontos: töröljük a flag-et
         return;
@@ -431,6 +511,7 @@ void RDSComponent::updateRDS() {
 
     // Egyébként csak akkor rajzoljuk újra, ha változtak az adatok
     if (dataChanged) {
+        DEBUG("RDSComponent: Részleges újrarajzolás - csak az érintett területek\n");
         // Csak az érintett részek újrarajzolása (nem a keret!)
         drawStationName();
         drawProgramType();
@@ -463,8 +544,64 @@ void RDSComponent::clearRDS() {
 }
 
 /**
+ * @brief RDS cache törlése frekvencia változáskor
+ * @details Azonnal törli az összes RDS adatot és reseteli az időzítőket.
+ * Használatos frekvencia váltáskor, amikor az RDS adatok már nem érvényesek.
+ */
+void RDSComponent::clearRdsOnFrequencyChange() {
+    DEBUG("RDSComponent: clearRdsOnFrequencyChange() - RDS cache törlése frekvencia változás miatt\n");
+
+    // Cache törlése
+    cachedStationName = "";
+    cachedProgramType = "";
+    cachedRadioText = "";
+    cachedDateTime = "";
+
+    // Állapot resetelés
+    rdsAvailable = false;
+    dataChanged = true;
+    needsScrolling = false;
+    scrollOffset = 0;
+
+    // Időzítők resetelése - új frekvencián kezdjük mérni az időt
+    lastValidRdsData = millis();
+    lastRdsUpdate = 0; // Azonnal frissítsen
+
+    // Sprite tisztítás
+    cleanupScrollSprite();
+
+    // Képernyő frissítés
+    markForRedraw(false);
+
+    DEBUG("RDSComponent: RDS cache törölve, új frekvencia várakozás indítva\n");
+}
+
+/**
  * @brief Ellenőrzi, hogy van-e érvényes RDS adat
  */
 bool RDSComponent::hasValidRDS() const {
     return rdsAvailable && (!cachedStationName.isEmpty() || !cachedProgramType.isEmpty() || !cachedRadioText.isEmpty() || !cachedDateTime.isEmpty());
 }
+
+// ===================================================================
+// Debug segédmetódusok
+// ===================================================================
+
+/**
+ * @brief RDS cache állapotának naplózása debug célokra
+ */
+void RDSComponent::debugCacheState(const char *context) {
+    static uint32_t lastDebugTime = 0;
+    uint32_t currentTime = millis();
+
+    // Csak 10 másodpercenként logoljunk
+    if (currentTime - lastDebugTime < 10000) {
+        return;
+    }
+    lastDebugTime = currentTime;
+
+    DEBUG("RDS Cache [%s]: Station='%s', PTY='%s', RT='%s', DT='%s', Available=%s, TimeSinceValid=%lu ms\n", context, cachedStationName.c_str(), cachedProgramType.c_str(),
+          cachedRadioText.c_str(), cachedDateTime.c_str(), rdsAvailable ? "true" : "false", currentTime - lastValidRdsData);
+}
+
+// ===================================================================

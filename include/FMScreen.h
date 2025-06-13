@@ -64,25 +64,24 @@ class FMScreen : public UIScreen, public CommonVerticalButtons::Mixin<FMScreen> 
      * - Képernyő aktiválásakor (activate())
      * - Specifikus eseményekkor (eseménykezelőkben)
      */
-    virtual void handleOwnLoop() override;
-
-    /**
-     * @brief Statikus képernyő tartalom kirajzolása
-     * @details Csak a statikus UI elemeket rajzolja:
-     * - S-Meter skála (vonalak, számok)
-     *
-     * A dinamikus tartalom (pl. S-Meter érték) a loop()-ban frissül.
-     */
+    virtual void handleOwnLoop() override; /**
+                                            * @brief Statikus képernyő tartalom kirajzolása
+                                            * @details Csak a statikus UI elemeket rajzolja:
+                                            * - S-Meter skála (vonalak, számok)
+                                            *
+                                            * A dinamikus tartalom (pl. S-Meter érték) a loop()-ban frissül.
+                                            */
     virtual void drawContent() override;
 
     /**
      * @brief Képernyő aktiválása - Event-driven gombállapot szinkronizálás
      * @details Ez az EGYETLEN hely, ahol gombállapotokat szinkronizáljuk!
+     * Emellett törli az RDS cache-t, ha más sávról jövünk.
      *
      * Szinkronizálási pontok:
-     * - Mute gomb ↔ rtv::muteStat állapot
-     * - AM gomb ↔ aktuális band típus
-     * - AGC/Attenuator gombok ↔ Si4735 állapotok (TODO)
+     * - Mute gomb <-> rtv::muteStat állapot
+     * - AM gomb <-> aktuális band típus
+     * - AGC/Attenuator gombok <-> Si4735 állapotok (TODO)
      */
     virtual void activate() override;
 

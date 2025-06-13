@@ -40,11 +40,10 @@ class RDSComponent : public UIComponent {
     String cachedProgramType;
     String cachedRadioText;
     String cachedDateTime;
-    bool rdsAvailable;
-
-    // Időzítés és cache kezelés
+    bool rdsAvailable; // Időzítés és cache kezelés
     uint32_t lastRdsUpdate;
     uint32_t lastScrollUpdate;
+    uint32_t lastValidRdsData; // Utolsó valid RDS adat időpontja
     bool dataChanged;
 
     // Layout területek
@@ -103,6 +102,12 @@ class RDSComponent : public UIComponent {
     void cleanupScrollSprite();
 
     /**
+     * @brief RDS cache állapotának naplózása debug célokra
+     * @param context Kontextus string a log üzenethez
+     */
+    void debugCacheState(const char *context);
+
+    /**
      * @brief Radio text scroll kezelése
      */
     void handleRadioTextScroll();
@@ -141,6 +146,13 @@ class RDSComponent : public UIComponent {
      * Használatos amikor nincs RDS vétel vagy AM módra váltunk.
      */
     void clearRDS();
+
+    /**
+     * @brief RDS cache törlése frekvencia változáskor
+     * @details Azonnal törli az összes RDS adatot és reseteli az időzítőket.
+     * Használatos frekvencia váltáskor, amikor az RDS adatok már nem érvényesek.
+     */
+    void clearRdsOnFrequencyChange();
 
     /**
      * @brief Ellenőrzi, hogy van-e érvényes RDS adat
