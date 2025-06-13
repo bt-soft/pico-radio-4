@@ -23,7 +23,7 @@ class VirtualKeyboardDialog : public UIDialogBase {
      * @param maxLength Maximális szöveg hossz
      * @param onChanged Callback, amikor a szöveg megváltozik
      */
-    VirtualKeyboardDialog(UIScreen *parent, TFT_eSPI &tft, const String &title, const String &initialText = "", uint8_t maxLength = 15, OnTextChangedCallback onChanged = nullptr);
+    VirtualKeyboardDialog(UIScreen *parent, TFT_eSPI &tft, const char *title, const String &initialText = "", uint8_t maxLength = 15, OnTextChangedCallback onChanged = nullptr);
 
     virtual ~VirtualKeyboardDialog(); // UIDialogBase interface
     virtual void drawSelf() override;
@@ -61,7 +61,6 @@ class VirtualKeyboardDialog : public UIDialogBase {
     std::shared_ptr<UIButton> backspaceButton;
     std::shared_ptr<UIButton> clearButton; // Szöveg kezelés
     String currentText;
-    String dialogTitle; // Dialógus címének tárolása
     uint8_t maxTextLength;
     OnTextChangedCallback textChangedCallback;
 

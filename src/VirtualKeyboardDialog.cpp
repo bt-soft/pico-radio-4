@@ -3,14 +3,8 @@
 #include "UIComponent.h"
 #include "utils.h"
 
-VirtualKeyboardDialog::VirtualKeyboardDialog(UIScreen *parent, TFT_eSPI &tft, const String &title, const String &initialText, uint8_t maxLength, OnTextChangedCallback onChanged)
-    : UIDialogBase(parent, tft, Rect(-1, -1, 350, 260), ""), currentText(initialText), dialogTitle(title), maxTextLength(maxLength), textChangedCallback(onChanged),
-      lastCursorBlink(millis()) {
-
-    DEBUG("VirtualKeyboardDialog constructor\n");
-
-    // A dialógus címének beállítása a tárolt String objektumból
-    this->title = dialogTitle.c_str();
+VirtualKeyboardDialog::VirtualKeyboardDialog(UIScreen *parent, TFT_eSPI &tft, const char *title, const String &initialText, uint8_t maxLength, OnTextChangedCallback onChanged)
+    : UIDialogBase(parent, tft, Rect(-1, -1, 350, 260), title), currentText(initialText), maxTextLength(maxLength), textChangedCallback(onChanged), lastCursorBlink(millis()) {
 
     // Input mező pozíció számítása
     inputRect = Rect(bounds.x + INPUT_MARGIN, bounds.y + getHeaderHeight() + INPUT_MARGIN, bounds.width - (INPUT_MARGIN * 2), INPUT_HEIGHT);
@@ -21,10 +15,7 @@ VirtualKeyboardDialog::VirtualKeyboardDialog(UIScreen *parent, TFT_eSPI &tft, co
     createKeyboard();
 }
 
-VirtualKeyboardDialog::~VirtualKeyboardDialog() {
-    DEBUG("VirtualKeyboardDialog destructor\n");
-    keyButtons.clear();
-}
+VirtualKeyboardDialog::~VirtualKeyboardDialog() { keyButtons.clear(); }
 
 void VirtualKeyboardDialog::createKeyboard() {
     keyButtons.clear();

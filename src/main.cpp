@@ -10,6 +10,7 @@
 #include "PicoSensorUtils.h"
 #include "ScreenManager.h"
 #include "SplashScreen.h"
+#include "UIComponent.h"
 #include "defines.h"
 #include "pins.h"
 #include "utils.h"
@@ -68,12 +69,13 @@ void setup() {
 
     // TFT LED háttérvilágítás kimenet
     pinMode(PIN_TFT_BACKGROUND_LED, OUTPUT);
-    analogWrite(PIN_TFT_BACKGROUND_LED, TFT_BACKGROUND_LED_MAX_BRIGHTNESS);
-
-    // TFT inicializálása
+    analogWrite(PIN_TFT_BACKGROUND_LED, TFT_BACKGROUND_LED_MAX_BRIGHTNESS); // TFT inicializálása
     tft.init();
     tft.setRotation(1);
     tft.fillScreen(TFT_BLACK); // Fekete háttér a splash screen-hez
+
+    // UI komponensek számára képernyő méretek inicializálása
+    UIComponent::initScreenDimensions(tft);
 
 #ifdef DEBUG_WAIT_FOR_SERIAL
     Utils::debugWaitForSerial(tft);

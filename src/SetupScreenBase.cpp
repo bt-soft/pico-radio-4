@@ -46,19 +46,18 @@ SetupScreenBase::SetupScreenBase(TFT_eSPI &tft, const char *screenName) : UIScre
  */
 void SetupScreenBase::createCommonUI(const char *title) {
     // Képernyő dimenzióinak és margóinak meghatározása
-    const int16_t screenW = tft.width();
-    const int16_t screenH = tft.height();
     const int16_t margin = 5;
     const int16_t buttonHeight = UIButton::DEFAULT_BUTTON_HEIGHT;
     const int16_t listTopMargin = 30;                            // Hely a címnek
     const int16_t listBottomPadding = buttonHeight + margin * 2; // Hely az Exit gombnak
 
     // Görgethető lista komponens létrehozása és hozzáadása a gyermek komponensekhez
-    Rect listBounds(margin, listTopMargin, screenW - (2 * margin), screenH - listTopMargin - listBottomPadding);
+    Rect listBounds(margin, listTopMargin, UIComponent::SCREEN_W - (2 * margin), UIComponent::SCREEN_H - listTopMargin - listBottomPadding);
     menuList = std::make_shared<UIScrollableListComponent>(tft, listBounds, this);
     addChild(menuList); // Exit gomb létrehozása a képernyő jobb alsó sarkában
+
     constexpr int8_t exitButtonWidth = UIButton::DEFAULT_BUTTON_WIDTH;
-    Rect exitButtonBounds(screenW - exitButtonWidth - margin, screenH - buttonHeight - margin, exitButtonWidth, buttonHeight);
+    Rect exitButtonBounds(UIComponent::SCREEN_W - exitButtonWidth - margin, UIComponent::SCREEN_H - buttonHeight - margin, exitButtonWidth, buttonHeight);
     exitButton =
         std::make_shared<UIButton>(tft, 0, exitButtonBounds, "Back", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, [this](const UIButton::ButtonEvent &event) {
             // Lambda callback: Back gomb megnyomásakor visszatérés az előző képernyőre

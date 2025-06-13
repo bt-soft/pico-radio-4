@@ -20,8 +20,6 @@ static constexpr uint8_t BACK_BUTTON = 33;
 
 MemoryScreen::MemoryScreen(TFT_eSPI &tft, Si4735Manager &si4735Manager) : UIScreen(tft, SCREEN_NAME_MEMORY, &si4735Manager) {
 
-    DEBUG("MemoryScreen constructor\n");
-
     // Aktuális sáv típus meghatározása
     isFmMode = isCurrentBandFm();
 
@@ -29,7 +27,7 @@ MemoryScreen::MemoryScreen(TFT_eSPI &tft, Si4735Manager &si4735Manager) : UIScre
     loadStations();
 }
 
-MemoryScreen::~MemoryScreen() { DEBUG("MemoryScreen destructor\n"); }
+MemoryScreen::~MemoryScreen() {}
 
 // ===================================================================
 // UI komponensek layout és elhelyezés
@@ -58,15 +56,16 @@ void MemoryScreen::createHorizontalButtonBar() {
 
     // Gombsor pozíció számítása (képernyő alján)
     uint16_t buttonY = 190;
-    uint16_t buttonWidth = 58;
-    uint16_t buttonHeight = 25;
+    uint16_t buttonWidth = 60;
+    uint16_t buttonHeight = 30;
     uint16_t spacing = 2;
     uint16_t totalWidth = 4 * buttonWidth + 3 * spacing;
     uint16_t startX = (240 - totalWidth) / 2;
 
     // Gomb konfigurációk létrehozása
     std::vector<UIHorizontalButtonBar::ButtonConfig> buttonConfigs = {
-        {ADD_CURRENT_BUTTON, "Add Curr", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, [this](const UIButton::ButtonEvent &event) { handleAddCurrentButton(event); }},
+        {ADD_CURRENT_BUTTON, "Add Current", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
+         [this](const UIButton::ButtonEvent &event) { handleAddCurrentButton(event); }},
         {EDIT_BUTTON, "Edit", UIButton::ButtonType::Pushable, UIButton::ButtonState::Disabled, [this](const UIButton::ButtonEvent &event) { handleEditButton(event); }},
         {DELETE_BUTTON, "Delete", UIButton::ButtonType::Pushable, UIButton::ButtonState::Disabled, [this](const UIButton::ButtonEvent &event) { handleDeleteButton(event); }},
         {BACK_BUTTON, "Back", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, [this](const UIButton::ButtonEvent &event) { handleBackButton(event); }}};
@@ -174,9 +173,8 @@ void MemoryScreen::drawContent() {
     tft.setTextSize(1);
     tft.setTextColor(TFT_YELLOW, TFT_COLOR_BACKGROUND);
     tft.setTextDatum(TC_DATUM);
-
     String title = isFmMode ? "FM Memory" : "AM Memory";
-    tft.drawString(title, 120, 5);
+    tft.drawString(title, bounds.x + bounds.width / 2, 5);
 
     // Komponensek már automatikusan kirajzolódnak
 }

@@ -45,6 +45,14 @@ struct Rect {
  */
 class UIComponent {
 
+  public:
+    // Statikus képernyő méretek - egyszer inicializálva, minden komponens számára elérhető
+    static uint16_t SCREEN_W;
+    static uint16_t SCREEN_H;
+
+    // Statikus inicializáló metódus
+    static void initScreenDimensions(TFT_eSPI &tft);
+
   protected:
     TFT_eSPI &tft;
     Rect bounds;
