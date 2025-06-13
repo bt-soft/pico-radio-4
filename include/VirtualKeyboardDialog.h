@@ -52,10 +52,9 @@ class VirtualKeyboardDialog : public UIDialogBase {
     static constexpr unsigned long CURSOR_BLINK_INTERVAL = 500;
 
     // Billentyűzet layout
-    const char *keyboardLayout[KEYBOARD_ROWS] = {"1234567890", "qwertzuiop", "asdfghjkl", "yxcvbnm.-"};
-
-    // UI elemek
+    const char *keyboardLayout[KEYBOARD_ROWS] = {"1234567890", "qwertzuiop", "asdfghjkl", "yxcvbnm.-"}; // UI elemek
     std::vector<std::shared_ptr<UIButton>> keyButtons;
+    std::vector<String> keyLabels; // Gombok feliratainak tárolása
     std::shared_ptr<UIButton> shiftButton;
     std::shared_ptr<UIButton> spaceButton;
     std::shared_ptr<UIButton> backspaceButton;
