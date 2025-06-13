@@ -280,6 +280,7 @@ void VirtualKeyboardDialog::updateButtonLabels() {
             keyLabelStorage[i][0] = newChar;
             keyLabelStorage[i][1] = '\0';
             keyButtons[i]->setLabel(keyLabelStorage[i]);
+            keyButtons[i]->markForRedraw();
             keyButtons[i]->draw();
         }
     }
