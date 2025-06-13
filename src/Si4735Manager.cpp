@@ -80,52 +80,6 @@ String Si4735Manager::getCurrentRdsProgramService() {
 }
 
 // ===================================================================
-// RDS Support - PTY (Program Type) tábla
-// ===================================================================
-
-/**
- * @brief RDS Program Type (PTY) nevek táblája
- * @details Az RDS standard 32 különböző program típust definiál (0-31).
- * Minden PTY kódhoz tartozik egy szöveges leírás.
- */
-const char *RDS_PTY_NAMES[] = {
-    "No defined",            // 0
-    "News",                  // 1
-    "Current affairs",       // 2
-    "Information",           // 3
-    "Sport",                 // 4
-    "Education",             // 5
-    "Drama",                 // 6
-    "Culture",               // 7
-    "Science",               // 8
-    "Varied",                // 9
-    "Pop Music",             // 10
-    "Rock Music",            // 11
-    "Easy Listening",        // 12
-    "Light Classical",       // 13
-    "Serious Classical",     // 14
-    "Other Music",           // 15
-    "Weather",               // 16
-    "Finance",               // 17
-    "Children's Programmes", // 18
-    "Social Affairs",        // 19
-    "Religion",              // 20
-    "Phone-in",              // 21
-    "Travel",                // 22
-    "Leisure",               // 23
-    "Jazz Music",            // 24
-    "Country Music",         // 25
-    "National Music",        // 26
-    "Oldies Music",          // 27
-    "Folk Music",            // 28
-    "Documentary",           // 29
-    "Alarm Test",            // 30
-    "Alarm"                  // 31
-};
-
-#define RDS_PTY_COUNT (sizeof(RDS_PTY_NAMES) / sizeof(RDS_PTY_NAMES[0]))
-
-// ===================================================================
 // RDS Support - Implementáció
 // ===================================================================
 
@@ -135,10 +89,8 @@ const char *RDS_PTY_NAMES[] = {
  */
 String Si4735Manager::getRdsStationName() {
     if (!isRdsAvailable()) {
-        DEBUG("Si4735Manager::getRdsStationName() - RDS nem elérhető\n");
         return "";
     }
-
     char *rdsStationName = si4735.getRdsText0A();
     if (rdsStationName != nullptr && strlen(rdsStationName) > 0) {
         char tempName[32];
@@ -146,29 +98,22 @@ String Si4735Manager::getRdsStationName() {
         tempName[sizeof(tempName) - 1] = '\0';
         Utils::trimSpaces(tempName);
         String result = String(tempName);
-        DEBUG("Si4735Manager::getRdsStationName() - Állomásnév: %s\n", result.c_str());
         return result;
     }
 
-    DEBUG("Si4735Manager::getRdsStationName() - Üres vagy null állomásnév\n");
     return "";
 }
 
 /**
- * @brief Lekérdezi az RDS program típust (PTY)
- * @return String Az RDS program típus szöveges leírása
+ * @brief Lekérdezi az RDS program típus kódot (PTY)
+ * @return uint8_t Az RDS program típus kódja (0-31), vagy 255 ha nincs RDS
  */
-String Si4735Manager::getRdsProgramType() {
+uint8_t Si4735Manager::getRdsProgramTypeCode() {
     if (!isRdsAvailable()) {
-        return "";
+        return 255; // Nincs RDS
     }
 
-    uint8_t ptyCode = si4735.getRdsProgramType();
-    if (ptyCode < RDS_PTY_COUNT) {
-        return String(RDS_PTY_NAMES[ptyCode]);
-    }
-
-    return "Unknown PTY";
+    return si4735.getRdsProgramType();
 }
 
 /**
@@ -177,7 +122,6 @@ String Si4735Manager::getRdsProgramType() {
  */
 String Si4735Manager::getRdsRadioText() {
     if (!isRdsAvailable()) {
-        DEBUG("Si4735Manager::getRdsRadioText() - RDS nem elérhető\n");
         return "";
     }
 
@@ -188,11 +132,9 @@ String Si4735Manager::getRdsRadioText() {
         tempText[sizeof(tempText) - 1] = '\0';
         Utils::trimSpaces(tempText);
         String result = String(tempText);
-        DEBUG("Si4735Manager::getRdsRadioText() - Radio text: %s\n", result.c_str());
         return result;
     }
 
-    DEBUG("Si4735Manager::getRdsRadioText() - Üres vagy null radio text\n");
     return "";
 }
 
@@ -224,20 +166,11 @@ bool Si4735Manager::isRdsAvailable() {
         return false;
     }
 
-    // RDS státusz lekérdezése
-    si4735.getRdsStatus();
+    // RDS státusz lekérdezése    si4735.getRdsStatus();
 
     // Kevésbé szigorú ellenőrzés - elég ha RDS fogadás történik
     // Az eredeti túl szigorú volt: si4735.getRdsReceived() && si4735.getRdsSync() && si4735.getRdsSyncFound()
     bool rdsReceived = si4735.getRdsReceived();
-    bool rdsSync = si4735.getRdsSync();
-
-    // Debug logolás csak ritkán, hogy ne spammelje a konzolt
-    static unsigned long lastDebugLog = 0;
-    if (millis() - lastDebugLog > 10000) { // 10 másodpercenként
-        DEBUG("Si4735Manager::isRdsAvailable() - RdsReceived: %s, RdsSync: %s\n", rdsReceived ? "true" : "false", rdsSync ? "true" : "false");
-        lastDebugLog = millis();
-    }
 
     // Ha van RDS vétel, akkor elérhető (sync nélkül is)
     return rdsReceived;
@@ -265,25 +198,5 @@ void Si4735Manager::loop() {
     // Hardver némítás kezelése
     manageHardwareAudioMute();
 
-    // Signal quality cache frissítése, ha szükséges
-    updateSignalCacheIfNeeded(); // RDS status debug - csak FM módban és 5 másodpercenként
-    static unsigned long lastRdsDebug = 0;
-    if (millis() - lastRdsDebug > 5000) {
-        BandTable &band = getCurrentBand();
-        if (band.bandType == FM_BAND_TYPE) {
-            si4735.getRdsStatus();
-            bool rdsReceived = si4735.getRdsReceived();
-            bool rdsSync = si4735.getRdsSync();
-            bool rdsSyncFound = si4735.getRdsSyncFound();
-
-            // Signal quality információ
-            SignalQualityData signalData = getSignalQuality();
-            uint16_t currentFreq = band.currFreq;
-
-            DEBUG("Si4735Manager::loop() - Freq: %d kHz (%.2f MHz), Signal: RSSI=%d SNR=%d\n", currentFreq, currentFreq / 100.0, signalData.rssi, signalData.snr);
-            DEBUG("Si4735Manager::loop() - RDS Status: Received=%s, Sync=%s, SyncFound=%s\n", rdsReceived ? "true" : "false", rdsSync ? "true" : "false",
-                  rdsSyncFound ? "true" : "false");
-        }
-        lastRdsDebug = millis();
-    }
+    // Signal quality cache frissítése, ha szükséges    updateSignalCacheIfNeeded();
 }

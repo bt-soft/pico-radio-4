@@ -27,13 +27,30 @@ class RDSComponent : public UIComponent {
     static constexpr uint16_t PROGRAM_TYPE_AREA_HEIGHT = 20;
     static constexpr uint16_t RADIO_TEXT_AREA_HEIGHT = 20;
     static constexpr uint16_t DATETIME_AREA_HEIGHT = 20;
-
-    static constexpr uint32_t RDS_UPDATE_INTERVAL_MS = 500; // RDS frissítési időköz
-    static constexpr uint32_t SCROLL_INTERVAL_MS = 100;     // Scroll lépések közötti idő
-    static constexpr uint8_t SCROLL_STEP_PIXELS = 2;        // Scroll lépés mérete pixelben
-
+    static constexpr uint32_t RDS_UPDATE_INTERVAL_MS = 2000; // RDS frissítési időköz - 2 másodperc
+    static constexpr uint32_t SCROLL_INTERVAL_MS = 100;      // Scroll lépések közötti idő
+    static constexpr uint8_t SCROLL_STEP_PIXELS = 2;         // Scroll lépés mérete pixelben
   private:
     Si4735Manager &si4735Manager;
+
+    // ===================================================================
+    // PTY (Program Type) tábla
+    // ===================================================================
+
+    /**
+     * @brief RDS Program Type (PTY) nevek táblája
+     * @details Az RDS standard 32 különböző program típust definiál (0-31).
+     * Minden PTY kódhoz tartozik egy szöveges leírás.
+     */
+    static const char *RDS_PTY_NAMES[];
+    static const uint8_t RDS_PTY_COUNT;
+
+    /**
+     * @brief PTY kód konvertálása szöveges leírássá
+     * @param ptyCode A PTY kód (0-31)
+     * @return String A PTY szöveges leírása
+     */
+    String convertPtyCodeToString(uint8_t ptyCode);
 
     // RDS adatok cache
     String cachedStationName;
@@ -99,17 +116,9 @@ class RDSComponent : public UIComponent {
     /**
      * @brief Scroll sprite felszabadítása
      */
-    void cleanupScrollSprite();
-
-    /**
-     * @brief RDS cache állapotának naplózása debug célokra
-     * @param context Kontextus string a log üzenethez
-     */
-    void debugCacheState(const char *context);
-
-    /**
-     * @brief Radio text scroll kezelése
-     */
+    void cleanupScrollSprite(); /**
+                                 * @brief Radio text scroll kezelése
+                                 */
     void handleRadioTextScroll();
 
     /**

@@ -45,10 +45,10 @@ class Si4735Manager : public Si4735Band {
     String getRdsStationName();
 
     /**
-     * @brief Lekérdezi az RDS program típust (PTY)
-     * @return String Az RDS program típus szöveges leírása
+     * @brief Lekérdezi az RDS program típus kódot (PTY)
+     * @return uint8_t Az RDS program típus kódja (0-31), vagy 255 ha nincs RDS
      */
-    String getRdsProgramType();
+    uint8_t getRdsProgramTypeCode();
 
     /**
      * @brief Lekérdezi az RDS radio text üzenetet
