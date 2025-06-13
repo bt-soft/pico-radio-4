@@ -598,16 +598,13 @@ void ValueChangeDialog::redrawValueArea() {
     tft.setTextColor(textColor, colors.background);
     tft.setTextSize(VALUE_TEXT_FONT_SIZE);
     tft.drawString(valueStr, centerX, valueY); // Gombok állapotának frissítése típus alapján
-    // Egységesített gomb állapot frissítés minden típusra
-    if (_decreaseButton) {
-        _decreaseButton->setEnabled(canDecrement());
-        // Explicit újrarajzolás kikényszerítése
-        _decreaseButton->draw();
-    }
+                                               // Egységesített gomb állapot frissítés minden típusra    if (_decreaseButton) {
+    _decreaseButton->setEnabled(canDecrement());
+    // Az automatikus frissítés fog működni
+
     if (_increaseButton) {
         _increaseButton->setEnabled(canIncrement());
-        // Explicit újrarajzolás kikényszerítése
-        _increaseButton->draw();
+        // Az automatikus frissítés fog működni
     }
 }
 
@@ -719,15 +716,12 @@ void ValueChangeDialog::redrawValueTextOnly() {
     tft.setTextDatum(MC_DATUM);
     tft.setTextColor(textColor, colors.background);
     tft.setTextSize(VALUE_TEXT_FONT_SIZE);
-    tft.drawString(valueStr, centerX, valueY); // Gombok állapotának frissítése (egységesítve)
-    if (_decreaseButton) {
-        _decreaseButton->setEnabled(canDecrement());
-        // EXPLICIT REDRAW FORCE: Force immediate visual update
-        _decreaseButton->draw();
-    }
+    tft.drawString(valueStr, centerX, valueY); // Gombok állapotának frissítése (egységesítve)    if (_decreaseButton) {
+    _decreaseButton->setEnabled(canDecrement());
+    // Az automatikus frissítés fog működni
+
     if (_increaseButton) {
         _increaseButton->setEnabled(canIncrement());
-        // EXPLICIT REDRAW FORCE: Force immediate visual update
-        _increaseButton->draw();
+        // Az automatikus frissítés fog működni
     }
 }

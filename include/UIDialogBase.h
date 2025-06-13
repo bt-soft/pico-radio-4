@@ -75,10 +75,8 @@ class UIDialogBase : public UIContainerComponent {
 
     // UICompositeComponent metódusok felülírása
 
-    virtual void draw() override;
-
-    // Legyen virtual, hogy a leszármazottak is felülírhassák helyesen
-    virtual void markForRedraw() override;
+    virtual void draw() override; // Legyen virtual, hogy a leszármazottak is felülírhassák helyesen
+    virtual void markForRedraw(bool markChildren = false) override;
 
     // A veilDrawn flag resetelése
     void resetVeilDrawnFlag() { veilDrawn = false; }

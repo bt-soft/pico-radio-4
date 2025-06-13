@@ -178,8 +178,8 @@ bool UIDialogBase::handleTouch(const TouchEvent &event) {
  * @details Felülírja az UIComponent::markForRedraw metódusát, hogy biztosítsa
  * a dialógus-specifikus újrarajzolási igények kezelését.
  */
-void UIDialogBase::markForRedraw() {
-    UIContainerComponent::markForRedraw(); // Meghívja az ősosztály implementációját
+void UIDialogBase::markForRedraw(bool markChildren) {
+    UIContainerComponent::markForRedraw(markChildren); // Meghívja az ősosztály implementációját
 }
 
 /**

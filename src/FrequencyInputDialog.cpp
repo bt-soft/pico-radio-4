@@ -542,9 +542,8 @@ bool FrequencyInputDialog::isFrequencyInBounds(uint16_t rawFreq) const { return 
  */
 void FrequencyInputDialog::updateOkButtonState() {
     if (_okButton) {
-        // Ez beállítja a gomb needsRedraw flag-jét.
+        // Ez beállítja a gomb needsRedraw flag-jét és automatikusan frissül.
         _okButton->setButtonState(_isValid ? UIButton::ButtonState::Off : UIButton::ButtonState::Disabled);
-        _okButton->draw(); // Frissítjük a gombot, hogy a színváltozás látszódjon
     }
 }
 

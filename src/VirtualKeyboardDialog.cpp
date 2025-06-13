@@ -87,7 +87,7 @@ void VirtualKeyboardDialog::createKeyboard() {
                 shiftActive = !shiftActive;
                 // Gomb állapot beállítása
                 shiftButton->setButtonState(shiftActive ? UIButton::ButtonState::On : UIButton::ButtonState::Off);
-                shiftButton->draw(); // Gomb újrarajzolása
+                // A gomb automatikusan frissül a setButtonState() híváskor
                 updateButtonLabels();
             }
         });
@@ -281,7 +281,7 @@ void VirtualKeyboardDialog::updateButtonLabels() {
             keyLabelStorage[i][1] = '\0';
             keyButtons[i]->setLabel(keyLabelStorage[i]);
             keyButtons[i]->markForRedraw();
-            keyButtons[i]->draw();
+            // Az automatikus frissítés most már működni fog
         }
     }
 }
@@ -389,6 +389,6 @@ void VirtualKeyboardDialog::updateOkButtonState() {
     if (okButton) {
         bool shouldEnable = currentText.length() >= 3;
         okButton->setEnabled(shouldEnable);
-        okButton->draw();
+        // A gomb automatikusan frissül a setEnabled() híváskor
     }
 }

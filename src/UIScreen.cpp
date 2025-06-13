@@ -35,13 +35,17 @@ bool UIScreen::isRedrawNeeded() const {
         return true;
     }
 
-    // // Aktív dialógus újrarajzolási igény ellenőrzése
-    // if (isDialogActive()) {
-    //     auto topDialog = _dialogStack.back().lock();
-    //     if (topDialog && topDialog->isRedrawNeeded()) {
-    //         return true;
-    //     }
-    // }    // Ha egyik sem igényel újrarajzolást, akkor false-t adunk vissza
+    // Aktív dialógus újrarajzolási igény ellenőrzése
+    if (isDialogActive()) {
+        for (const auto &weakDialog : dialogStack) {
+            auto dialog = weakDialog.lock();
+            if (dialog && dialog->isRedrawNeeded()) {
+                return true;
+            }
+        }
+    }
+
+    // Ha egyik sem igényel újrarajzolást, akkor false-t adunk vissza
     return false;
 }
 

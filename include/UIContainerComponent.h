@@ -92,18 +92,26 @@ class UIContainerComponent : public UIComponent {
         }
 
         return false; // Senki sem kezelte
+    } /**
+       * @brief Jelzi, hogy a konténert újra kell rajzolni.
+       * @param markChildren Ha true, akkor a gyerekeket is megjelöli (alapértelmezett: false)
+       */
+    virtual void markForRedraw(bool markChildren = false) override {
+        UIComponent::markForRedraw(); // Mark the container itself
+        if (markChildren) {
+            for (auto &child : children) {
+                if (child)
+                    child->markForRedraw(); // Mark all children only if requested
+            }
+        }
     }
 
     /**
      * @brief Jelzi, hogy a konténert és annak összes gyerekét újra kell rajzolni.
+     * @details Kényelmi metódus a teljes konténer újrarajzolásához.
      */
-    virtual void markForRedraw() override {
-        UIComponent::markForRedraw(); // Mark the container itself
-        for (auto &child : children) {
-            if (child)
-                child->markForRedraw(); // Mark all children
-        }
-    }
+    void markForCompleteRedraw() { markForRedraw(true); }
+
     /**
      * @brief Loop metódus, amely először saját loop logikáját kezeli, majd a gyerek komponensek loop-ját hívja meg.
      */

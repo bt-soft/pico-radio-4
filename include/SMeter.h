@@ -197,7 +197,7 @@ class SMeter : public UIComponent {
      * @brief Újrarajzolásra jelölés - reset-eli az initialized flag-et
      * @details Dialóg bezárása vagy képernyő törlése után szükséges a statikus skála újrarajzolása
      */
-    virtual void markForRedraw() override;
+    virtual void markForRedraw(bool markChildren = false) override;
 
     /**
      * @brief Nem kezeli az érintést (UIComponent override)

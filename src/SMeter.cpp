@@ -292,9 +292,9 @@ void SMeter::draw() {
  * @details Dialóg bezárása vagy képernyő törlése után szükséges a statikus skála újrarajzolása.
  * Ez a metódus biztosítja, hogy a drawSmeterScale() újra kirajzolja a statikus elemeket.
  */
-void SMeter::markForRedraw() {
+void SMeter::markForRedraw(bool markChildren) {
     // Szülő implementáció meghívása (beállítja a needsRedraw flag-et)
-    UIComponent::markForRedraw();
+    UIComponent::markForRedraw(markChildren);
 
     // SMeter specifikus: reset-eljük az initialized flag-et
     // Ez kikényszeríti a statikus skála újrarajzolását

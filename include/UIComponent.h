@@ -69,7 +69,7 @@ class UIComponent {
     /**
      * @brief A komponens jelezheti, hogy vizuális lenyomott visszajelzést ad-e
      * @details Ha true, akkor a komponens vizuális visszajelzést ad a lenyomásra (pl. színváltás).
-     * @note Alapértelmezés szerint true, de a származtatott osztályok felülírhatják, ha nem kívánják ezt a viselkedést.
+     * @note Alapértelmezett szerint true, de a származtatott osztályok felülírhatják, ha nem kívánják ezt a viselkedést.
      * pl.: az UIScreen osztály nem ad vizuális visszajelzést a lenyomásra, mert a képernyő nem interaktív elem.
      * Emiatt ő majd felülírja ezt a metódust, hogy false-t adjon vissza.
      */
@@ -212,10 +212,8 @@ class UIComponent {
 
     // Tiltott állapot getter/setter
     inline bool isDisabled() const { return disabled; }
-    inline void setDisabled(bool disabled) { this->disabled = disabled; }
-
-    // Újrarajzolás getter/setter
-    virtual void markForRedraw() { needsRedraw = true; }
+    inline void setDisabled(bool disabled) { this->disabled = disabled; } // Újrarajzolás getter/setter
+    virtual void markForRedraw(bool markChildren = false) { needsRedraw = true; }
     virtual bool isRedrawNeeded() const { return needsRedraw; }
 
   protected:
