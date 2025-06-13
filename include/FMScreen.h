@@ -150,13 +150,6 @@ class FMScreen : public UIScreen, public CommonVerticalButtons::Mixin<FMScreen> 
      */
     void handleTestButton(const UIButton::ButtonEvent &event);
 
-    /**
-     * @brief SETUP gomb eseménykezelő (vízszintes) - Beállítások képernyőre váltás
-     * @param event Gomb esemény (Clicked)
-     * @details Pushable gomb: Setup képernyőre navigálás (duplikáció a függőleges gombbal)
-     */
-    void handleSetupButtonHorizontal(const UIButton::ButtonEvent &event);
-
     // ===================================================================
     // UI komponens objektumok - Smart pointer kezelés
     // ===================================================================

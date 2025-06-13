@@ -1,33 +1,3 @@
-/**
- * @file AMScreen.cpp
- * @brief AM rádió vezérlő képernyő implementáció
- * @details Event-driven gombállapot kezeléssel, optimalizált teljesítménnyel és
- *          univerzális gomb ID rendszer használatával
- *
- * **ARCHITEKTÚRA - Event-driven button state management**:
- * Ez az implementáció teljes mértékben Event-driven architektúrát használ:
- * - NINCS gombállapot polling a loop ciklusban (teljesítmény optimalizálás)
- * - Gombállapotok CSAK aktiváláskor szinkronizálódnak
- * - Jelentős teljesítményjavulás a korábbi polling megközelítéshez képest
- * - Univerzális gomb ID rendszer (CommonVerticalButtons) használata
- *
- * **PROJEKTÖSSZETEVŐK**:
- * - Közös függőleges gombsor az FMScreen-nel (8 univerzális funkcionális gomb)
- * - AM/MW/LW/SW frekvencia hangolás és megjelenítés
- * - S-Meter (jelerősség és SNR) valós idejű frissítés AM módban
- * - Vízszintes navigációs gombsor FM gombbal az FMScreen-re váltáshoz
- *
- * **VÁLTOZÁSOK (v3.0 - 2025.06.11)**:
- * - Univerzális gomb ID rendszer bevezetése
- * - Duplikált gombkezelési kód eliminálása (~25 sor eltávolítva)
- * - Template komplexitás megszüntetése (AMScreenButtonIDStruct eltávolítva)
- * - Közös factory pattern az FMScreen-nel
- * - Egyszerűsített metódus hívások
- *
- * @author Rádió projekt
- * @version 3.0 - Univerzális gomb ID rendszer (2025.06.11)
- */
-
 #include "AMScreen.h"
 #include "CommonVerticalButtons.h"
 #include "defines.h"
@@ -248,10 +218,11 @@ void AMScreen::createHorizontalButtonBar() {
     // ===================================================================
     std::vector<UIHorizontalButtonBar::ButtonConfig> configs = {
         {AMScreenHorizontalButtonIDs::FM_BUTTON, "FM", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, [this](const UIButton::ButtonEvent &e) { handleFMButton(e); }},
+        //
         {AMScreenHorizontalButtonIDs::TEST_BUTTON, "Test", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
-         [this](const UIButton::ButtonEvent &e) { handleTestButton(e); }},
-        {AMScreenHorizontalButtonIDs::SETUP_BUTTON, "Setup", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
-         [this](const UIButton::ButtonEvent &e) { handleSetupButtonHorizontal(e); }}};
+         [this](const UIButton::ButtonEvent &e) { handleTestButton(e); }}
+        //
+    };
 
     // ===================================================================
     // UIHorizontalButtonBar objektum létrehozása
@@ -331,15 +302,5 @@ void AMScreen::handleTestButton(const UIButton::ButtonEvent &event) {
     if (event.state == UIButton::EventButtonState::Clicked) {
         // Test képernyőre váltás
         getScreenManager()->switchToScreen(SCREEN_NAME_TEST);
-    }
-}
-
-/**
- * @brief SETUP gomb eseménykezelő (vízszintes) - Beállítások képernyőre váltás
- */
-void AMScreen::handleSetupButtonHorizontal(const UIButton::ButtonEvent &event) {
-    if (event.state == UIButton::EventButtonState::Clicked) {
-        // Setup képernyőre váltás (ugyanaz, mint a függőleges gomb)
-        getScreenManager()->switchToScreen(SCREEN_NAME_SETUP);
     }
 }

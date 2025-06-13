@@ -184,13 +184,7 @@ class AMScreen : public UIScreen, public CommonVerticalButtons::Mixin<AMScreen> 
      */
     void handleTestButton(const UIButton::ButtonEvent &event);
 
-    /**
-     * @brief SETUP gomb eseménykezelő (vízszintes) - Beállítások képernyőre váltás
-     * @param event Gomb esemény (Clicked)
-     * @details Pushable gomb: Setup képernyőre navigálás
-     * Duplikáció a függőleges gombbal (kényelemért)
-     */
-    void handleSetupButtonHorizontal(const UIButton::ButtonEvent &event); // ===================================================================
+    // ===================================================================
     // UI komponens objektumok - Smart pointer kezelés
     // ===================================================================
 

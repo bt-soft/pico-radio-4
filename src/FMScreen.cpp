@@ -252,11 +252,10 @@ void FMScreen::createHorizontalButtonBar() {
 
         // 2. TEST - Teszt és diagnosztikai képernyőre váltás
         {FMScreenHorizontalButtonIDs::TEST_BUTTON, "Test", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
-         [this](const UIButton::ButtonEvent &event) { handleTestButton(event); }},
+         [this](const UIButton::ButtonEvent &event) { handleTestButton(event); }}
 
-        // 3. SETUP - Beállítások képernyőre váltás (duplikáció a függőleges gombbal)
-        {FMScreenHorizontalButtonIDs::SETUP_BUTTON, "Setup", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
-         [this](const UIButton::ButtonEvent &event) { handleSetupButtonHorizontal(event); }}};
+        //
+    };
 
     // ===================================================================
     // UIHorizontalButtonBar objektum létrehozása
@@ -333,20 +332,5 @@ void FMScreen::handleTestButton(const UIButton::ButtonEvent &event) {
         DEBUG("FMScreen: Switching to Test screen\n");
         // ScreenManager-en keresztül Test képernyőre váltás
         UIScreen::getScreenManager()->switchToScreen(SCREEN_NAME_TEST);
-    }
-}
-
-/**
- * @brief SETUP gomb eseménykezelő (vízszintes) - Beállítások képernyőre váltás
- * @param event Gomb esemény (Clicked)
- *
- * @details Pushable gomb: Setup képernyőre navigálás
- * Azonos funkcionalitás a függőleges Setup gombbal (duplikáció a kényelemért)
- */
-void FMScreen::handleSetupButtonHorizontal(const UIButton::ButtonEvent &event) {
-    if (event.state == UIButton::EventButtonState::Clicked) {
-        DEBUG("FMScreen: Switching to Setup screen (from horizontal button)\n");
-        // ScreenManager-en keresztül Setup képernyőre váltás
-        UIScreen::getScreenManager()->switchToScreen(SCREEN_NAME_SETUP);
     }
 }
