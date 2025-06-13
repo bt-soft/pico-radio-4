@@ -149,6 +149,7 @@ void setup() {
     SplashScreen splash(tft);
     splash.show(true, 6); // Splash screen megjelenítése progress bar-ral    // Lépés 1: I2C inicializálás
     splash.updateProgress(1, 6, "Initializing I2C...");
+
     // Az si473x (Nem a default I2C lábakon [4,5] van!!!)
     Wire.setSDA(PIN_SI4735_I2C_SDA); // I2C for SI4735 SDA
     Wire.setSCL(PIN_SI4735_I2C_SCL); // I2C for SI4735 SCL

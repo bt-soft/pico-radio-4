@@ -7,8 +7,8 @@
 // Állandók a komponens méreteihez
 constexpr uint8_t STATUS_LINE_X = 0;
 constexpr uint8_t STATUS_LINE_Y = 0;
-constexpr uint16_t STATUS_LINE_WIDTH = 240; // Állapotsor szélessége pixelben
-constexpr uint8_t STATUS_LINE_HEIGHT = 16;  // Állapotsor magassága pixelben
+// Az UIComponent::SCREEN_W-t használjuk a szélesség meghatározásához
+constexpr uint8_t STATUS_LINE_HEIGHT = 16; // Állapotsor magassága pixelben
 
 // Négyzetek szélességei (konstansokban)
 constexpr uint8_t BOX_WIDTH_BFO = 32;               // BFO négyzet szélessége
@@ -44,7 +44,7 @@ constexpr uint16_t StationInMemoryBoxColor = TFT_SILVER; // Az állomás memóri
  * @details A komponens  kis négyzetekben jelenít meg a különböző állapotinformációkat.
  */
 StatusLine::StatusLine(TFT_eSPI &tft, int16_t x, int16_t y, Si4735Manager *pSi4735Manager, const ColorScheme &colors)
-    : UIComponent(tft, Rect(x, y, STATUS_LINE_WIDTH, STATUS_LINE_HEIGHT), colors), pSi4735Manager(pSi4735Manager) {
+    : UIComponent(tft, Rect(x, y, UIComponent::SCREEN_W, STATUS_LINE_HEIGHT), colors), pSi4735Manager(pSi4735Manager) {
     initializeBoxes();
 }
 

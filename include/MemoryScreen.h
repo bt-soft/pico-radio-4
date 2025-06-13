@@ -5,6 +5,7 @@
 #include "MessageDialog.h"
 #include "StationData.h"
 #include "StationStore.h"
+#include "UIButton.h"
 #include "UIHorizontalButtonBar.h"
 #include "UIScreen.h"
 #include "UIScrollableListComponent.h"
@@ -43,11 +44,10 @@ class MemoryScreen : public UIScreen, public IScrollableListDataSource {
     static constexpr uint8_t ADD_CURRENT_BUTTON = 30;
     static constexpr uint8_t EDIT_BUTTON = 31;
     static constexpr uint8_t DELETE_BUTTON = 32;
-    static constexpr uint8_t BACK_BUTTON = 33;
-
-    // UI komponensek
+    static constexpr uint8_t BACK_BUTTON = 33; // UI komponensek
     std::shared_ptr<UIScrollableListComponent> memoryList;
     std::shared_ptr<UIHorizontalButtonBar> horizontalButtonBar;
+    std::shared_ptr<UIButton> backButton;
 
     // Adatok
     std::vector<StationData> stations;

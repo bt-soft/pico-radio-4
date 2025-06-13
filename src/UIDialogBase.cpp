@@ -13,23 +13,21 @@
 UIDialogBase::UIDialogBase(UIScreen *parentScreen, TFT_eSPI &tft, const Rect &initialBounds, const char *title, const ColorScheme &cs)
     : UIContainerComponent(tft, initialBounds, cs), parentScreen(parentScreen), title(title) {
 
-    Rect finalBounds = initialBounds;
-
-    // Szélesség beállítása: ha 0, akkor alapértelmezett, egyébként a megadott
+    Rect finalBounds = initialBounds; // Szélesség beállítása: ha 0, akkor alapértelmezett, egyébként a megadott
     if (finalBounds.width == 0) {
-        finalBounds.width = tft.width() * 0.8f; // Alapértelmezett szélesség
+        finalBounds.width = UIComponent::SCREEN_W * 0.8f; // Alapértelmezett szélesség
     }
     // Magasság beállítása: ha 0, akkor alapértelmezett, egyébként a megadott
     if (finalBounds.height == 0) {
-        finalBounds.height = tft.height() * 0.6f; // Alapértelmezett magasság (ezt a MessageDialog felülírhatja)
+        finalBounds.height = UIComponent::SCREEN_H * 0.6f; // Alapértelmezett magasság (ezt a MessageDialog felülírhatja)
     }
 
     // Középre igazítás, ha x vagy y -1
     if (finalBounds.x == -1) {
-        finalBounds.x = (tft.width() - finalBounds.width) / 2;
+        finalBounds.x = (UIComponent::SCREEN_W - finalBounds.width) / 2;
     }
     if (finalBounds.y == -1) {
-        finalBounds.y = (tft.height() - finalBounds.height) / 2;
+        finalBounds.y = (UIComponent::SCREEN_H - finalBounds.height) / 2;
     }
     setBounds(finalBounds); // UIComponent::setBounds
 
@@ -189,13 +187,12 @@ void UIDialogBase::markForRedraw() {
  * @details A fátyol csak a dialógus területén kívül rajzolódik ki, hogy a dialógus kiemelkedjen.
  * A fátyol pixel mérete 3, és a színe a UIColorPalette::DIALOG_VEIL_COLOR.
  */
-void UIDialogBase::drawVeil() {
-    // CSAK a dialógus területén KÍVÜL rajzoljuk a fátyolt!
+void UIDialogBase::drawVeil() {            // CSAK a dialógus területén KÍVÜL rajzoljuk a fátyolt!
     constexpr uint8_t VEIL_PIXEL_SIZE = 3; // Fátyol pixel mérete
-    for (int16_t y = 0; y < tft.height(); y += VEIL_PIXEL_SIZE) {
+    for (int16_t y = 0; y < UIComponent::SCREEN_H; y += VEIL_PIXEL_SIZE) {
 
         // Ne rajzoljunk fátyolt a dialógus területére!
-        for (int16_t x = (y % VEIL_PIXEL_SIZE); x < tft.width(); x += VEIL_PIXEL_SIZE) {
+        for (int16_t x = (y % VEIL_PIXEL_SIZE); x < UIComponent::SCREEN_W; x += VEIL_PIXEL_SIZE) {
             if (!bounds.contains(x, y)) {
                 tft.drawPixel(x, y, UIColorPalette::DIALOG_VEIL_COLOR);
             }

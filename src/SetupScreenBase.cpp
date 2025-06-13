@@ -46,10 +46,10 @@ SetupScreenBase::SetupScreenBase(TFT_eSPI &tft, const char *screenName) : UIScre
  */
 void SetupScreenBase::createCommonUI(const char *title) {
     // Képernyő dimenzióinak és margóinak meghatározása
-    const int16_t margin = 5;
-    const int16_t buttonHeight = UIButton::DEFAULT_BUTTON_HEIGHT;
-    const int16_t listTopMargin = 30;                            // Hely a címnek
-    const int16_t listBottomPadding = buttonHeight + margin * 2; // Hely az Exit gombnak
+    constexpr int16_t margin = 5;
+    constexpr int16_t buttonHeight = UIButton::DEFAULT_BUTTON_HEIGHT;
+    constexpr int16_t listTopMargin = 30;                            // Hely a címnek
+    constexpr int16_t listBottomPadding = buttonHeight + margin * 2; // Hely az Exit gombnak
 
     // Görgethető lista komponens létrehozása és hozzáadása a gyermek komponensekhez
     Rect listBounds(margin, listTopMargin, UIComponent::SCREEN_W - (2 * margin), UIComponent::SCREEN_H - listTopMargin - listBottomPadding);
@@ -96,7 +96,7 @@ void SetupScreenBase::drawContent() {
     tft.setFreeFont(&FreeSansBold9pt7b);
     tft.setTextSize(1);
     // Cím kirajzolása a képernyő tetején középen
-    tft.drawString(getScreenTitle(), tft.width() / 2, 10);
+    tft.drawString(getScreenTitle(), UIComponent::SCREEN_W / 2, 10);
 }
 
 /**

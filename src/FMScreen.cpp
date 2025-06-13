@@ -73,7 +73,7 @@ void FMScreen::layoutComponents() {
     // ===================================================================
     // S-Meter (jelerősség mérő) pozicionálás
     // ===================================================================
-    Rect smeterBounds(2, FreqDisplayY + FreqDisplay::FREQDISPLAY_HEIGHT + 20, 240, 60);
+    Rect smeterBounds(2, FreqDisplayY + FreqDisplay::FREQDISPLAY_HEIGHT + 20, UIComponent::SCREEN_W - 4, 60);
     ColorScheme smeterColors = ColorScheme::defaultScheme();
     smeterColors.background = TFT_COLOR_BACKGROUND; // Fekete háttér a designhoz
     UIScreen::createSMeter(smeterBounds, smeterColors);
@@ -233,10 +233,10 @@ void FMScreen::createHorizontalButtonBar() {
     // ===================================================================
     // Gombsor pozicionálás - Bal alsó sarok
     // ===================================================================
-    const uint16_t buttonBarHeight = 35;                        // Optimális gombmagasság
-    const uint16_t buttonBarX = 0;                              // Bal szélhez igazítva
-    const uint16_t buttonBarY = tft.height() - buttonBarHeight; // Alsó szélhez igazítva
-    const uint16_t buttonBarWidth = 220;                        // 3 gomb + margók optimális szélessége
+    const uint16_t buttonBarHeight = 35;                                 // Optimális gombmagasság
+    const uint16_t buttonBarX = 0;                                       // Bal szélhez igazítva
+    const uint16_t buttonBarY = UIComponent::SCREEN_H - buttonBarHeight; // Alsó szélhez igazítva
+    const uint16_t buttonBarWidth = 220;                                 // 3 gomb + margók optimális szélessége
 
     // ===================================================================
     // Gomb konfigurációk - Navigációs események

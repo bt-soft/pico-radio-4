@@ -39,8 +39,16 @@ MemoryScreen::~MemoryScreen() {}
 void MemoryScreen::layoutComponents() {
 
     // Lista komponens létrehozása
-    Rect listBounds(5, 25, 400, 250);
+    // Rect listBounds(5, 25, 400, 250);
 
+    // Képernyő dimenzióinak és margóinak meghatározása
+    const int16_t margin = 5;
+    const int16_t buttonHeight = UIButton::DEFAULT_BUTTON_HEIGHT;
+    const int16_t listTopMargin = 30;                            // Hely a címnek
+    const int16_t listBottomPadding = buttonHeight + margin * 2; // Hely az Exit gombnak
+
+    // Görgethető lista komponens létrehozása és hozzáadása a gyermek komponensekhez
+    Rect listBounds(margin, listTopMargin, UIComponent::SCREEN_W - (2 * margin), UIComponent::SCREEN_H - listTopMargin - listBottomPadding);
     memoryList = std::make_shared<UIScrollableListComponent>(tft, listBounds, this, 6, 20);
     addChild(memoryList);
 
@@ -52,27 +60,36 @@ void MemoryScreen::layoutComponents() {
  *
  */
 void MemoryScreen::createHorizontalButtonBar() {
-    using namespace MemoryScreenHorizontalButtonIDs;
+    using namespace MemoryScreenHorizontalButtonIDs; // Gombsor pozíció számítása (képernyő alján)
+    constexpr int16_t margin = 5;
+    uint16_t buttonY = UIComponent::SCREEN_H - UIButton::DEFAULT_BUTTON_HEIGHT - margin;
+    uint16_t buttonWidth = 90;
+    uint16_t buttonHeight = UIButton::DEFAULT_BUTTON_HEIGHT;
+    uint16_t spacing = 5;
 
-    // Gombsor pozíció számítása (képernyő alján)
-    uint16_t buttonY = 190;
-    uint16_t buttonWidth = 60;
-    uint16_t buttonHeight = 30;
-    uint16_t spacing = 2;
-    uint16_t totalWidth = 4 * buttonWidth + 3 * spacing;
-    uint16_t startX = (240 - totalWidth) / 2;
+    // Csak az első 3 gombhoz számítjuk a szélességet (Back gomb külön lesz)
+    uint16_t totalWidth = 3 * buttonWidth + 2 * spacing;
+    uint16_t startX = margin;
 
-    // Gomb konfigurációk létrehozása
+    Rect buttonRect(startX, buttonY, totalWidth, buttonHeight);
+
+    // Gomb konfigurációk létrehozása (Back gomb nélkül)
     std::vector<UIHorizontalButtonBar::ButtonConfig> buttonConfigs = {
-        {ADD_CURRENT_BUTTON, "Add Current", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
-         [this](const UIButton::ButtonEvent &event) { handleAddCurrentButton(event); }},
+        {ADD_CURRENT_BUTTON, "Add Curr", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, [this](const UIButton::ButtonEvent &event) { handleAddCurrentButton(event); }},
         {EDIT_BUTTON, "Edit", UIButton::ButtonType::Pushable, UIButton::ButtonState::Disabled, [this](const UIButton::ButtonEvent &event) { handleEditButton(event); }},
-        {DELETE_BUTTON, "Delete", UIButton::ButtonType::Pushable, UIButton::ButtonState::Disabled, [this](const UIButton::ButtonEvent &event) { handleDeleteButton(event); }},
-        {BACK_BUTTON, "Back", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, [this](const UIButton::ButtonEvent &event) { handleBackButton(event); }}};
+        {DELETE_BUTTON, "Delete", UIButton::ButtonType::Pushable, UIButton::ButtonState::Disabled, [this](const UIButton::ButtonEvent &event) { handleDeleteButton(event); }}};
 
-    horizontalButtonBar = std::make_shared<UIHorizontalButtonBar>(tft, Rect(startX, buttonY, totalWidth, buttonHeight), buttonConfigs, buttonWidth, buttonHeight, spacing);
-
+    horizontalButtonBar = std::make_shared<UIHorizontalButtonBar>(tft, buttonRect, buttonConfigs, buttonWidth, buttonHeight, spacing);
     addChild(horizontalButtonBar);
+
+    // Back gomb külön, jobbra igazítva
+    uint16_t backButtonWidth = 60;
+    uint16_t backButtonX = UIComponent::SCREEN_W - backButtonWidth - margin;
+    Rect backButtonRect(backButtonX, buttonY, backButtonWidth, buttonHeight);
+
+    backButton = std::make_shared<UIButton>(tft, BACK_BUTTON, backButtonRect, "Back", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
+                                            [this](const UIButton::ButtonEvent &event) { handleBackButton(event); });
+    addChild(backButton);
 }
 
 // ===================================================================
@@ -174,7 +191,7 @@ void MemoryScreen::drawContent() {
     tft.setTextColor(TFT_YELLOW, TFT_COLOR_BACKGROUND);
     tft.setTextDatum(TC_DATUM);
     String title = isFmMode ? "FM Memory" : "AM Memory";
-    tft.drawString(title, bounds.x + bounds.width / 2, 5);
+    tft.drawString(title, UIComponent::SCREEN_W / 2, 5);
 
     // Komponensek már automatikusan kirajzolódnak
 }

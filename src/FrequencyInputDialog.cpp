@@ -24,7 +24,7 @@ FrequencyInputDialog::FrequencyInputDialog(UIScreen *parentScreen, TFT_eSPI &tft
 
     // Dialógus méret beállítása ha automatikus
     if (this->bounds.width <= 0 || this->bounds.height <= 0) {
-        this->bounds.width = 320;
+        this->bounds.width = UIComponent::SCREEN_W;
         this->bounds.height = 350; // Növelt magasság a gomboknak
     }
 
@@ -361,7 +361,7 @@ void FrequencyInputDialog::drawFrequencyDisplay() {
     tft.setFreeFont();
     tft.setTextSize(2);
     tft.setTextDatum(BL_DATUM);
-    tft.setTextColor(colors.foreground, colors.background); 
+    tft.setTextColor(colors.foreground, colors.background);
     tft.drawString(_unitString, displayCenterX + 70, displayY + 40);
 
     // Font visszaállítása
