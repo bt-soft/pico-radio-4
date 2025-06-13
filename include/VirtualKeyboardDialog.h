@@ -57,7 +57,8 @@ class VirtualKeyboardDialog : public UIDialogBase {
     std::shared_ptr<UIButton> shiftButton;
     std::shared_ptr<UIButton> spaceButton;
     std::shared_ptr<UIButton> backspaceButton;
-    std::shared_ptr<UIButton> clearButton; // Szöveg kezelés
+    std::shared_ptr<UIButton> clearButton;
+    std::shared_ptr<UIButton> okButton; // Szöveg kezelés
     String currentText;
     uint8_t maxTextLength;
     OnTextChangedCallback textChangedCallback;
@@ -71,15 +72,14 @@ class VirtualKeyboardDialog : public UIDialogBase {
 
     // Pozíciók
     Rect inputRect;
-    Rect keyboardRect;
-
-    // Metódusok
+    Rect keyboardRect; // Metódusok
     void createKeyboard();
     void drawInputField();
     void drawCursor();
     void handleKeyPress(char key);
     void handleSpecialKey(const String &keyType);
     void updateButtonLabels();
+    void updateOkButtonState();
     char getKeyChar(char baseChar, bool shifted);
     void notifyTextChanged();
 };

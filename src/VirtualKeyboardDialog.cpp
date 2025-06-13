@@ -109,7 +109,7 @@ void VirtualKeyboardDialog::createKeyboard() {
 
     // Backspace gomb
     uint16_t backspaceX = specialStartX + shiftWidth + spaceWidth + (2 * specialSpacing);
-    
+
     backspaceButton = std::make_shared<UIButton>(               //
         tft,                                                    //
         buttonId++,                                             //
@@ -125,7 +125,7 @@ void VirtualKeyboardDialog::createKeyboard() {
 
     // Clear gomb
     uint16_t clearX = specialStartX + shiftWidth + spaceWidth + backspaceWidth + (3 * specialSpacing);
-        clearButton = std::make_shared<UIButton>( //
+    clearButton = std::make_shared<UIButton>( //
         tft,                                  //
         buttonId++,                           //
         Rect(clearX, specialY, clearWidth, KEY_HEIGHT),
@@ -141,15 +141,13 @@ void VirtualKeyboardDialog::createKeyboard() {
     // OK és Cancel gombok a speciális sor alatt
     uint16_t okCancelY = specialY + KEY_HEIGHT + 8;
     uint16_t okCancelWidth = 60;
-    uint16_t okCancelStartX = keyboardRect.x + (keyboardRect.width - 2 * okCancelWidth - 10) / 2;
-
-    // OK gomb
-    auto okButton = std::make_shared<UIButton>(                     //
-        tft,                                                        //
-        buttonId++,                                                 //
-        Rect(okCancelStartX, okCancelY, okCancelWidth, KEY_HEIGHT), //
-        "OK",                                                       //
-        UIButton::ButtonType::Pushable,                             //
+    uint16_t okCancelStartX = keyboardRect.x + (keyboardRect.width - 2 * okCancelWidth - 10) / 2; // OK gomb
+    okButton = std::make_shared<UIButton>(                                                        //
+        tft,                                                                                      //
+        buttonId++,                                                                               //
+        Rect(okCancelStartX, okCancelY, okCancelWidth, KEY_HEIGHT),                               //
+        "OK",                                                                                     //
+        UIButton::ButtonType::Pushable,                                                           //
         [this](const UIButton::ButtonEvent &event) {
             if (event.state == UIButton::EventButtonState::Clicked) {
                 close(UIDialogBase::DialogResult::Accepted);
@@ -169,6 +167,9 @@ void VirtualKeyboardDialog::createKeyboard() {
             }
         });
     addChild(cancelButton);
+
+    // OK gomb állapot beállítása a kezdeti szöveg alapján
+    updateOkButtonState();
 }
 
 void VirtualKeyboardDialog::drawSelf() {
@@ -183,7 +184,7 @@ void VirtualKeyboardDialog::drawSelf() {
 }
 
 void VirtualKeyboardDialog::drawInputField() {
-    
+
     // Input mező háttér
     tft.fillRect(inputRect.x, inputRect.y, inputRect.width, inputRect.height, TFT_BLACK);
     tft.drawRect(inputRect.x, inputRect.y, inputRect.width, inputRect.height, TFT_WHITE);
@@ -237,6 +238,7 @@ void VirtualKeyboardDialog::handleKeyPress(char key) {
 
     // Shift állapot megmarad - csak manuális kikapcsolással kapcsol ki
     notifyTextChanged();
+    updateOkButtonState();
     markForRedraw();
 
     // Azonnali újrarajzolás az input mezőnek
@@ -248,6 +250,7 @@ void VirtualKeyboardDialog::handleSpecialKey(const String &keyType) {
         if (currentText.length() > 0) {
             currentText.remove(currentText.length() - 1);
             notifyTextChanged();
+            updateOkButtonState();
             markForRedraw();
 
             // Azonnali újrarajzolás az input mezőnek
@@ -257,6 +260,7 @@ void VirtualKeyboardDialog::handleSpecialKey(const String &keyType) {
         if (currentText.length() > 0) {
             currentText = "";
             notifyTextChanged();
+            updateOkButtonState();
             markForRedraw();
 
             // Azonnali újrarajzolás az input mezőnek
@@ -282,7 +286,7 @@ void VirtualKeyboardDialog::updateButtonLabels() {
 }
 
 char VirtualKeyboardDialog::getKeyChar(char baseChar, bool shifted) {
-    
+
     if (isalpha(baseChar)) {
         char result = shifted ? toupper(baseChar) : tolower(baseChar);
         return result;
@@ -329,6 +333,7 @@ void VirtualKeyboardDialog::setText(const String &text) {
         currentText = currentText.substring(0, maxTextLength);
     }
     notifyTextChanged();
+    updateOkButtonState();
     markForRedraw();
 
     // Azonnali újrarajzolás az input mezőnek
@@ -348,5 +353,13 @@ void VirtualKeyboardDialog::handleOwnLoop() {
         cursorVisible = !cursorVisible;
         lastCursorBlink = now;
         markForRedraw();
+    }
+}
+
+void VirtualKeyboardDialog::updateOkButtonState() {
+    if (okButton) {
+        bool shouldEnable = currentText.length() >= 3;
+        okButton->setEnabled(shouldEnable);
+        okButton->draw();
     }
 }
