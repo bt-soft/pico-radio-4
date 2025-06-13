@@ -181,7 +181,8 @@ bool MemoryScreen::onItemClicked(int index) {
     selectedIndex = index;
     tuneToStation(index);
     updateHorizontalButtonStates();
-    // Frissítjük a behangolt állomás jelzését a listában
+    // A behangolt állomás jelzésének frissítése szükséges
+    // Ideálisan csak az érintett elemeket kellene frissíteni, de egyelőre a teljes listát
     refreshCurrentTunedIndication();
     return false; // Nincs szükség teljes újrarajzolásra
 }
@@ -247,8 +248,13 @@ void MemoryScreen::onDialogClosed(UIDialogBase *closedDialog) {
     // Dialógus állapot resetelése
     currentDialogState = DialogState::None;
 
-    // Gombok állapotának frissítése
+    // Gombok állapotának frissítése és explicit újrarajzolás
     updateHorizontalButtonStates();
+
+    // A gombsor konténer teljes újrarajzolása, hogy biztosan megjelenjenek a gombok
+    if (horizontalButtonBar) {
+        horizontalButtonBar->markForCompleteRedraw();
+    }
 }
 
 // ===================================================================

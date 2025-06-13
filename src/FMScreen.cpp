@@ -201,12 +201,15 @@ void FMScreen::activate() {
 void FMScreen::onDialogClosed(UIDialogBase *closedDialog) {
 
     // Először hívjuk az alap implementációt (stack cleanup, navigation logic)
-    UIScreen::onDialogClosed(closedDialog);
-
-    // Ha ez volt az utolsó dialógus, frissítsük a gombállapotokat
+    UIScreen::onDialogClosed(closedDialog); // Ha ez volt az utolsó dialógus, frissítsük a gombállapotokat
     if (!isDialogActive()) {
         updateAllVerticalButtonStates(pSi4735Manager); // Függőleges gombok szinkronizálása
         updateHorizontalButtonStates();                // Vízszintes gombok szinkronizálása
+
+        // A gombsor konténer teljes újrarajzolása, hogy biztosan megjelenjenek a gombok
+        if (horizontalButtonBar) {
+            horizontalButtonBar->markForCompleteRedraw();
+        }
     }
 }
 

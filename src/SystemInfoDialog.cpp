@@ -206,13 +206,11 @@ void SystemInfoDialog::layoutDialogContent() {
     if (nextButton) {
         removeChild(nextButton);
         nextButton = nullptr;
-    }
-
-    // Közös lambda az oldalváltáshoz és UI frissítéshez - helyben definiáljuk
+    } // Közös lambda az oldalváltáshoz és UI frissítéshez - helyben definiáljuk
     auto updatePageAndUI = [this]() {
         updateNavigationButtons();
-        markForRedraw();
-        drawSelf();
+        markForCompleteRedraw(); // Az összes gyereket is újrarajzolja
+        // drawSelf() explicit hívás eltávolítva - a markForCompleteRedraw() gondoskodik róla
     };
 
     // Previous gomb létrehozása (bal oldal)
