@@ -20,6 +20,7 @@
 #define SCREEN_NAME_EMPTY "EmptyScreen"
 #define SCREEN_NAME_SCREENSAVER "ScreenSaver"
 #define SCREEN_NAME_SETUP "SetupScreen"
+#define SCREEN_NAME_MEMORY "MemoryScreen"
 
 //--- Debug ---
 // Debug mode is now controlled via build flags in platformio.ini

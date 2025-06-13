@@ -268,25 +268,25 @@ class CommonVerticalButtons {
             DEBUG("Switching to Setup screen\n");
             screenManager->switchToScreen(SCREEN_NAME_SETUP);
         }
-    }
-
-    /**
-     * @brief MEMORY gomb kezelő - MessageDialog megjelenítése
-     */
+    } /**
+       * @brief MEMORY gomb kezelő - MemoryScreen képernyőre váltás
+       */
     static void handleMemoryButton(const UIButton::ButtonEvent &event, Si4735Manager *si4735Manager, UIScreen *screen) {
         if (event.state != UIButton::EventButtonState::Clicked || !screen) {
             return;
         }
 
-        DEBUG("Memory functions dialog requested\n");
-        // Egyszerű tájékoztató dialógus - használjuk a MessageDialog ButtonsType::Ok-ot
-        auto messageDialog = std::make_shared<MessageDialog>(
-            screen, screen->getTFT(), Rect(-1, -1, 300, 0), // Auto-magasság
-            "Memory Functions",
-            "Memory management not yet implemented.\n\nPlanned features:\n- Save current frequency\n- Load saved stations\n- Edit station names\n- Delete stations",
-            MessageDialog::ButtonsType::Ok);
+        DEBUG("Memory screen requested\n");
 
-        screen->showDialog(messageDialog);
+        // MemoryScreen képernyőre váltás
+        auto screenManager = screen->getScreenManager();
+        if (!screenManager) {
+            DEBUG("ERROR: Could not get screenManager from screen in handleMemoryButton!\n");
+            return;
+        }
+
+        DEBUG("Switching to Memory screen\n");
+        screenManager->switchToScreen(SCREEN_NAME_MEMORY);
     }
 
     /**
