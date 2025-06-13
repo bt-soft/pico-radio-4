@@ -99,7 +99,11 @@ void SetupScreen::handleItemAction(int index, int action) {
  * @brief Rendszer információ dialógus megjelenítése
  */
 void SetupScreen::handleSystemInfoDialog() {
-    auto systemInfoDialog = std::make_shared<SystemInfoDialog>(this, this->tft, Rect(-1, -1, UIComponent::SCREEN_W, UIComponent::SCREEN_H));
+    auto systemInfoDialog = std::make_shared<SystemInfoDialog>(                    //
+        this,                                                                      //
+        this->tft,                                                                 //
+        Rect(-1, -1, UIComponent::SCREEN_W * 3 / 4, UIComponent::SCREEN_H * 3 / 4) //
+    );
     this->showDialog(systemInfoDialog);
 }
 
@@ -107,8 +111,13 @@ void SetupScreen::handleSystemInfoDialog() {
  * @brief Gyári beállítások visszaállítása dialógussal
  */
 void SetupScreen::handleFactoryResetDialog() {
-    auto confirmDialog = std::make_shared<MessageDialog>(this, this->tft, Rect(-1, -1, UIComponent::SCREEN_W, 0), "Factory Reset",
-                                                         "Reset all settings to defaults?\n\nThis cannot be undone!", MessageDialog::ButtonsType::YesNo);
+    auto confirmDialog = std::make_shared<MessageDialog>(            //
+        this,                                                        //
+        this->tft,                                                   //
+        Rect(-1, -1, UIComponent::SCREEN_W * 3 / 4, 0),              //
+        "Factory Reset",                                             //
+        "Reset all settings to defaults?\n\nThis cannot be undone!", //
+        MessageDialog::ButtonsType::YesNo);
 
     confirmDialog->setDialogCallback([this](UIDialogBase *sender, MessageDialog::DialogResult result) {
         if (result == MessageDialog::DialogResult::Accepted) {
