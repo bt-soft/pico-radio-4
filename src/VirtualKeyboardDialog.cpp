@@ -239,7 +239,8 @@ void VirtualKeyboardDialog::handleKeyPress(char key) {
     // Shift állapot megmarad - csak manuális kikapcsolással kapcsol ki
     notifyTextChanged();
     updateOkButtonState();
-    markForRedraw();
+    // NE hívjuk a markForRedraw()-t, csak az input mezőt rajzoljuk újra
+    // markForRedraw(); // Ez okozza a gombok eltűnését
 
     // Azonnali újrarajzolás az input mezőnek
     drawInputField();
@@ -251,7 +252,8 @@ void VirtualKeyboardDialog::handleSpecialKey(const String &keyType) {
             currentText.remove(currentText.length() - 1);
             notifyTextChanged();
             updateOkButtonState();
-            markForRedraw();
+            // NE hívjuk a markForRedraw()-t, csak az input mezőt rajzoljuk újra
+            // markForRedraw(); // Ez okozza a gombok eltűnését
 
             // Azonnali újrarajzolás az input mezőnek
             drawInputField();
@@ -261,7 +263,8 @@ void VirtualKeyboardDialog::handleSpecialKey(const String &keyType) {
             currentText = "";
             notifyTextChanged();
             updateOkButtonState();
-            markForRedraw();
+            // NE hívjuk a markForRedraw()-t, csak az input mezőt rajzoljuk újra
+            // markForRedraw(); // Ez okozza a gombok eltűnését
 
             // Azonnali újrarajzolás az input mezőnek
             drawInputField();

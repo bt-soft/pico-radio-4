@@ -79,6 +79,158 @@ String Si4735Manager::getCurrentRdsProgramService() {
     return ""; // Nincs érvényes RDS PS név
 }
 
+// ===================================================================
+// RDS Support - PTY (Program Type) tábla
+// ===================================================================
+
+/**
+ * @brief RDS Program Type (PTY) nevek táblája
+ * @details Az RDS standard 32 különböző program típust definiál (0-31).
+ * Minden PTY kódhoz tartozik egy szöveges leírás.
+ */
+const char *RDS_PTY_NAMES[] = {
+    "No defined",            // 0
+    "News",                  // 1
+    "Current affairs",       // 2
+    "Information",           // 3
+    "Sport",                 // 4
+    "Education",             // 5
+    "Drama",                 // 6
+    "Culture",               // 7
+    "Science",               // 8
+    "Varied",                // 9
+    "Pop Music",             // 10
+    "Rock Music",            // 11
+    "Easy Listening",        // 12
+    "Light Classical",       // 13
+    "Serious Classical",     // 14
+    "Other Music",           // 15
+    "Weather",               // 16
+    "Finance",               // 17
+    "Children's Programmes", // 18
+    "Social Affairs",        // 19
+    "Religion",              // 20
+    "Phone-in",              // 21
+    "Travel",                // 22
+    "Leisure",               // 23
+    "Jazz Music",            // 24
+    "Country Music",         // 25
+    "National Music",        // 26
+    "Oldies Music",          // 27
+    "Folk Music",            // 28
+    "Documentary",           // 29
+    "Alarm Test",            // 30
+    "Alarm"                  // 31
+};
+
+#define RDS_PTY_COUNT (sizeof(RDS_PTY_NAMES) / sizeof(RDS_PTY_NAMES[0]))
+
+// ===================================================================
+// RDS Support - Implementáció
+// ===================================================================
+
+/**
+ * @brief Lekérdezi az RDS állomásnevet (Program Service)
+ * @return String Az RDS állomásnév, vagy üres string ha nem elérhető
+ */
+String Si4735Manager::getRdsStationName() {
+    if (!isRdsAvailable()) {
+        return "";
+    }
+
+    char *rdsStationName = si4735.getRdsText0A();
+    if (rdsStationName != nullptr && strlen(rdsStationName) > 0) {
+        char tempName[32];
+        strncpy(tempName, rdsStationName, sizeof(tempName) - 1);
+        tempName[sizeof(tempName) - 1] = '\0';
+        Utils::trimSpaces(tempName);
+        return String(tempName);
+    }
+
+    return "";
+}
+
+/**
+ * @brief Lekérdezi az RDS program típust (PTY)
+ * @return String Az RDS program típus szöveges leírása
+ */
+String Si4735Manager::getRdsProgramType() {
+    if (!isRdsAvailable()) {
+        return "";
+    }
+
+    uint8_t ptyCode = si4735.getRdsProgramType();
+    if (ptyCode < RDS_PTY_COUNT) {
+        return String(RDS_PTY_NAMES[ptyCode]);
+    }
+
+    return "Unknown PTY";
+}
+
+/**
+ * @brief Lekérdezi az RDS radio text üzenetet
+ * @return String Az RDS radio text, vagy üres string ha nem elérhető
+ */
+String Si4735Manager::getRdsRadioText() {
+    if (!isRdsAvailable()) {
+        return "";
+    }
+
+    char *rdsText = si4735.getRdsText2A();
+    if (rdsText != nullptr && strlen(rdsText) > 0) {
+        char tempText[128];
+        strncpy(tempText, rdsText, sizeof(tempText) - 1);
+        tempText[sizeof(tempText) - 1] = '\0';
+        Utils::trimSpaces(tempText);
+        return String(tempText);
+    }
+
+    return "";
+}
+
+/**
+ * @brief Lekérdezi az RDS dátum és idő információt
+ * @param year Referencia a év tárolásához
+ * @param month Referencia a hónap tárolásához
+ * @param day Referencia a nap tárolásához
+ * @param hour Referencia az óra tárolásához
+ * @param minute Referencia a perc tárolásához
+ * @return true ha sikerült lekérdezni a dátum/idő adatokat
+ */
+bool Si4735Manager::getRdsDateTime(uint16_t &year, uint16_t &month, uint16_t &day, uint16_t &hour, uint16_t &minute) {
+    if (!isRdsAvailable()) {
+        return false;
+    }
+
+    return si4735.getRdsDateTime(&year, &month, &day, &hour, &minute);
+}
+
+/**
+ * @brief Ellenőrzi, hogy elérhető-e RDS adat
+ * @return true ha van érvényes RDS vétel
+ */
+bool Si4735Manager::isRdsAvailable() {
+    // Ellenőrizzük, hogy FM módban vagyunk-e
+    BandTable &band = getCurrentBand();
+    if (band.bandType != FM_BAND_TYPE) {
+        return false;
+    }
+
+    // RDS státusz lekérdezése
+    si4735.getRdsStatus();
+    return si4735.getRdsReceived() && si4735.getRdsSync() && si4735.getRdsSyncFound();
+}
+
+/**
+ * @brief Lekérdezi az RDS jel minőségét
+ * @return uint8_t Az RDS jel minősége (SNR érték)
+ */
+uint8_t Si4735Manager::getRdsSignalQuality() {
+    // A cached signal quality-t használjuk, ami optimalizált
+    SignalQualityData signalData = getSignalQuality();
+    return signalData.isValid ? signalData.snr : 0;
+}
+
 /**
  * Loop függvény a squelchez és a hardver némításhoz.
  * Ez a függvény folyamatosan figyeli a squelch állapotát és kezeli a hardver némítást.
@@ -90,6 +242,7 @@ void Si4735Manager::loop() {
 
     // Hardver némítás kezelése
     manageHardwareAudioMute();
+    
     // Signal quality cache frissítése, ha szükséges
     updateSignalCacheIfNeeded();
 }

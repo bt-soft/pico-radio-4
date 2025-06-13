@@ -7,6 +7,7 @@
 #ifndef __FM_SCREEN_H
 #define __FM_SCREEN_H
 #include "CommonVerticalButtons.h"
+#include "RDSComponent.h"
 #include "UIButton.h"
 #include "UIHorizontalButtonBar.h"
 #include "UIScreen.h"
@@ -148,9 +149,7 @@ class FMScreen : public UIScreen, public CommonVerticalButtons::Mixin<FMScreen> 
      * @param event Gomb esemény (Clicked)
      * @details Pushable gomb: Test és diagnosztikai képernyőre navigálás
      */
-    void handleTestButton(const UIButton::ButtonEvent &event);
-
-    // ===================================================================
+    void handleTestButton(const UIButton::ButtonEvent &event); // ===================================================================
     // UI komponens objektumok - Smart pointer kezelés
     // ===================================================================
 
@@ -162,6 +161,16 @@ class FMScreen : public UIScreen, public CommonVerticalButtons::Mixin<FMScreen> 
      * - AM, Test, Setup gombok
      */
     std::shared_ptr<UIHorizontalButtonBar> horizontalButtonBar;
+
+    /**
+     * @brief RDS információs komponens
+     * @details Smart pointer az RDS adatok megjelenítéséhez
+     * - RDS állomásnév, program típus megjelenítés
+     * - Radio text scroll támogatás
+     * - Dátum/idő megjelenítés
+     * - Automatikus frissítés és optimalizálás
+     */
+    std::shared_ptr<RDSComponent> rdsComponent;
 };
 
 #endif // __FM_SCREEN_H

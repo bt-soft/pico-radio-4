@@ -68,15 +68,30 @@ void FMScreen::layoutComponents() {
     uint16_t FreqDisplayY = 20;
     Rect freqBounds(30, FreqDisplayY, 200, FreqDisplay::FREQDISPLAY_HEIGHT);
     UIScreen::createFreqDisplay(freqBounds);
-    freqDisplayComp->setHideUnderline(true); // Alulvonás elrejtése a frekvencia kijelzőn
-
-    // ===================================================================
+    freqDisplayComp->setHideUnderline(true); // Alulvonás elrejtése a frekvencia kijelzőn    // ===================================================================
     // S-Meter (jelerősség mérő) pozicionálás
     // ===================================================================
-    Rect smeterBounds(2, FreqDisplayY + FreqDisplay::FREQDISPLAY_HEIGHT + 20, UIComponent::SCREEN_W - 4, 60);
+    // S-Meter szélesség korlátozása - helyet hagyunk a függőleges gombsornak
+    uint16_t smeterWidth = UIComponent::SCREEN_W - 90; // 90px helyet hagyunk a jobb oldalon
+    Rect smeterBounds(2, FreqDisplayY + FreqDisplay::FREQDISPLAY_HEIGHT + 20, smeterWidth, 60);
     ColorScheme smeterColors = ColorScheme::defaultScheme();
-    smeterColors.background = TFT_COLOR_BACKGROUND; // Fekete háttér a designhoz
-    UIScreen::createSMeter(smeterBounds, smeterColors);
+    smeterColors.background = TFT_COLOR_BACKGROUND;     // Fekete háttér a designhoz
+    UIScreen::createSMeter(smeterBounds, smeterColors); // ===================================================================
+    // RDS komponens létrehozása és pozicionálása
+    // ===================================================================
+    uint16_t rdsY = smeterBounds.y + smeterBounds.height + 10;
+    // RDS szélesség korlátozása - helyet hagyunk a függőleges gombsornak (72px + 10px margin)
+    uint16_t rdsWidth = UIComponent::SCREEN_W - 90; // 90px helyet hagyunk a jobb oldalon
+    Rect rdsBounds(5, rdsY, rdsWidth, RDSComponent::DEFAULT_HEIGHT);
+
+    rdsComponent = std::make_shared<RDSComponent>(tft, rdsBounds, *pSi4735Manager);
+    addChild(rdsComponent);
+
+    // RDS területek finomhangolása (opcionális - alapértelmezett layout elfogadható)
+    // rdsComponent->setStationNameArea(Rect(10, rdsY, 200, 18));
+    // rdsComponent->setProgramTypeArea(Rect(220, rdsY, 150, 18));
+    // rdsComponent->setDateTimeArea(Rect(380, rdsY, 85, 18));
+    // rdsComponent->setRadioTextArea(Rect(10, rdsY + 20, 460, 18));
 
     // ===================================================================    // Gombsorok létrehozása - Event-driven architektúra
     // ===================================================================
@@ -147,6 +162,13 @@ void FMScreen::handleOwnLoop() {
             // RSSI és SNR megjelenítése FM módban
             smeterComp->showRSSI(signalCache.rssi, signalCache.snr, true /* FM mód */);
         }
+    }
+
+    // ===================================================================
+    // RDS adatok valós idejű frissítése
+    // ===================================================================
+    if (rdsComponent) {
+        rdsComponent->updateRDS();
     }
 }
 
