@@ -123,6 +123,15 @@ void MemoryScreen::loadStations() {
     } else {
         selectedIndex = -1;
     }
+
+    // Inicializáljuk a lastTunedIndex változót
+    lastTunedIndex = -1;
+    for (int i = 0; i < stations.size(); i++) {
+        if (isStationCurrentlyTuned(stations[i])) {
+            lastTunedIndex = i;
+            break;
+        }
+    }
 }
 
 void MemoryScreen::refreshList() {
@@ -138,6 +147,39 @@ void MemoryScreen::refreshCurrentTunedIndication() {
     if (memoryList) {
         memoryList->markForRedraw();
     }
+    updateHorizontalButtonStates();
+}
+
+void MemoryScreen::refreshTunedIndicationOptimized() {
+    if (!memoryList) {
+        return;
+    }
+
+    // Megkeressük a jelenleg behangolt állomás indexét
+    int currentTunedIndex = -1;
+    for (int i = 0; i < stations.size(); i++) {
+        if (isStationCurrentlyTuned(stations[i])) {
+            currentTunedIndex = i;
+            break;
+        }
+    }
+
+    // Ha megváltozott a behangolt állomás, frissítjük az érintett elemeket
+    if (currentTunedIndex != lastTunedIndex) {
+        // Korábbi behangolt elem frissítése (ha volt)
+        if (lastTunedIndex >= 0 && lastTunedIndex < stations.size()) {
+            memoryList->redrawListItem(lastTunedIndex);
+        }
+
+        // Új behangolt elem frissítése (ha van)
+        if (currentTunedIndex >= 0 && currentTunedIndex < stations.size()) {
+            memoryList->redrawListItem(currentTunedIndex);
+        }
+
+        // Frissítjük a nyilvántartást
+        lastTunedIndex = currentTunedIndex;
+    }
+
     updateHorizontalButtonStates();
 }
 
@@ -181,9 +223,8 @@ bool MemoryScreen::onItemClicked(int index) {
     selectedIndex = index;
     tuneToStation(index);
     updateHorizontalButtonStates();
-    // A behangolt állomás jelzésének frissítése szükséges
-    // Ideálisan csak az érintett elemeket kellene frissíteni, de egyelőre a teljes listát
-    refreshCurrentTunedIndication();
+    // Optimalizált frissítés - csak az érintett elemek újrarajzolása
+    refreshTunedIndicationOptimized();
     return false; // Nincs szükség teljes újrarajzolásra
 }
 
@@ -226,16 +267,14 @@ void MemoryScreen::drawContent() {
 }
 
 void MemoryScreen::activate() {
-    DEBUG("MemoryScreen activated\n");
-
-    // Sáv típus frissítése
+    DEBUG("MemoryScreen activated\n"); // Sáv típus frissítése
     bool newFmMode = isCurrentBandFm();
     if (newFmMode != isFmMode) {
         isFmMode = newFmMode;
         refreshList();
     } else {
-        // Ha a sáv típus nem változott, csak a behangolt állomás jelzését frissítjük
-        refreshCurrentTunedIndication();
+        // Ha a sáv típus nem változott, csak a behangolt állomás jelzését frissítjük optimalizáltan
+        refreshTunedIndicationOptimized();
     }
 
     updateHorizontalButtonStates();

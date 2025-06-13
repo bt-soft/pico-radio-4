@@ -47,11 +47,10 @@ class MemoryScreen : public UIScreen, public IScrollableListDataSource {
     static constexpr uint8_t BACK_BUTTON = 33; // UI komponensek
     std::shared_ptr<UIScrollableListComponent> memoryList;
     std::shared_ptr<UIHorizontalButtonBar> horizontalButtonBar;
-    std::shared_ptr<UIButton> backButton;
-
-    // Adatok
+    std::shared_ptr<UIButton> backButton; // Adatok
     std::vector<StationData> stations;
     int selectedIndex = -1;
+    int lastTunedIndex = -1; // Utolsó behangolt állomás indexe optimalizált frissítéshez
     bool isFmMode = true;
 
     // Dialógus állapotok
@@ -66,6 +65,7 @@ class MemoryScreen : public UIScreen, public IScrollableListDataSource {
     void loadStations();
     void refreshList();
     void refreshCurrentTunedIndication();
+    void refreshTunedIndicationOptimized(); // Optimalizált frissítés csak az érintett elemekre
 
     // Gomb eseménykezelők
     void handleAddCurrentButton(const UIButton::ButtonEvent &event);
