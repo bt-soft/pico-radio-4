@@ -141,13 +141,3 @@ bool Si4735Rds::isRdsAvailable() {
     }
     return true;
 }
-
-/**
- * @brief Lekérdezi az RDS jel minőségét
- * @return uint8_t Az RDS jel minősége (SNR érték)
- */
-uint8_t Si4735Rds::getRdsSignalQuality() {
-    // A cached signal quality-t használjuk, ami optimalizált
-    SignalQualityData signalData = getSignalQuality();
-    return signalData.isValid ? signalData.snr : 0;
-}

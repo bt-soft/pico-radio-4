@@ -168,6 +168,18 @@ SignalQualityData Si4735Runtime::getSignalQuality() {
 }
 
 /**
+ * @brief Lekéri csak az RSSI értéket cache-elt módon
+ * @return uint8_t RSSI érték
+ */
+uint8_t Si4735Runtime::getRSSI() { return getSignalQuality().rssi; }
+
+/**
+ * @brief Lekéri csak az SNR értéket cache-elt módon
+ * @return uint8_t SNR érték
+ */
+uint8_t Si4735Runtime::getSNR() { return getSignalQuality().snr; }
+
+/**
  * @brief Lekéri a signal quality adatokat valós időben (közvetlen chip lekérdezés)
  * @return SignalQualityData A friss signal quality adatok
  */
@@ -183,15 +195,3 @@ SignalQualityData Si4735Runtime::getSignalQualityRealtime() {
     realtimeData.isValid = true;
     return realtimeData;
 }
-
-/**
- * @brief Lekéri csak az RSSI értéket cache-elt módon
- * @return uint8_t RSSI érték
- */
-uint8_t Si4735Runtime::getRSSI() { return getSignalQuality().rssi; }
-
-/**
- * @brief Lekéri csak az SNR értéket cache-elt módon
- * @return uint8_t SNR érték
- */
-uint8_t Si4735Runtime::getSNR() { return getSignalQuality().snr; }

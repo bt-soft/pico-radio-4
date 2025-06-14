@@ -11,16 +11,6 @@
  */
 class Si4735Rds : public Si4735Band {
 
-  private:
-#define MAX_STATION_NAME_LENGTH 8
-    // Az SI4735 bufferét használjuk,
-    // ez csak ez jelző pointer a képernyő törlésének szükségességének jelzésére
-    char *rdsStationName = NULL;
-
-#define MAX_MESSAGE_LENGTH 64
-    char rdsInfo[MAX_MESSAGE_LENGTH];
-    bool rdsInfoChanged = false; // Flag a szöveg megváltozásának jelzésére
-
   public:
     /**
      * @brief Si4735Rds osztály konstruktora
@@ -72,12 +62,6 @@ class Si4735Rds : public Si4735Band {
      * @return true ha van érvényes RDS vétel
      */
     bool isRdsAvailable();
-
-    /**
-     * @brief Lekérdezi az RDS jel minőségét
-     * @return uint8_t Az RDS jel minősége (SNR érték)
-     */
-    uint8_t getRdsSignalQuality();
 };
 
 #endif // __SI4735_RDS_H
