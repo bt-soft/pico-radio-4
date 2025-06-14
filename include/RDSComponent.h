@@ -52,16 +52,8 @@ class RDSComponent : public UIComponent {
      */
     String convertPtyCodeToString(uint8_t ptyCode);
 
-    // RDS adatok cache
-    String cachedStationName;
-    String cachedProgramType;
-    String cachedRadioText;
-    String cachedDateTime;
-    bool rdsAvailable; // Időzítés és cache kezelés
-
-    uint32_t lastRdsUpdate;
+    // Időzítés és UI kezelés
     uint32_t lastScrollUpdate;
-    uint32_t lastValidRdsData; // Utolsó valid RDS adat időpontja
     bool dataChanged;
 
     // Layout területek
@@ -117,9 +109,11 @@ class RDSComponent : public UIComponent {
     /**
      * @brief Scroll sprite felszabadítása
      */
-    void cleanupScrollSprite(); /**
-                                 * @brief Radio text scroll kezelése
-                                 */
+    void cleanupScrollSprite();
+
+    /**
+     * @brief Radio text scroll kezelése
+     */
     void handleRadioTextScroll();
 
     /**

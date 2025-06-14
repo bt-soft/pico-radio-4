@@ -2,6 +2,8 @@
 #include "Config.h"
 #include "StationData.h"
 
+#define VALID_STATION_NAME_MIN_LENGHT 3 // Minimális hossz az érvényes állomásnévhez
+
 // /**
 //  * @brief Lekérdezi az aktuális RDS Program Service (PS) nevet.
 //  * @note Csak a MemmoryDisplay.cpp fájlban használjuk.
@@ -140,4 +142,173 @@ bool Si4735Rds::isRdsAvailable() {
         return false;
     }
     return true;
+}
+
+// ===================================================================
+// Adaptív cache és időzítési funkcionalitás
+// ===================================================================
+
+/**
+ * @brief RDS adatok frissítése adaptív időzítéssel és cache-eléssel
+ * @return true ha változtak az adatok
+ */
+bool Si4735Rds::updateRdsDataWithCache() {
+    uint32_t currentTime = millis();
+
+    // Adaptív frissítési időköz:
+    // - Ha nincs RDS adat -> 1 másodperc (gyors keresés)
+    // - Ha van stabil RDS adat -> 3 másodperc (takarékos)
+    uint32_t adaptiveInterval = RDS_UPDATE_INTERVAL_SLOW;
+    if (cachedStationName.isEmpty() || cachedStationName.length() < VALID_STATION_NAME_MIN_LENGHT) {
+        adaptiveInterval = RDS_UPDATE_INTERVAL_FAST;
+    }
+
+    // Időzített frissítés
+    if (currentTime - lastRdsUpdate < adaptiveInterval || !isRdsAvailable()) {
+        return false; // Túl korai a frissítés vagy nincs RDS adat
+    }
+    lastRdsUpdate = currentTime;
+
+    bool dataChanged = false;
+    bool hasValidData = false;
+
+    // --- Állomásnév frissítése -------------------------------------------------------------
+    String newStationName = getRdsStationName();
+    // Csak akkor frissíti a cache-t, ha tényleg változott az adat
+    if (!newStationName.isEmpty() && newStationName.length() >= VALID_STATION_NAME_MIN_LENGHT && newStationName != cachedStationName) {
+        cachedStationName = newStationName;
+        dataChanged = true;
+        hasValidData = true;
+    }
+    // Akkor is jelzünk az érvényes adatot, ha nem változott, de van adat
+    if (!newStationName.isEmpty()) {
+        hasValidData = true;
+    }
+
+    // --- Program típus frissítése - PTY kód alapján -----------------------------------------
+    uint8_t newPtyCode = getRdsProgramTypeCode();
+    if (newPtyCode != 255) { // 255 = nincs RDS
+        String newProgramType = convertPtyCodeToString(newPtyCode);
+        if (!newProgramType.isEmpty() && newProgramType != cachedProgramType) {
+            cachedProgramType = newProgramType;
+            dataChanged = true;
+            hasValidData = true;
+        }
+        if (!newProgramType.isEmpty()) {
+            hasValidData = true;
+        }
+    }
+
+    // --- Radio text frissítése -------------------------------------------------------------
+    String newRadioText = getRdsRadioText();
+    if (!newRadioText.isEmpty() && newRadioText != cachedRadioText) {
+        cachedRadioText = newRadioText;
+        dataChanged = true;
+        hasValidData = true;
+    }
+    if (!newRadioText.isEmpty()) {
+        hasValidData = true;
+    }
+
+    // -- Dátum/idő frissítése -------------------------------------------------------------
+    uint16_t year, month, day, hour, minute;
+    if (getRdsDateTime(year, month, day, hour, minute)) {
+        // Dátum formázása: "2025.06.14"
+        String newDate = String(year) + "." + (month < 10 ? "0" : "") + String(month) + "." + (day < 10 ? "0" : "") + String(day);
+
+        // Dátum ellenőrzése és frissítése
+        if (newDate != cachedDate) {
+            cachedDate = newDate;
+            dataChanged = true;
+            hasValidData = true;
+        }
+
+        // Idő formázása: "15:30"
+        String newTime = (hour < 10 ? "0" : "") + String(hour) + ":" + (minute < 10 ? "0" : "") + String(minute);
+
+        // Idő ellenőrzése és frissítése
+        if (newTime != cachedTime) {
+            cachedTime = newTime;
+            dataChanged = true;
+            hasValidData = true;
+        }
+    } // Ha volt valid adat, frissítsük az időzítőt
+    if (hasValidData) {
+        lastValidRdsData = currentTime;
+    }
+
+    // Timeout ellenőrzés - különböző időzítés a különböző RDS adatokhoz
+    if (currentTime - lastValidRdsData > RDS_DATA_TIMEOUT) { // Hosszú timeout után ha nincs érvényes állomásnév, akkor töröljük a cache-t
+        if (!cachedStationName.isEmpty()) {
+            cachedStationName = "";
+            cachedProgramType = "";
+            cachedRadioText = "";
+            cachedDate = "";
+            cachedTime = "";
+            dataChanged = true;
+        }
+    }
+
+    return dataChanged;
+}
+
+/**
+ * @brief Cache törlése (pl. állomásváltáskor)
+ */
+void Si4735Rds::clearRdsCache() {
+    cachedStationName = "";
+    cachedProgramType = "";
+    cachedRadioText = "";
+    cachedDate = "";
+    cachedTime = "";
+    lastRdsUpdate = 0; // Azonnal frissítsen
+    lastValidRdsData = 0;
+}
+
+/**
+ * @brief PTY kód szöveges leírássá alakítása
+ * @param ptyCode A PTY kód (0-31)
+ * @return String A PTY szöveges leírása
+ */
+String Si4735Rds::convertPtyCodeToString(uint8_t ptyCode) {
+    // PTY kódok RDS szabvány szerint (0-31)
+    static const char *ptyTable[] = {
+        "No programme",          // 0
+        "News",                  // 1
+        "Current Affairs",       // 2
+        "Information",           // 3
+        "Sport",                 // 4
+        "Education",             // 5
+        "Drama",                 // 6
+        "Culture",               // 7
+        "Science",               // 8
+        "Varied",                // 9
+        "Pop Music",             // 10
+        "Rock Music",            // 11
+        "Easy Listening",        // 12
+        "Light Classical",       // 13
+        "Serious Classical",     // 14
+        "Other Music",           // 15
+        "Weather",               // 16
+        "Finance",               // 17
+        "Children's programmes", // 18
+        "Social Affairs",        // 19
+        "Religion",              // 20
+        "Phone In",              // 21
+        "Travel",                // 22
+        "Leisure",               // 23
+        "Jazz Music",            // 24
+        "Country Music",         // 25
+        "National Music",        // 26
+        "Oldies Music",          // 27
+        "Folk Music",            // 28
+        "Documentary",           // 29
+        "Alarm Test",            // 30
+        "Alarm"                  // 31
+    };
+
+    if (ptyCode <= 31) {
+        return String(ptyTable[ptyCode]);
+    }
+    return "Unknown";
 }

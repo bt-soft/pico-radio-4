@@ -15,7 +15,7 @@ class Si4735Rds : public Si4735Band {
     /**
      * @brief Si4735Rds osztály konstruktora
      */
-    Si4735Rds() : Si4735Band() {}
+    Si4735Rds() : Si4735Band() { clearRdsCache(); }
 
     // ===================================================================
     // RDS Support - RDS funkcionalitás
@@ -62,6 +62,87 @@ class Si4735Rds : public Si4735Band {
      * @return true ha van érvényes RDS vétel
      */
     bool isRdsAvailable();
+
+    // ===================================================================
+    // Adaptív cache és időzítési funkcionalitás
+    // ===================================================================
+
+    /**
+     * @brief RDS adatok frissítése adaptív időzítéssel és cache-eléssel
+     * @return true ha változtak az adatok
+     */
+    bool updateRdsDataWithCache();
+
+    /**
+     * @brief Cache-elt RDS állomásnév lekérdezése
+     * @return String A cache-elt állomásnév
+     */
+    String getCachedStationName() const { return cachedStationName; }
+
+    /**
+     * @brief Cache-elt RDS program típus lekérdezése
+     * @return String A cache-elt program típus
+     */
+    String getCachedProgramType() const { return cachedProgramType; }
+
+    /**
+     * @brief Cache-elt RDS radio text lekérdezése
+     * @return String A cache-elt radio text
+     */
+    String getCachedRadioText() const { return cachedRadioText; }
+
+    /**
+     * @brief Cache-elt RDS dátum lekérdezése
+     * @return String A cache-elt dátum
+     */
+    String getCachedDate() const { return cachedDate; }
+
+    /**
+     * @brief Cache-elt RDS idő lekérdezése
+     * @return String A cache-elt idő
+     */
+    String getCachedTime() const { return cachedTime; }
+
+    /**
+     * @brief Cache-elt RDS dátum/idő lekérdezése (kompatibilitás)
+     * @return String A cache-elt dátum/idő
+     */
+    String getCachedDateTime() const {
+        if (!cachedDate.isEmpty() && !cachedTime.isEmpty()) {
+            return cachedDate + " " + cachedTime;
+        }
+        return cachedDate.isEmpty() ? cachedTime : cachedDate;
+    }
+
+    /**
+     * @brief Cache törlése (pl. állomásváltáskor)
+     */
+    void clearRdsCache();
+
+    /**
+     * @brief PTY kód szöveges leírássá alakítása
+     * @param ptyCode A PTY kód (0-31)
+     * @return String A PTY szöveges leírása
+     */
+    String convertPtyCodeToString(uint8_t ptyCode);
+
+  private: // RDS cache változók
+    String cachedStationName;
+    String cachedProgramType;
+    String cachedRadioText;
+    String cachedDate;
+    String cachedTime;
+
+    // Időzítés változók
+    uint32_t lastRdsUpdate = 0;
+    uint32_t lastValidRdsData = 0;
+
+    // Adaptív frissítési intervallumok (milliszekundum)
+    static const uint32_t RDS_UPDATE_INTERVAL_FAST = 1000; // 1 másodperc új állomás esetén
+    static const uint32_t RDS_UPDATE_INTERVAL_SLOW = 3000; // 3 másodperc stabil állomás esetén
+
+    // Timeout értékek (milliszekundum)
+    static const uint32_t RDS_DATA_TIMEOUT = 120000; // 120 másodperc
 };
 
 #endif // __SI4735_RDS_H
