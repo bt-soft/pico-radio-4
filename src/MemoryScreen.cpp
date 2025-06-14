@@ -279,7 +279,6 @@ void MemoryScreen::activate() {
     updateHorizontalButtonStates();
     UIScreen::activate(); // FMScreen-ből való automatikus station add ellenőrzése
     if (screenParams.autoAddStation) {
-        DEBUG("MemoryScreen: Auto-adding station with RDS name: '%s'\n", screenParams.rdsStationName);
         // Automatikus "Add Curr" gomb megnyomás szimulálása
         handleAddCurrentButton(UIButton::ButtonEvent{ADD_CURRENT_BUTTON, "Add Curr", UIButton::EventButtonState::Clicked});
         // Paraméterek törlése, hogy ne ismétlődjön
@@ -309,11 +308,9 @@ void MemoryScreen::onDialogClosed(UIDialogBase *closedDialog) {
 void MemoryScreen::setParameters(void *params) {
     if (params) {
         screenParams = *static_cast<MemoryScreenParams *>(params);
-        DEBUG("MemoryScreen: Parameters received - autoAdd: %s, RDS name: '%s'\n", screenParams.autoAddStation ? "true" : "false", screenParams.rdsStationName);
     } else {
         // Paraméterek resetelése
         screenParams = MemoryScreenParams();
-        DEBUG("MemoryScreen: Parameters reset\n");
     }
 }
 
@@ -364,7 +361,6 @@ void MemoryScreen::showAddStationDialog() {
     String initialStationName = "";
     if (screenParams.rdsStationName[0] != '\0') {
         initialStationName = String(screenParams.rdsStationName);
-        DEBUG("MemoryScreen: Using RDS station name as default: '%s'\n", screenParams.rdsStationName);
     }
 
     auto keyboardDialog = std::make_shared<VirtualKeyboardDialog>(this, tft, "Add Station", initialStationName, MAX_STATION_NAME_LEN, [this](const String &newText) {

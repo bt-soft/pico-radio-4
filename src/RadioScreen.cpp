@@ -146,18 +146,12 @@ bool RadioScreen::checkCurrentFrequencyInMemory() const {
  * Ha talál egyezést, frissíti a StatusLine státuszát is.
  */
 bool RadioScreen::checkAndUpdateMemoryStatus() {
-    DEBUG("RadioScreen::checkAndUpdateMemoryStatus() called\n");
 
     bool isInMemory = checkCurrentFrequencyInMemory();
-
-    DEBUG("Station in memory: %s\n", isInMemory ? "YES" : "NO");
 
     // StatusLine frissítése ha létezik
     if (statusLineComp) {
         statusLineComp->updateStationInMemory(isInMemory);
-        DEBUG("StatusLine updated with memory status\n");
-    } else {
-        DEBUG("No StatusLine component to update\n");
     }
 
     return isInMemory;

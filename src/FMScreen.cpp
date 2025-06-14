@@ -426,21 +426,15 @@ void FMScreen::handleMemoButton(const UIButton::ButtonEvent &event) {
     }
 
     // Ellenőrizzük, hogy az aktuális állomás már a memóriában van-e
-    bool isInMemory = checkCurrentFrequencyInMemory(); // RDS állomásnév lekérése (ha van)
-    String rdsStationName = pSi4735Manager->getCachedStationName();
-
-    // Ha új állomás és van RDS név, akkor automatikus hozzáadás
+    bool isInMemory = checkCurrentFrequencyInMemory();              // RDS állomásnév lekérése (ha van)
+    String rdsStationName = pSi4735Manager->getCachedStationName(); // Ha új állomás és van RDS név, akkor automatikus hozzáadás
     if (!isInMemory && rdsStationName.length() > 0) {
-        DEBUG("Station not in memory and has RDS name: %s\n", rdsStationName.c_str());
-
         // ScreenManager biztonságos paraméter beállítása
         screenManager->setMemoryScreenParams(true, rdsStationName.c_str());
 
         // MemoryScreen megnyitása a ScreenManager buffer-ből
         screenManager->switchToMemoryScreen();
     } else {
-        DEBUG("Station already in memory or no RDS name - opening Memory screen normally\n");
-
         // Normál MemoryScreen megnyitása paraméterek nélkül
         screenManager->switchToScreen(SCREEN_NAME_MEMORY);
     }

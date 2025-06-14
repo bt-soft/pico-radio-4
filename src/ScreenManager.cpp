@@ -33,3 +33,8 @@ void ScreenManager::registerDefaultScreenFactories() {
     registerScreenFactory(SCREEN_NAME_TEST, [](TFT_eSPI &tft_param) { return std::make_shared<TestScreen>(tft_param); });
     registerScreenFactory(SCREEN_NAME_EMPTY, [](TFT_eSPI &tft_param) { return std::make_shared<EmptyScreen>(tft_param); });
 }
+
+// MemoryScreen paraméter kezelés implementációja
+void ScreenManager::setMemoryScreenParams(bool autoAdd, const char *rdsName) { memoryScreenParamsBuffer = MemoryScreenParams(autoAdd, rdsName); }
+
+void ScreenManager::switchToMemoryScreen() { switchToScreen(SCREEN_NAME_MEMORY, &memoryScreenParamsBuffer); }

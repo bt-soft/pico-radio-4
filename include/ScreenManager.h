@@ -45,16 +45,11 @@ class ScreenManager : public IScreenManager {
 
     // Deferred action queue - biztonságos képernyőváltáshoz
     std::queue<DeferredAction> deferredActions;
-    bool processingEvents = false;
-
-    // Aktuális képernyő lekérdezése
+    bool processingEvents = false; // Aktuális képernyő lekérdezése
     std::shared_ptr<UIScreen> getCurrentScreen() const { return currentScreen; }
 
     // Előző képernyő neve
     String getPreviousScreenName() const { return previousScreenName; }
-
-    // Paraméter buffer a biztonságos paraméter átadáshoz
-    MemoryScreenParams memoryScreenParamsBuffer;
 
   public:
     ScreenManager(TFT_eSPI &tft) : tft(tft), previousScreenName(nullptr), lastActivityTime(millis()) { registerDefaultScreenFactories(); }
@@ -259,14 +254,11 @@ class ScreenManager : public IScreenManager {
     }
 
     // MemoryScreen paraméter kezelés - IScreenManager interface implementáció
-    void setMemoryScreenParams(bool autoAdd, const char *rdsName = nullptr) override {
-        memoryScreenParamsBuffer = MemoryScreenParams(autoAdd, rdsName);
-        DEBUG("ScreenManager: Set MemoryScreen params - autoAdd: %s, RDS: '%s'\n", autoAdd ? "true" : "false", rdsName ? rdsName : "");
-    }
-
-    void switchToMemoryScreen() override { switchToScreen(SCREEN_NAME_MEMORY, &memoryScreenParamsBuffer); }
+    void setMemoryScreenParams(bool autoAdd, const char *rdsName = nullptr) override;
+    void switchToMemoryScreen() override;
 
   private:
     void registerDefaultScreenFactories();
+    MemoryScreenParams memoryScreenParamsBuffer;
 };
 #endif // __SCREEN_MANAGER_H
