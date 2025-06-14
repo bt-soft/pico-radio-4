@@ -85,14 +85,24 @@ class RadioScreen : public UIScreen {
      * @details Létrehozza a közös gombokat, amiket minden RadioScreen használ
      * A leszármazott osztályok ezt kiterjeszthetik saját specifikus gombokkal
      */
-    virtual void createCommonHorizontalButtons();
+    virtual void createCommonHorizontalButtons(); /**
+                                                   * @brief Közös vízszintes gombsor állapotainak szinkronizálása
+                                                   * @details Csak aktiváláskor hívódik meg! Event-driven architektúra.
+                                                   * A leszármazott osztályok felülírhatják saját specifikus állapotokkal
+                                                   */
+    virtual void updateCommonHorizontalButtonStates();
+
+    // ===================================================================
+    // UIScreen interface override
+    // ===================================================================
 
     /**
-     * @brief Közös vízszintes gombsor állapotainak szinkronizálása
-     * @details Csak aktiváláskor hívódik meg! Event-driven architektúra.
-     * A leszármazott osztályok felülírhatják saját specifikus állapotokkal
+     * @brief RadioScreen aktiválása - Signal quality cache invalidálás
+     * @details Minden RadioScreen aktiváláskor invalidálja a signal quality cache-t,
+     * hogy az S-meter azonnal frissüljön. A leszármazott osztályok meghívhatják
+     * ezt a szülő implementációt, majd hozzáadhatják saját aktiválási logikájukat.
      */
-    virtual void updateCommonHorizontalButtonStates();
+    virtual void activate() override;
 
     /**
      * @brief Lehetőség a leszármazott osztályoknak további gombok hozzáadására

@@ -334,9 +334,6 @@ void Si4735Band::tuneMemoryStation(uint16_t frequency, int16_t bfoOffset, uint8_
     // Mentjük a frekvenciát a konfigurációba is a perzisztencia érdekében
     config.data.currentFrequency = this->currentBand->currFreq;
 
-    // Ez biztosítja, hogy az S-meter azonnal frissüljön az új frekvencián
-    invalidateSignalCache();
-
     // BFO eltolás visszaállítása SSB/CW esetén ---
     if (demodModIndex == LSB || demodModIndex == USB || demodModIndex == CW) {
         this->currentBand->lastBFO = bfoOffset; // Mentett BFO visszaállítása a sáv változóba

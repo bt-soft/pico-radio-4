@@ -156,8 +156,9 @@ void AMScreen::drawContent() {
  */
 void AMScreen::activate() {
 
-    // Alaposztály aktiválás (UI komponens hierarchia)
-    UIScreen::activate();
+    // Szülő osztály aktiválása (RadioScreen -> UIScreen)
+    // *** Ez automatikusan meghívja a signal cache invalidálást ***
+    RadioScreen::activate();
 
     // ===================================================================
     // *** EGYETLEN GOMBÁLLAPOT SZINKRONIZÁLÁSI PONT - Event-driven ***

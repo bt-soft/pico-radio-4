@@ -335,3 +335,26 @@ void RadioScreen::handleScanButton(const UIButton::ButtonEvent &event) {
         Serial.println("RadioScreen::handleScanButton - Scan funkció (TODO)");
     }
 }
+
+// ===================================================================
+// UIScreen interface override
+// ===================================================================
+
+/**
+ * @brief RadioScreen aktiválása - Signal quality cache invalidálás
+ * @details Minden RadioScreen aktiváláskor invalidálja a signal quality cache-t,
+ * hogy az S-meter azonnal frissüljön az új frekvencián.
+ */
+void RadioScreen::activate() {
+    // Szülő osztály aktiválása (UIScreen)
+    UIScreen::activate();
+
+    // Signal quality cache invalidálása képernyő aktiváláskor
+    // Ez biztosítja, hogy az S-meter azonnal frissüljön, amikor visszatérünk
+    // a memória képernyőről vagy másik képernyőről
+    if (pSi4735Manager) {
+        pSi4735Manager->invalidateSignalCache();
+    }
+}
+
+// ===================================================================

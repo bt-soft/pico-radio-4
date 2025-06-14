@@ -94,7 +94,9 @@ void FMScreen::layoutComponents() {
     uint16_t stereoY = rdsY + 40; // RDS komponens után (20px RDS magasság + 20px margin)
     Rect stereoBounds(5, stereoY, 50, 20);
     stereoIndicator = std::make_shared<StereoIndicator>(tft, stereoBounds);
-    addChild(stereoIndicator); // ===================================================================
+    addChild(stereoIndicator);
+
+    // ===================================================================
     // Gombsorok létrehozása - Event-driven architektúra
     // ===================================================================
     createCommonVerticalButtonsWithCustomMemo(); // ButtonsGroupManager alapú függőleges gombsor egyedi Memo kezelővel
@@ -237,8 +239,10 @@ void FMScreen::drawContent() {
  * - További állapotok szinkronizálása (AGC, Attenuator, stb.)
  */
 void FMScreen::activate() {
-    // Szülő osztály aktiválása
-    UIScreen::activate();
+
+    // Szülő osztály aktiválása (RadioScreen -> UIScreen)
+    // *** Ez automatikusan meghívja a signal cache invalidálást ***
+    RadioScreen::activate();
 
     // StatusLine frissítése
     checkAndUpdateMemoryStatus();
