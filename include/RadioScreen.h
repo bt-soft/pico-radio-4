@@ -17,6 +17,7 @@
 #define __RADIO_SCREEN_H
 
 #include "RDSComponent.h"
+#include "SMeter.h"
 #include "UIHorizontalButtonBar.h"
 #include "UIScreen.h"
 
@@ -143,6 +144,30 @@ class RadioScreen : public UIScreen {
      * @details Virtuális függvény - leszármazott osztályok felülírhatják
      */
     virtual void handleScanButton(const UIButton::ButtonEvent &event);
+
+    // ===================================================================
+    // S-Meter (jelerősség mérő) komponens kezelés
+    // ===================================================================
+
+    /// S-Meter komponens - jelerősség és jel minőség megjelenítése
+    std::shared_ptr<SMeter> smeterComp;
+
+    /**
+     * @brief Létrehozza az S-Meter komponenst
+     * @param smeterBounds Az S-Meter komponens határai
+     */
+    inline void createSMeterComponent(const Rect &smeterBounds) {
+        smeterComp = std::make_shared<SMeter>(tft, smeterBounds);
+        addChild(smeterComp);
+    }
+
+    /**
+     * @brief S-Meter frissítése optimalizált időzítéssel
+     * @param isFMMode true = FM mód, false = AM mód
+     * @details 250ms-es intervallummal frissíti az S-meter-t (4 Hz)
+     * Belső változás detektálással - csak szükség esetén rajzol újra
+     */
+    void updateSMeter(bool isFMMode);
 
     // ===================================================================
     // RDS komponens kezelés

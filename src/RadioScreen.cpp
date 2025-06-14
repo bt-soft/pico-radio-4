@@ -337,6 +337,32 @@ void RadioScreen::handleScanButton(const UIButton::ButtonEvent &event) {
 }
 
 // ===================================================================
+// S-Meter (jelerősség mérő) kezelés
+// ===================================================================
+
+/**
+ * @brief S-Meter frissítése optimalizált időzítéssel
+ * @param isFMMode true = FM mód, false = AM mód
+ * @details 250ms-es intervallummal frissíti az S-meter-t (4 Hz)
+ * Belső változás detektálással - csak szükség esetén rajzol újra
+ */
+void RadioScreen::updateSMeter(bool isFMMode) {
+    static uint32_t lastSmeterUpdate = 0;
+    uint32_t currentTime = millis();
+
+    // S-meter frissítés 250ms-enként (4 Hz) - elegendő a vizuális visszajelzéshez
+    if (smeterComp && (currentTime - lastSmeterUpdate >= 250)) {
+        // Cache-elt jelerősség adatok lekérése a Si4735Manager-től
+        SignalQualityData signalCache = pSi4735Manager->getSignalQuality();
+        if (signalCache.isValid) {
+            // RSSI és SNR megjelenítése a megfelelő módban
+            smeterComp->showRSSI(signalCache.rssi, signalCache.snr, isFMMode);
+        }
+        lastSmeterUpdate = currentTime;
+    }
+}
+
+// ===================================================================
 // UIScreen interface override
 // ===================================================================
 

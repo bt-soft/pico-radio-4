@@ -1,5 +1,6 @@
 #include "AMScreen.h"
 #include "CommonVerticalButtons.h"
+#include "FreqDisplay.h"
 #include "defines.h"
 #include "rtVars.h"
 #include "utils.h"
@@ -95,21 +96,9 @@ void AMScreen::handleOwnLoop() {
     // ===================================================================
 
     // ===================================================================
-    // S-Meter (jelerősség) időzített frissítése - Optimalizált
+    // S-Meter (jelerősség) időzített frissítése - Közös RadioScreen implementáció
     // ===================================================================
-    static uint32_t lastSmeterUpdate = 0;
-    uint32_t currentTime = millis();
-
-    // S-meter frissítés 250ms-enként (4 Hz) - elegendő a vizuális visszajelzéshez
-    if (smeterComp && (currentTime - lastSmeterUpdate >= 250)) {
-        // Cache-elt jelerősség adatok lekérése a Si4735Manager-től
-        SignalQualityData signalCache = pSi4735Manager->getSignalQuality();
-        if (signalCache.isValid) {
-            // RSSI és SNR megjelenítése AM módban
-            smeterComp->showRSSI(signalCache.rssi, signalCache.snr, false /* AM mód */);
-        }
-        lastSmeterUpdate = currentTime;
-    }
+    updateSMeter(false /* AM mód */);
 }
 
 /**
@@ -203,7 +192,13 @@ void AMScreen::onDialogClosed(UIDialogBase *closedDialog) {
 /**
  * @brief UI komponensek létrehozása és képernyőn való elhelyezése
  */
-void AMScreen::layoutComponents() {              // UI komponensek létrehozása
+void AMScreen::layoutComponents() { // UI komponensek létrehozása
+    // S-Meter komponens létrehozása - RadioScreen közös implementáció
+    uint16_t smeterWidth = UIComponent::SCREEN_W - 90; // 90px helyet hagyunk a jobb oldalon
+    uint16_t FreqDisplayY = 40;                        // Feltételezve hogy ugyanaz, mint az FMScreen-ben
+    Rect smeterBounds(2, FreqDisplayY + FreqDisplay::FREQDISPLAY_HEIGHT + 20, smeterWidth, 60);
+    createSMeterComponent(smeterBounds);
+
     createCommonVerticalButtons(pSi4735Manager); // ButtonsGroupManager használata
     createCommonHorizontalButtons();             // Alsó közös + AM specifikus vízszintes gombsor
 }

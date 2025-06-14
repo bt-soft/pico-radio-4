@@ -2,7 +2,6 @@
 #include "Band.h"
 #include "CommonVerticalButtons.h"
 #include "FreqDisplay.h"
-#include "SMeter.h"
 #include "StatusLine.h"
 #include "UIColorPalette.h"
 #include "UIHorizontalButtonBar.h"
@@ -61,14 +60,12 @@ void FMScreen::layoutComponents() {
     freqDisplayComp->setHideUnderline(true); // Alulvonás elrejtése a frekvencia kijelzőn
 
     // ===================================================================
-    // S-Meter (jelerősség mérő) pozicionálás
+    // S-Meter (jelerősség mérő) pozicionálás    // ===================================================================
+    // S-Meter komponens létrehozása - RadioScreen közös implementáció
     // ===================================================================
-    // S-Meter szélesség korlátozása - helyet hagyunk a függőleges gombsornak
     uint16_t smeterWidth = UIComponent::SCREEN_W - 90; // 90px helyet hagyunk a jobb oldalon
     Rect smeterBounds(2, FreqDisplayY + FreqDisplay::FREQDISPLAY_HEIGHT + 20, smeterWidth, 60);
-    ColorScheme smeterColors = ColorScheme::defaultScheme();
-    smeterColors.background = TFT_COLOR_BACKGROUND; // Fekete háttér a designhoz
-    UIScreen::createSMeter(smeterBounds, smeterColors);
+    createSMeterComponent(smeterBounds);
 
     // ===================================================================
     // RDS komponens létrehozása és pozicionálása
@@ -166,21 +163,9 @@ bool FMScreen::handleRotary(const RotaryEvent &event) {
 void FMScreen::handleOwnLoop() {
 
     // ===================================================================
-    // S-Meter (jelerősség) időzített frissítése - Optimalizált
+    // S-Meter (jelerősség) időzített frissítése - Közös RadioScreen implementáció
     // ===================================================================
-    static uint32_t lastSmeterUpdate = 0;
-    uint32_t currentTime = millis();
-
-    // S-meter frissítés 250ms-enként (4 Hz) - elegendő a vizuális visszajelzéshez
-    if (smeterComp && (currentTime - lastSmeterUpdate >= 250)) {
-        // Cache-elt jelerősség adatok lekérése a Si4735Manager-től
-        SignalQualityData signalCache = pSi4735Manager->getSignalQuality();
-        if (signalCache.isValid) {
-            // RSSI és SNR megjelenítése FM módban
-            smeterComp->showRSSI(signalCache.rssi, signalCache.snr, true /* FM mód */);
-        }
-        lastSmeterUpdate = currentTime;
-    }
+    updateSMeter(true /* FM mód */);
 
     // ===================================================================
     // RDS adatok valós idejű frissítése (optimalizált)
