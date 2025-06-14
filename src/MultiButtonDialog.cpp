@@ -128,21 +128,38 @@ void MultiButtonDialog::layoutDialogContent() {
 
     uint16_t buttonHeight = UIButton::DEFAULT_BUTTON_HEIGHT;
 
-    // Gombdefiníciók frissítése
+    // === EGYSÉGES GOMBSZÉLESSÉG SZÁMÍTÁS ===
+    // Megkeressük a leghosszabb címke szélességét
+    uint16_t maxButtonWidth = UIButton::DEFAULT_BUTTON_WIDTH; // Minimum szélesség
+
+    for (const auto &def : _buttonDefs) {
+        uint16_t calculatedWidth = UIButton::calculateWidthForText(tft, def.label, false, buttonHeight);
+        if (calculatedWidth > maxButtonWidth) {
+            maxButtonWidth = calculatedWidth;
+        }
+    }
+
+    // Biztonsági margó hozzáadása (10px)
+    maxButtonWidth += 10;
+
+    // Gombdefiníciók frissítése - minden gomb ugyanazt a szélességet kapja
     for (auto &def : _buttonDefs) {
         def.height = buttonHeight;
-    } // Margók kiszámítása (képernyő-relatív)
+        def.width = maxButtonWidth; // <<<< KULCS: Minden gomb ugyanakkora széles lesz!
+    }
+
+    // Margók kiszámítása (képernyő-relatív)
     int16_t manager_marginLeft = bounds.x + UIDialogBase::PADDING;
     int16_t manager_marginRight = tft.width() - (bounds.x + bounds.width - UIDialogBase::PADDING);
     int16_t manager_marginBottom = tft.height() - (bounds.y + bounds.height - (2 * UIDialogBase::PADDING));
 
-    // Gombok elrendezése horizontálisan
+    // Gombok elrendezése horizontálisan - most minden gomb egyforma széles
     layoutHorizontalButtonGroup(_buttonDefs, &_buttonsList, manager_marginLeft, manager_marginRight, manager_marginBottom,
-                                UIButton::DEFAULT_BUTTON_WIDTH, // defaultButtonWidthRef
-                                buttonHeight,                   // defaultButtonHeightRef
-                                UIDialogBase::PADDING,          // rowGap
-                                UIDialogBase::PADDING,          // buttonGap
-                                true                            // centerHorizontally
+                                maxButtonWidth,        // defaultButtonWidthRef - most az egységes szélességet adjuk át
+                                buttonHeight,          // defaultButtonHeightRef
+                                UIDialogBase::PADDING, // rowGap
+                                UIDialogBase::PADDING, // buttonGap
+                                true                   // centerHorizontally
     );
 
     markForRedraw();
