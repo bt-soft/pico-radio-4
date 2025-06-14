@@ -178,11 +178,7 @@ void setup() {
             ;
     } // Lépés 4: SI4735 konfigurálás
     splash.updateProgress(4, 6, "Configuring SI4735...");
-    si4735Manager->setDeviceI2CAddress(si4735Addr == 0x11 ? 0 : 1); // Sets the I2C Bus Address, erre is szükség van...
-    splash.drawSI4735Info(si4735Manager->getSi4735());
-
-    // FONTOS: Si4735Manager inicializálása itt, hogy a band-ok betöltődjenek
-    si4735Manager->init();
+    si4735Manager->setDeviceI2CAddress(si4735Addr == 0x11 ? 0 : 1); // Sets the I2C Bus Address, erre is szükség van...    splash.drawSI4735Info(si4735Manager->getSi4735());
 
     delay(300);
     //--------------------------------------------------------------------
