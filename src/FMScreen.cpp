@@ -165,14 +165,17 @@ void FMScreen::handleOwnLoop() {
             // RSSI és SNR megjelenítése FM módban
             smeterComp->showRSSI(signalCache.rssi, signalCache.snr, true /* FM mód */);
         }
-    } // ===================================================================
+    }
+    // ===================================================================
     // RDS adatok valós idejű frissítése (optimalizált)
     // ===================================================================
     if (rdsComponent) {
         // RDS frissítés gyakrabban, de az RDSComponent maga időzít (1-3s adaptívan)
         static uint32_t lastRdsCall = 0;
         uint32_t currentTime = millis();
-        if (currentTime - lastRdsCall >= 100) { // 100ms = 10 Hz (nem túl gyakori, de elég a responsiveness-hez)
+
+        // 100ms = 10 Hz (nem túl gyakori, de elég a responsiveness-hez)
+        if (currentTime - lastRdsCall >= 100) {
             rdsComponent->updateRDS();
             lastRdsCall = currentTime;
         }

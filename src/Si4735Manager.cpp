@@ -88,9 +88,16 @@ String Si4735Manager::getCurrentRdsProgramService() {
  * @return String Az RDS állomásnév, vagy üres string ha nem elérhető
  */
 String Si4735Manager::getRdsStationName() {
-    if (!isRdsAvailable()) {
+
+    // Ellenőrizzük, hogy FM módban vagyunk-e
+    BandTable &band = getCurrentBand();
+    if (band.bandType != FM_BAND_TYPE) {
         return "";
     }
+
+    // RDS státusz frissítése
+    si4735.getRdsStatus();
+
     char *rdsStationName = si4735.getRdsText0A();
     if (rdsStationName != nullptr && strlen(rdsStationName) > 0) {
         char tempName[32];
@@ -109,9 +116,14 @@ String Si4735Manager::getRdsStationName() {
  * @return uint8_t Az RDS program típus kódja (0-31), vagy 255 ha nincs RDS
  */
 uint8_t Si4735Manager::getRdsProgramTypeCode() {
-    if (!isRdsAvailable()) {
+    // Ellenőrizzük, hogy FM módban vagyunk-e
+    BandTable &band = getCurrentBand();
+    if (band.bandType != FM_BAND_TYPE) {
         return 255; // Nincs RDS
     }
+
+    // RDS státusz frissítése
+    si4735.getRdsStatus();
 
     return si4735.getRdsProgramType();
 }
@@ -121,9 +133,14 @@ uint8_t Si4735Manager::getRdsProgramTypeCode() {
  * @return String Az RDS radio text, vagy üres string ha nem elérhető
  */
 String Si4735Manager::getRdsRadioText() {
-    if (!isRdsAvailable()) {
+    // Ellenőrizzük, hogy FM módban vagyunk-e
+    BandTable &band = getCurrentBand();
+    if (band.bandType != FM_BAND_TYPE) {
         return "";
     }
+
+    // RDS státusz frissítése
+    si4735.getRdsStatus();
 
     char *rdsText = si4735.getRdsText2A();
     if (rdsText != nullptr && strlen(rdsText) > 0) {
@@ -148,9 +165,14 @@ String Si4735Manager::getRdsRadioText() {
  * @return true ha sikerült lekérdezni a dátum/idő adatokat
  */
 bool Si4735Manager::getRdsDateTime(uint16_t &year, uint16_t &month, uint16_t &day, uint16_t &hour, uint16_t &minute) {
-    if (!isRdsAvailable()) {
+    // Ellenőrizzük, hogy FM módban vagyunk-e
+    BandTable &band = getCurrentBand();
+    if (band.bandType != FM_BAND_TYPE) {
         return false;
     }
+
+    // RDS státusz frissítése
+    si4735.getRdsStatus();
 
     return si4735.getRdsDateTime(&year, &month, &day, &hour, &minute);
 }
@@ -160,20 +182,20 @@ bool Si4735Manager::getRdsDateTime(uint16_t &year, uint16_t &month, uint16_t &da
  * @return true ha van érvényes RDS vétel
  */
 bool Si4735Manager::isRdsAvailable() {
+
     // Ellenőrizzük, hogy FM módban vagyunk-e
     BandTable &band = getCurrentBand();
     if (band.bandType != FM_BAND_TYPE) {
         return false;
     }
 
-    // RDS státusz lekérdezése    si4735.getRdsStatus();
+    // RDS státusz lekérdezése
+    si4735.getRdsStatus();
 
-    // Kevésbé szigorú ellenőrzés - elég ha RDS fogadás történik
-    // Az eredeti túl szigorú volt: si4735.getRdsReceived() && si4735.getRdsSync() && si4735.getRdsSyncFound()
-    bool rdsReceived = si4735.getRdsReceived();
-
-    // Ha van RDS vétel, akkor elérhető (sync nélkül is)
-    return rdsReceived;
+    if (!si4735.getRdsReceived() or !si4735.getRdsSync() or !si4735.getRdsSyncFound()) {
+        return false;
+    }
+    return true;
 }
 
 /**
@@ -198,5 +220,6 @@ void Si4735Manager::loop() {
     // Hardver némítás kezelése
     manageHardwareAudioMute();
 
-    // Signal quality cache frissítése, ha szükséges    updateSignalCacheIfNeeded();
+    // Signal quality cache frissítése, ha szükséges
+    updateSignalCacheIfNeeded();
 }

@@ -1,4 +1,5 @@
 #include "RDSComponent.h"
+#include "defines.h"
 #include "utils.h"
 
 // ===================================================================
@@ -238,6 +239,7 @@ void RDSComponent::updateRdsData() {
     }
     lastRdsUpdate = currentTime;
 
+    // Ellenőrizzük, hogy van-e új RDS adat
     bool newRdsAvailable = si4735Manager.isRdsAvailable();
 
     // Az RDS elérhetőség csak informatív - NE töröljük a cached adatokat!
@@ -522,6 +524,8 @@ void RDSComponent::markForRedraw(bool markChildren) {
  * @brief RDS adatok frissítése (loop-ban hívandó)
  */
 void RDSComponent::updateRDS() {
+
+    // Adaptív frissítési időköz figyelembevételével frissítjük az RDS adatokat
     updateRdsData();
 
     // Ha a UIComponent szintjén újrarajzolás szükséges, akkor teljes újrarajzolás
