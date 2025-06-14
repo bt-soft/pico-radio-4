@@ -313,12 +313,28 @@ class Band {
 
     inline uint8_t getCurrentBandDefaultStep() { return getCurrentBand().defStep; }
 
-    inline bool getCurrentBandIsHam() { return getCurrentBand().isHam; }
+    inline bool getCurrentBandIsHam() {
+        return getCurrentBand().isHam;
+    } /**
+       * @brief Band nevek lekérdezése - a hívó fél adja meg a tömböt
+       * @param names A hívó által allokált tömb, amelybe a neveket betöltjük (legalább getFilteredBandCount() méretű kell legyen)
+       * @param count A talált elemek száma (kimeneti paraméter)
+       * @param isHamFilter HAM szűrő
+       */
+    void getBandNames(const char **names, uint8_t &count, bool isHamFilter);
 
     /**
-     * @brief Band nevek lekérdezése
+     * @brief Band tábla méretének lekérdezése
+     * @return A teljes band tábla mérete
      */
-    const char **getBandNames(uint8_t &count, bool isHamFilter);
+    static uint8_t getBandTableSize();
+
+    /**
+     * @brief Szűrt band nevek számának lekérdezése
+     * @param isHamFilter HAM szűrő
+     * @return A szűrt band nevek száma
+     */
+    static uint8_t getFilteredBandCount(bool isHamFilter);
 };
 
 #endif // __BAND_H

@@ -128,22 +128,39 @@ int8_t Band::getBandIdxByBandName(const char *bandName) {
 }
 
 /**
- * Sávok neveinek visszaadása tömbként
+ * Band tábla méretének lekérdezése
+ */
+uint8_t Band::getBandTableSize() { return BANDTABLE_COUNT; }
+
+/**
+ * Szűrt band nevek számának lekérdezése
  *
- * @param count talált elemek száma
  * @param isHamFilter HAM szűrő
  */
-const char **Band::getBandNames(uint8_t &count, bool isHamFilter) {
-
-    static const char *filteredNames[BANDTABLE_COUNT]; // Tároló a kiválasztott nevekre
-    memset(filteredNames, 0, sizeof(filteredNames));   // Inicializáljuk a tárolót nullával
-
-    count = 0; // Kezdőérték
+uint8_t Band::getFilteredBandCount(bool isHamFilter) {
+    uint8_t count = 0;
     for (size_t i = 0; i < BANDTABLE_COUNT; i++) {
-        if (bandTable[i].isHam == isHamFilter) {            // HAM sáv szűrés
-            filteredNames[count++] = bandTable[i].bandName; // Közvetlen pointer hozzáadás
+        if (bandTable[i].isHam == isHamFilter) {
+            count++;
         }
     }
+    return count;
+}
 
-    return filteredNames; // A pointert visszaadjuk
+/**
+ * Sávok neveinek betöltése a hívó által megadott tömbbe
+ *
+ * @param names A hívó által allokált tömb, amelybe a neveket betöltjük (legalább getFilteredBandCount() méretű kell legyen)
+ * @param count Talált elemek száma (kimeneti paraméter)
+ * @param isHamFilter HAM szűrő
+ */
+void Band::getBandNames(const char **names, uint8_t &count, bool isHamFilter) {
+    count = 0;                                           // Kezdőérték
+    uint8_t maxSize = getFilteredBandCount(isHamFilter); // Maximális méret kiszámítása
+
+    for (size_t i = 0; i < BANDTABLE_COUNT && count < maxSize; i++) {
+        if (bandTable[i].isHam == isHamFilter) {    // HAM sáv szűrés
+            names[count++] = bandTable[i].bandName; // Közvetlen pointer hozzáadás
+        }
+    }
 }
