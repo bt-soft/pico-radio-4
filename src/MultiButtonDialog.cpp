@@ -80,7 +80,12 @@ void MultiButtonDialog::createDialogContent() {
             UIButton::ButtonState buttonState = UIButton::ButtonState::Off;
             bool isDefaultButton = (_defaultButtonIndex >= 0 && _defaultButtonIndex == static_cast<int>(i));
             if (isDefaultButton) {
-                buttonState = UIButton::ButtonState::CurrentActive;
+                // Ha ez az alapértelmezett gomb és le van tiltva, akkor Disabled állapotot állítunk be
+                if (_disableDefaultButton) {
+                    buttonState = UIButton::ButtonState::Disabled;
+                } else {
+                    buttonState = UIButton::ButtonState::CurrentActive;
+                }
             }
             _buttonDefs.push_back({static_cast<uint8_t>(buttonIdCounter + i), _userOptions[i], UIButton::ButtonType::Pushable,
                                    [this, index = i, label = _userOptions[i], isDefaultButton](const UIButton::ButtonEvent &event) {
