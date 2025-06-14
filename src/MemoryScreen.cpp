@@ -436,6 +436,9 @@ void MemoryScreen::tuneToStation(int index) {
 
     // Si4735Manager::tuneMemoryStation használata (öröklés Si4735Band-ből)
     if (pSi4735Manager) {
+        if (pSi4735Manager->isCurrentBandFM()) {
+            pSi4735Manager->clearRdsCache(); // RDS törlése FM módban
+        }
         pSi4735Manager->tuneMemoryStation(station.frequency, station.bfoOffset, station.bandIndex, station.modulation, station.bandwidthIndex);
     }
 }
