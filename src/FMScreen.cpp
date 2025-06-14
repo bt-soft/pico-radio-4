@@ -212,7 +212,6 @@ void FMScreen::drawContent() {
  * - További állapotok szinkronizálása (AGC, Attenuator, stb.)
  */
 void FMScreen::activate() {
-    DEBUG("FMScreen::activate() called\n");
     // Szülő osztály aktiválása
     UIScreen::activate();
 
