@@ -167,11 +167,16 @@ bool RadioScreen::checkAndUpdateMemoryStatus() {
  * @details Létrehozza a közös gombokat, amiket minden RadioScreen használ
  */
 void RadioScreen::createCommonHorizontalButtons() {
+
+    constexpr uint16_t H_BUTTON_DEFAULT_HEIGHT = 40; // Alapértelmezett gomb magassága a vízszintes gombsorhoz
+    constexpr uint16_t H_BUTTON_DEFAULT_WIDTH = 70;  // Egyedi gomb szélessége
+    constexpr uint16_t H_BUTTON_DEFAULT_GAP = 3;     // Gombok közötti távolság
+
     // ===================================================================
     // Gombsor pozicionálás - Bal alsó sarok
     // ===================================================================
-    const uint16_t buttonBarHeight = 35;                                 // Optimális gombmagasság
-    const uint16_t buttonBarX = 0;                                       // Bal szélhez igazítva
+    constexpr uint16_t buttonBarHeight = H_BUTTON_DEFAULT_HEIGHT + 10;   // Vízszintes gombsor konténer magassága (alapértelmezett + padding)
+    constexpr uint16_t buttonBarX = 0;                                   // Bal szélhez igazítva
     const uint16_t buttonBarY = UIComponent::SCREEN_H - buttonBarHeight; // Alsó szélhez igazítva
 
     // ===================================================================
@@ -200,9 +205,7 @@ void RadioScreen::createCommonHorizontalButtons() {
     // ===================================================================
     // Gombsor szélessége dinamikus számítás
     // ===================================================================
-    const uint16_t buttonWidth = 70;                                                                                 // Egyedi gomb szélessége
-    const uint16_t buttonSpacing = 3;                                                                                // Gombok közötti távolság
-    const uint16_t buttonBarWidth = buttonConfigs.size() * buttonWidth + (buttonConfigs.size() - 1) * buttonSpacing; // Dinamikus szélesség
+    const uint16_t buttonBarWidth = buttonConfigs.size() * H_BUTTON_DEFAULT_WIDTH + (buttonConfigs.size() - 1) * H_BUTTON_DEFAULT_GAP; // Dinamikus szélesség
 
     // ===================================================================
     // UIHorizontalButtonBar objektum létrehozása
@@ -211,9 +214,9 @@ void RadioScreen::createCommonHorizontalButtons() {
         tft,                                                           // TFT display referencia
         Rect(buttonBarX, buttonBarY, buttonBarWidth, buttonBarHeight), // Gombsor pozíció és méret
         buttonConfigs,                                                 // Gomb konfigurációk
-        buttonWidth,                                                   // Egyedi gomb szélessége
-        30,                                                            // Egyedi gomb magassága
-        buttonSpacing                                                  // Gombok közötti távolság
+        H_BUTTON_DEFAULT_WIDTH,                                        // Egyedi gomb szélessége
+        H_BUTTON_DEFAULT_HEIGHT,                                       // Egyedi gomb magassága
+        H_BUTTON_DEFAULT_GAP                                           // Gombok közötti távolság
     );
 
     // Komponens hozzáadása a képernyőhöz

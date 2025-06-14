@@ -283,8 +283,7 @@ void FMScreen::addSpecificHorizontalButtons(std::vector<UIHorizontalButtonBar::B
     // FM specifikus gombok hozzáadása a közös gombok után
 
     // 1. SEEK DOWN - Automatikus hangolás lefelé
-    buttonConfigs.push_back({                                               //
-                             FMScreenHorizontalButtonIDs::SEEK_DOWN_BUTTON, //
+    buttonConfigs.push_back({FMScreenHorizontalButtonIDs::SEEK_DOWN_BUTTON, //
                              "Seek-",                                       //
                              UIButton::ButtonType::Pushable,                //
                              UIButton::ButtonState::Off,                    //
