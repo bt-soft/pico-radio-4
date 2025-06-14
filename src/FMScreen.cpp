@@ -78,7 +78,9 @@ void FMScreen::layoutComponents() {
     uint16_t rdsY = smeterBounds.y + smeterBounds.height + 10;
 
     // RDS komponens létrehozása (már nem kell rdsBounds)
-    createRDSComponent(); // RDS részkomponensek egyedi pozícionálása
+    createRDSComponent();
+
+    // RDS részkomponensek egyedi pozícionálása
     // Állomásnév - bal oldal
     rdsComponent->setStationNameArea(Rect(10, rdsY, 180, 18)); // 180px szélesség
     // Program típus - középen
@@ -173,7 +175,9 @@ void FMScreen::handleOwnLoop() {
             // RSSI és SNR megjelenítése FM módban
             smeterComp->showRSSI(signalCache.rssi, signalCache.snr, true /* FM mód */);
         }
-    } // ===================================================================
+    }
+
+    // ===================================================================
     // RDS adatok valós idejű frissítése (optimalizált)
     // ===================================================================
     if (rdsComponent) {
@@ -188,13 +192,22 @@ void FMScreen::handleOwnLoop() {
         }
     }
 
-    // ===================================================================
-    // STEREO/MONO jelző frissítése
-    // ===================================================================
-    if (stereoIndicator && pSi4735Manager) {
-        // Si4735 stereo állapot lekérdezése
-        bool isStereo = pSi4735Manager->getSi4735().getCurrentPilot();
-        stereoIndicator->setStereo(isStereo);
+    // Néhány adatot csak ritkábban frissítünk
+#define SCREEN_COMPS_REFRESH_TIME_MSEC 1000 // Frissítési időköz
+    static uint32_t elapsedTimedValues = 0; // Kezdőérték nulla
+    if ((millis() - elapsedTimedValues) >= SCREEN_COMPS_REFRESH_TIME_MSEC) {
+
+        // ===================================================================
+        // STEREO/MONO jelző frissítése
+        // ===================================================================
+        if (stereoIndicator && pSi4735Manager) {
+            // Si4735 stereo állapot lekérdezése
+            bool isStereo = pSi4735Manager->getSi4735().getCurrentPilot();
+            stereoIndicator->setStereo(isStereo);
+        }
+
+        // Frissítjük az időbélyeget
+        elapsedTimedValues = millis();
     }
 }
 
