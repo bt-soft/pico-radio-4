@@ -35,6 +35,7 @@ static FMScreen *g_currentSeekingFMScreen = nullptr;
 void seekProgressCallback(uint16_t frequency) {
     if (g_currentSeekingFMScreen && g_currentSeekingFMScreen->freqDisplayComp) {
         g_currentSeekingFMScreen->freqDisplayComp->setFrequency(frequency);
+        g_currentSeekingFMScreen->freqDisplayComp->draw(); // Azonnali frissítés a kijelzőn
     }
 }
 

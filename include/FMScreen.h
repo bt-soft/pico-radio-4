@@ -67,13 +67,15 @@ class FMScreen : public UIScreen, public CommonVerticalButtons::Mixin<FMScreen> 
      * - Képernyő aktiválásakor (activate())
      * - Specifikus eseményekkor (eseménykezelőkben)
      */
-    virtual void handleOwnLoop() override; /**
-                                            * @brief Statikus képernyő tartalom kirajzolása
-                                            * @details Csak a statikus UI elemeket rajzolja:
-                                            * - S-Meter skála (vonalak, számok)
-                                            *
-                                            * A dinamikus tartalom (pl. S-Meter érték) a loop()-ban frissül.
-                                            */
+    virtual void handleOwnLoop() override;
+    //
+    /**
+     * @brief Statikus képernyő tartalom kirajzolása
+     * @details Csak a statikus UI elemeket rajzolja:
+     * - S-Meter skála (vonalak, számok)
+     *
+     * A dinamikus tartalom (pl. S-Meter érték) a loop()-ban frissül.
+     */
     virtual void drawContent() override;
 
     /**
@@ -113,11 +115,13 @@ class FMScreen : public UIScreen, public CommonVerticalButtons::Mixin<FMScreen> 
      * - Függőleges gombsor (jobb oldal)
      * - Vízszintes gombsor (alul)
      */
-    void layoutComponents(); /**
-                              * @brief Vízszintes gombsor létrehozása - Alsó navigációs gombok
-                              * @details 4 gomb elhelyezése vízszintes elrendezésben:
-                              * Seek Down, Seek Up, AM, Test
-                              */
+    void layoutComponents();
+    //
+    /**
+     * @brief Vízszintes gombsor létrehozása - Alsó navigációs gombok
+     * @details 4 gomb elhelyezése vízszintes elrendezésben:
+     * Seek Down, Seek Up, AM, Test
+     */
     void createHorizontalButtonBar();
 
     // ===================================================================
@@ -131,7 +135,9 @@ class FMScreen : public UIScreen, public CommonVerticalButtons::Mixin<FMScreen> 
      * Szinkronizált állapotok:
      * - AM gomb ↔ aktuális band típus (FM vs AM/MW/LW/SW)
      */
-    void updateHorizontalButtonStates(); // ===================================================================
+    void updateHorizontalButtonStates();
+    //
+    // ===================================================================
     // Vízszintes gomb eseménykezelők
     // ===================================================================
 
@@ -159,7 +165,8 @@ class FMScreen : public UIScreen, public CommonVerticalButtons::Mixin<FMScreen> 
     /**
      * @brief TEST gomb eseménykezelő - Teszt képernyőre váltás
      * @param event Gomb esemény (Clicked)
-     * @details Pushable gomb: Test és diagnosztikai képernyőre navigálás     */
+     * @details Pushable gomb: Test és diagnosztikai képernyőre navigálás
+     */
     void handleTestButton(const UIButton::ButtonEvent &event);
 
     // ===================================================================
