@@ -47,10 +47,8 @@ class VirtualKeyboardDialog : public UIDialogBase {
     static constexpr uint16_t KEY_SPACING = 2;
     static constexpr uint16_t INPUT_HEIGHT = 30;
     static constexpr uint16_t INPUT_MARGIN = 5;
-    static constexpr unsigned long CURSOR_BLINK_INTERVAL = 500;
-
-    // Billentyűzet layout
-    const char *keyboardLayout[KEYBOARD_ROWS] = {"1234567890", "qwertzuiop", "asdfghjkl", "yxcvbnm.-"}; // UI elemek
+    static constexpr unsigned long CURSOR_BLINK_INTERVAL = 500;                                         // Billentyűzet layout
+    const char *keyboardLayout[KEYBOARD_ROWS] = {"1234567890", "qwertzuiop", "asdfghjkl", "yxcvbnm-."}; // UI elemek
     std::vector<std::shared_ptr<UIButton>> keyButtons;
     char keyLabelStorage[50][2]; // Max 50 gomb, 1 karakter + null terminator
     uint8_t keyLabelCount = 0;
@@ -58,7 +56,8 @@ class VirtualKeyboardDialog : public UIDialogBase {
     std::shared_ptr<UIButton> spaceButton;
     std::shared_ptr<UIButton> backspaceButton;
     std::shared_ptr<UIButton> clearButton;
-    std::shared_ptr<UIButton> okButton; // Szöveg kezelés
+    std::shared_ptr<UIButton> okButton;
+    std::shared_ptr<UIButton> cancelButton; // Szöveg kezelés
     String currentText;
     uint8_t maxTextLength;
     OnTextChangedCallback textChangedCallback;

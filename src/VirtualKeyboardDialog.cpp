@@ -136,37 +136,40 @@ void VirtualKeyboardDialog::createKeyboard() {
                 handleSpecialKey("clear");
             }
         });
-    addChild(clearButton);
-
-    // OK és Cancel gombok a speciális sor alatt
+    addChild(clearButton); // OK és Cancel gombok a speciális sor alatt
     uint16_t okCancelY = specialY + KEY_HEIGHT + 8;
-    uint16_t okCancelWidth = 60;
-    uint16_t okCancelStartX = keyboardRect.x + (keyboardRect.width - 2 * okCancelWidth - 10) / 2; // OK gomb
-    okButton = std::make_shared<UIButton>(                                                        //
-        tft,                                                                                      //
-        buttonId++,                                                                               //
-        Rect(okCancelStartX, okCancelY, okCancelWidth, KEY_HEIGHT),                               //
-        "OK",                                                                                     //
-        UIButton::ButtonType::Pushable,                                                           //
-        [this](const UIButton::ButtonEvent &event) {
-            if (event.state == UIButton::EventButtonState::Clicked) {
-                close(UIDialogBase::DialogResult::Accepted);
-            }
-        });
-    addChild(okButton);
+    uint16_t cancelWidth = 75; // Cancel gomb szélesebb
+    uint16_t okWidth = 60;     // OK gomb normál szélesség
+    uint16_t buttonSpacing = 10;
+    uint16_t totalButtonsWidth = cancelWidth + okWidth + buttonSpacing;
+    uint16_t buttonsStartX = keyboardRect.x + (keyboardRect.width - totalButtonsWidth) / 2;
 
-    // Cancel gomb
-    auto cancelButton = std::make_shared<UIButton>(                                      //
-        tft,                                                                             //
-        buttonId++,                                                                      //
-        Rect(okCancelStartX + okCancelWidth + 10, okCancelY, okCancelWidth, KEY_HEIGHT), //
-        "Cancel",                                                                        //
+    // Cancel gomb (bal oldalon, szélesebb)
+    cancelButton = std::make_shared<UIButton>(                   //
+        tft,                                                     //
+        buttonId++,                                              //
+        Rect(buttonsStartX, okCancelY, cancelWidth, KEY_HEIGHT), //
+        "Cancel",                                                //
         UIButton::ButtonType::Pushable, [this](const UIButton::ButtonEvent &event) {
             if (event.state == UIButton::EventButtonState::Clicked) {
                 close(UIDialogBase::DialogResult::Rejected);
             }
         });
     addChild(cancelButton);
+
+    // OK gomb (jobb oldalon)
+    okButton = std::make_shared<UIButton>(                                                 //
+        tft,                                                                               //
+        buttonId++,                                                                        //
+        Rect(buttonsStartX + cancelWidth + buttonSpacing, okCancelY, okWidth, KEY_HEIGHT), //
+        "OK",                                                                              //
+        UIButton::ButtonType::Pushable,                                                    //
+        [this](const UIButton::ButtonEvent &event) {
+            if (event.state == UIButton::EventButtonState::Clicked) {
+                close(UIDialogBase::DialogResult::Accepted);
+            }
+        });
+    addChild(okButton);
 
     // OK gomb állapot beállítása a kezdeti szöveg alapján
     if (okButton) {
@@ -273,18 +276,21 @@ void VirtualKeyboardDialog::handleSpecialKey(const String &keyType) {
 }
 
 void VirtualKeyboardDialog::updateButtonLabels() {
+    // Az eredeti billentyűzet layout alapján frissítjük a gombokat
+    size_t buttonIndex = 0;
 
-    for (size_t i = 0; i < keyButtons.size() && i < keyLabelCount; i++) {
-        const char *currentLabel = keyButtons[i]->getLabel();
+    for (uint8_t row = 0; row < KEYBOARD_ROWS && buttonIndex < keyButtons.size(); ++row) {
+        const char *rowKeys = keyboardLayout[row];
+        uint8_t keysInRow = strlen(rowKeys);
 
-        if (strlen(currentLabel) == 1) {
-            char baseChar = currentLabel[0];
+        for (uint8_t col = 0; col < keysInRow && buttonIndex < keyButtons.size(); ++col) {
+            char baseChar = rowKeys[col];
             char newChar = getKeyChar(baseChar, shiftActive);
-            keyLabelStorage[i][0] = newChar;
-            keyLabelStorage[i][1] = '\0';
-            keyButtons[i]->setLabel(keyLabelStorage[i]);
-            keyButtons[i]->markForRedraw();
-            // Az automatikus frissítés most már működni fog
+            keyLabelStorage[buttonIndex][0] = newChar;
+            keyLabelStorage[buttonIndex][1] = '\0';
+            keyButtons[buttonIndex]->setLabel(keyLabelStorage[buttonIndex]);
+            keyButtons[buttonIndex]->markForRedraw();
+            buttonIndex++;
         }
     }
 }

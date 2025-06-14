@@ -11,14 +11,6 @@
 // ===================================================================
 // Vízszintes gombsor azonosítók - Képernyő-specifikus navigáció
 // ===================================================================
-/**
- * @brief Vízszintes gombsor gomb azonosítók (FM képernyő specifikus)
- * @details Alsó navigációs gombsor - képernyőváltáshoz használt gombok
- *
- * **ID tartomány**: 20-22 (nem ütközik a univerzális 10-17 tartománnyal)
- * **Funkció**: Képernyők közötti navigáció (AM, Test, Setup)
- * **Gomb típus**: Pushable (egyszeri nyomás → képernyőváltás)
- */
 namespace FMScreenHorizontalButtonIDs {
 static constexpr uint8_t AM_BUTTON = 20;    ///< AM képernyőre váltás (pushable)
 static constexpr uint8_t TEST_BUTTON = 21;  ///< Test képernyőre váltás (pushable)
@@ -40,7 +32,6 @@ static constexpr uint8_t SETUP_BUTTON = 22; ///< Setup képernyőre váltás (pu
  * - Event-driven gombkezelés beállítása
  */
 FMScreen::FMScreen(TFT_eSPI &tft, Si4735Manager &si4735Manager) : UIScreen(tft, SCREEN_NAME_FM, &si4735Manager) {
-    // Si4735 chip már inicializálva a main.cpp-ben
     layoutComponents(); // UI komponensek elhelyezése
 }
 
@@ -68,7 +59,9 @@ void FMScreen::layoutComponents() {
     uint16_t FreqDisplayY = 20;
     Rect freqBounds(30, FreqDisplayY, 200, FreqDisplay::FREQDISPLAY_HEIGHT);
     UIScreen::createFreqDisplay(freqBounds);
-    freqDisplayComp->setHideUnderline(true); // Alulvonás elrejtése a frekvencia kijelzőn    // ===================================================================
+    freqDisplayComp->setHideUnderline(true); // Alulvonás elrejtése a frekvencia kijelzőn
+
+    // ===================================================================
     // S-Meter (jelerősség mérő) pozicionálás
     // ===================================================================
     // S-Meter szélesség korlátozása - helyet hagyunk a függőleges gombsornak
@@ -76,22 +69,19 @@ void FMScreen::layoutComponents() {
     Rect smeterBounds(2, FreqDisplayY + FreqDisplay::FREQDISPLAY_HEIGHT + 20, smeterWidth, 60);
     ColorScheme smeterColors = ColorScheme::defaultScheme();
     smeterColors.background = TFT_COLOR_BACKGROUND; // Fekete háttér a designhoz
-    UIScreen::createSMeter(
-        smeterBounds,
-        smeterColors); // ===================================================================    // ===================================================================
+    UIScreen::createSMeter(smeterBounds, smeterColors);
+
+    // ===================================================================
     // RDS komponens létrehozása és pozicionálása
     // ===================================================================
     uint16_t rdsY = smeterBounds.y + smeterBounds.height + 10;
+
     // RDS szélesség korlátozása - helyet hagyunk a függőleges gombsornak (72px + 10px margin)
     uint16_t rdsWidth = UIComponent::SCREEN_W - 90; // 90px helyet hagyunk a jobb oldalon
     Rect rdsBounds(5, rdsY, rdsWidth, RDSComponent::DEFAULT_HEIGHT);
 
-    DEBUG("FMScreen: RDS komponens létrehozása - bounds: x=%d, y=%d, w=%d, h=%d\n", rdsBounds.x, rdsBounds.y, rdsBounds.width, rdsBounds.height);
-
     rdsComponent = std::make_shared<RDSComponent>(tft, rdsBounds, *pSi4735Manager);
     addChild(rdsComponent);
-
-    DEBUG("FMScreen: RDS komponens hozzáadva a gyerekekhez\n");
 
     // RDS területek finomhangolása (opcionális - alapértelmezett layout elfogadható)
     // rdsComponent->setStationNameArea(Rect(10, rdsY, 200, 18));
@@ -99,7 +89,8 @@ void FMScreen::layoutComponents() {
     // rdsComponent->setDateTimeArea(Rect(380, rdsY, 85, 18));
     // rdsComponent->setRadioTextArea(Rect(10, rdsY + 20, 460, 18));
 
-    // ===================================================================    // Gombsorok létrehozása - Event-driven architektúra
+    // ===================================================================
+    // Gombsorok létrehozása - Event-driven architektúra
     // ===================================================================
     createCommonVerticalButtons(pSi4735Manager); // ButtonsGroupManager alapú függőleges gombsor
     createHorizontalButtonBar();                 // Alsó vízszintes gombsor
@@ -123,8 +114,11 @@ void FMScreen::layoutComponents() {
 bool FMScreen::handleRotary(const RotaryEvent &event) {
 
     // Biztonsági ellenőrzés: csak aktív dialógus nélkül és nem klikk eseménykor
-    if (!isDialogActive() && event.buttonState != RotaryEvent::ButtonState::Clicked) { // Frekvencia léptetés és automatikus mentés a band táblába
-        pSi4735Manager->stepFrequency(event.value);
+    if (!isDialogActive() && event.buttonState != RotaryEvent::ButtonState::Clicked) {
+
+        // Frekvencia léptetés és automatikus mentés a band táblába
+        // Beállítjuk a chip-en és le is mentjük a konfigba a frekvenciát
+        config.data.currentFrequency = pSi4735Manager->stepFrequency(event.value);
 
         // RDS cache törlése frekvencia változás miatt
         if (rdsComponent) {
@@ -321,14 +315,8 @@ void FMScreen::updateHorizontalButtonStates() {
     // AM gomb állapot szinkronizálása - Band típus alapján
     // ===================================================================
     uint8_t currentBandType = pSi4735Manager->getCurrentBand().bandType;
-
-    // AM gomb világít, ha NEM FM módban vagyunk (tehát AM, MW, LW, SW módban)
-    // Ez vizuális visszajelzést ad, hogy melyik band családban vagyunk
     bool isAMMode = (currentBandType != FM_BAND_TYPE);
     horizontalButtonBar->setButtonState(FMScreenHorizontalButtonIDs::AM_BUTTON, isAMMode ? UIButton::ButtonState::On : UIButton::ButtonState::Off);
-
-    // Test és Setup gombok pushable típusúak - állapotuk mindig Off marad
-    // (Pushable gombok nem tartanak állapotot, csak eseményeket generálnak)
 }
 
 // ===================================================================
@@ -344,8 +332,6 @@ void FMScreen::updateHorizontalButtonStates() {
  */
 void FMScreen::handleAMButton(const UIButton::ButtonEvent &event) {
     if (event.state == UIButton::EventButtonState::Clicked) {
-        DEBUG("FMScreen: Switching to AM band family screen\n");
-        // ScreenManager-en keresztül AM képernyőre váltás
         UIScreen::getScreenManager()->switchToScreen(SCREEN_NAME_AM);
     }
 }
@@ -359,8 +345,6 @@ void FMScreen::handleAMButton(const UIButton::ButtonEvent &event) {
  */
 void FMScreen::handleTestButton(const UIButton::ButtonEvent &event) {
     if (event.state == UIButton::EventButtonState::Clicked) {
-        DEBUG("FMScreen: Switching to Test screen\n");
-        // ScreenManager-en keresztül Test képernyőre váltás
         UIScreen::getScreenManager()->switchToScreen(SCREEN_NAME_TEST);
     }
 }

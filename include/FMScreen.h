@@ -148,7 +148,8 @@ class FMScreen : public UIScreen, public CommonVerticalButtons::Mixin<FMScreen> 
      * @param event Gomb esemény (Clicked)
      * @details Pushable gomb: Test és diagnosztikai képernyőre navigálás
      */
-    void handleTestButton(const UIButton::ButtonEvent &event); // ===================================================================
+    void handleTestButton(const UIButton::ButtonEvent &event);
+    // ===================================================================
     // UI komponens objektumok - Smart pointer kezelés
     // ===================================================================
 
