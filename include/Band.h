@@ -69,9 +69,15 @@ class Band {
     static const FrequencyStep stepSizeFM[3];
 
     static const FrequencyStep stepSizeBFO[4];
-
     Band();
     virtual ~Band() = default;
+
+    /**
+     * @brief Band tábla dinamikus adatainak egyszeri inicializálása
+     * @details Ezt a metódust csak egyszer kell meghívni az alkalmazás indításakor!
+     * @param forceReinit Ha true, akkor újrainicializálja a dinamikus adatokat, függetlenül a jelenlegi állapotuktól
+     */
+    void initializeBandTableData(bool forceReinit = false);
 
     /**
      * @brief A Default Antenna Tuning Capacitor értékének lekérdezése
@@ -142,7 +148,6 @@ class Band {
      * A lehetséges AM demodulációs módok kigyűjtése
      */
     inline const char **getAmDemodulationModes(uint8_t &count) {
-        // count = sizeof(bandModeDesc) / sizeof(bandModeDesc[0]) - 1;
         count = ARRAY_ITEM_COUNT(bandModeDesc) - 1;
         return &bandModeDesc[1];
     }
@@ -313,14 +318,14 @@ class Band {
 
     inline uint8_t getCurrentBandDefaultStep() { return getCurrentBand().defStep; }
 
-    inline bool getCurrentBandIsHam() {
-        return getCurrentBand().isHam;
-    } /**
-       * @brief Band nevek lekérdezése - a hívó fél adja meg a tömböt
-       * @param names A hívó által allokált tömb, amelybe a neveket betöltjük (legalább getFilteredBandCount() méretű kell legyen)
-       * @param count A talált elemek száma (kimeneti paraméter)
-       * @param isHamFilter HAM szűrő
-       */
+    inline bool getCurrentBandIsHam() { return getCurrentBand().isHam; }
+
+    /**
+     * @brief Band nevek lekérdezése - a hívó fél adja meg a tömböt
+     * @param names A hívó által allokált tömb, amelybe a neveket betöltjük (legalább getFilteredBandCount() méretű kell legyen)
+     * @param count A talált elemek száma (kimeneti paraméter)
+     * @param isHamFilter HAM szűrő
+     */
     void getBandNames(const char **names, uint8_t &count, bool isHamFilter);
 
     /**

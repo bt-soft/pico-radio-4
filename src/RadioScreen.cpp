@@ -277,10 +277,11 @@ void RadioScreen::handleBandButton(const UIButton::ButtonEvent &event) {
  * @param isHamBand Igaz, ha a Ham sávot kell kezelni, hamis, ha más sáv
  */
 void RadioScreen::processBandButton(bool isHamBand) {
+
     uint16_t dialogHeight = isHamBand ? 180 : 250; // Alapértelmezett dialógus magasság
     uint8_t _bandCount;
 
-    // Először lekérdezzük, maximum hány elemet kell tudnunk tárolni
+    // Először lekérdezzük, hogy max hány elemet kell tudnunk tárolni
     uint8_t maxBandCount = pSi4735Manager->getFilteredBandCount(isHamBand);
 
     // Allokáljuk a megfelelő méretű tömböt okos pointerrel
@@ -306,6 +307,7 @@ void RadioScreen::processBandButton(bool isHamBand) {
             // Átállítjuk a használni kívánt BAND indexét
             config.data.currentBandIdx = pSi4735Manager->getBandIdxByBandName(buttonLabel);
 
+            // Átállítjuk a rádiót a kiválasztott sávra
             pSi4735Manager->init();
 
             // Átkapcsolunk a megfelelő screenre (Itt lehet FM is a kiválasztott sáv)

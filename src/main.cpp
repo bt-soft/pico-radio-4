@@ -154,13 +154,14 @@ void setup() {
     Wire.setSDA(PIN_SI4735_I2C_SDA); // I2C for SI4735 SDA
     Wire.setSCL(PIN_SI4735_I2C_SCL); // I2C for SI4735 SCL
     Wire.begin();
-    delay(300);
-
-    // Si4735Manager inicializálása itt
+    delay(300); // Si4735Manager inicializálása itt
     splash.updateProgress(2, 6, "Initializing SI4735 Manager...");
     if (si4735Manager == nullptr) {
         si4735Manager = new Si4735Manager();
     }
+
+    // KRITIKUS: Band tábla dinamikus adatainak EGYSZERI inicializálása RÖGTÖN a Si4735Manager létrehozása után!
+    si4735Manager->initializeBandTableData(true); // forceReinit = true az első inicializálásnál
 
     // Si4735 inicializálása
     splash.updateProgress(3, 6, "Detecting SI4735...");

@@ -72,13 +72,20 @@ const FrequencyStep Band::stepSizeBFO[] = {
 /**
  * Konstruktor
  */
-Band::Band() {
+Band::Band() {}
 
-    // A BandTable inicializálása - változó adatok beállítása, ha még nincsenek inicializálva
+/**
+ * @brief Band tábla dinamikus adatainak egyszeri inicializálása
+ * @details Ezt a metódust csak egyszer kell meghívni az alkalmazás indításakor!
+ * @param forceReinit Ha true, akkor újrainicializálja a dinamikus adatokat, függetlenül a jelenlegi állapotuktól
+ */
+void Band::initializeBandTableData(bool forceReinit) {
+
+    // A BandTable dinamikus adatainak inicializálása - változó adatok beállítása, ha még nincsenek inicializálva
     for (uint8_t i = 0; i < BANDTABLE_COUNT; i++) {
 
         // Ha még nem volt az EEPROM mentésből visszaállítás, akkor most bemásoljuk a default értékeket a változó értékekbe
-        if (bandTable[i].currFreq == 0) {
+        if (bandTable[i].currFreq == 0 || forceReinit) {
             bandTable[i].currFreq = bandTable[i].defFreq; // Frekvencia
             bandTable[i].currStep = bandTable[i].defStep; // Lépés
             bandTable[i].currMod = bandTable[i].prefMod;  // Moduláció
@@ -155,6 +162,7 @@ uint8_t Band::getFilteredBandCount(bool isHamFilter) {
  * @param isHamFilter HAM szűrő
  */
 void Band::getBandNames(const char **names, uint8_t &count, bool isHamFilter) {
+
     count = 0;                                           // Kezdőérték
     uint8_t maxSize = getFilteredBandCount(isHamFilter); // Maximális méret kiszámítása
 
