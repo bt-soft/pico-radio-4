@@ -14,9 +14,6 @@
 
 class FMScreen : public UIScreen, public CommonVerticalButtons::Mixin<FMScreen> {
 
-    // Friend deklaráció a static seek callback számára
-    friend void seekProgressCallback(uint16_t frequency);
-
   public:
     // ===================================================================
     // Konstruktor és destruktor

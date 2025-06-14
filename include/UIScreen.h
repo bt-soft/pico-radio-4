@@ -9,7 +9,13 @@
 #include "UIContainerComponent.h"
 #include "UIDialogBase.h"
 
+// Forward deklaráció a seek callback függvényhez
+void seekProgressCallback(uint16_t frequency);
+
 class UIScreen : public UIContainerComponent {
+
+    // Friend deklaráció a seek callback számára
+    friend void seekProgressCallback(uint16_t frequency);
 
   private:
     /**
@@ -39,6 +45,26 @@ class UIScreen : public UIContainerComponent {
   protected:
     // Si4735Manager pointer
     Si4735Manager *pSi4735Manager;
+
+    // ===================================================================
+    // Seek callback infrastruktúra
+    // ===================================================================
+
+    /**
+     * @brief Seek keresés indítása lefelé valós idejű frekvencia frissítéssel
+     * @details Beállítja a callback infrastruktúrát és indítja a seek-et
+     */
+    void seekStationDown();
+
+    /**
+     * @brief Seek keresés indítása felfelé valós idejű frekvencia frissítéssel
+     * @details Beállítja a callback infrastruktúrát és indítja a seek-et
+     */
+    void seekStationUp();
+
+    // ===================================================================
+    // UI komponensek factory metódusok
+    // ===================================================================
 
     // Állapotsor komponens
     std::shared_ptr<StatusLine> statusLineComp;

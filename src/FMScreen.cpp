@@ -19,27 +19,6 @@ static constexpr uint8_t TEST_BUTTON = 23;      ///< Test képernyőre váltás 
 } // namespace FMScreenHorizontalButtonIDs
 
 // ===================================================================
-// Static callback support a SI4735::seekStationProgress-hez
-// ===================================================================
-
-/// Static pointer az aktuális FMScreen instance-ra (seek callback-hez)
-static FMScreen *g_currentSeekingFMScreen = nullptr;
-
-/**
- * @brief Callback függvény a SI4735::seekStationProgress számára
- * @param frequency Aktuális frekvencia a seek során
- *
- * @details C-style callback, ami frissíti a frekvencia kijelzőt seek közben.
- * A g_currentSeekingFMScreen static pointer-en keresztül éri el az instance-t.
- */
-void seekProgressCallback(uint16_t frequency) {
-    if (g_currentSeekingFMScreen && g_currentSeekingFMScreen->freqDisplayComp) {
-        g_currentSeekingFMScreen->freqDisplayComp->setFrequency(frequency);
-        g_currentSeekingFMScreen->freqDisplayComp->draw(); // Azonnali frissítés a kijelzőn
-    }
-}
-
-// ===================================================================
 // Konstruktor és inicializálás
 // ===================================================================
 
@@ -372,17 +351,10 @@ void FMScreen::handleSeekDownButton(const UIButton::ButtonEvent &event) {
                 rdsComponent->clearRdsOnFrequencyChange();
             }
 
-            // Static pointer beállítása a callback számára
-            g_currentSeekingFMScreen = this;
+            // Seek lefelé az UIScreen delegált metódusával
+            seekStationDown();
 
-            // Seek lefelé valós idejű frekvencia frissítéssel
-            pSi4735Manager->getSi4735().seekStationProgress(seekProgressCallback, SEEK_DOWN);
-
-            // Static pointer nullázása
-            g_currentSeekingFMScreen = nullptr;
-
-            // Seek befejezése után: konfiguráció és RDS frissítése
-            config.data.currentFrequency = pSi4735Manager->getCurrentBand().currFreq;
+            // Seek befejezése után: RDS frissítése
             if (rdsComponent) {
                 rdsComponent->clearRdsOnFrequencyChange();
             }
@@ -405,17 +377,10 @@ void FMScreen::handleSeekUpButton(const UIButton::ButtonEvent &event) {
                 rdsComponent->clearRdsOnFrequencyChange();
             }
 
-            // Static pointer beállítása a callback számára
-            g_currentSeekingFMScreen = this;
+            // Seek felfelé az UIScreen delegált metódusával
+            seekStationUp();
 
-            // Seek felfelé valós idejű frekvencia frissítéssel
-            pSi4735Manager->getSi4735().seekStationProgress(seekProgressCallback, SEEK_UP);
-
-            // Static pointer nullázása
-            g_currentSeekingFMScreen = nullptr;
-
-            // Seek befejezése után: konfiguráció és RDS frissítése
-            config.data.currentFrequency = pSi4735Manager->getCurrentBand().currFreq;
+            // Seek befejezése után: RDS frissítése
             if (rdsComponent) {
                 rdsComponent->clearRdsOnFrequencyChange();
             }
