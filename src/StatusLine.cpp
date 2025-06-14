@@ -4,9 +4,6 @@
 #include "Si4735Runtime.h"
 #include "rtvars.h"
 
-// Statikus változó definíciója
-bool StatusLine::stationInMemory = false;
-
 // Állandók a komponens méreteihez
 constexpr uint8_t STATUS_LINE_X = 0;
 constexpr uint8_t STATUS_LINE_Y = 0;
@@ -49,7 +46,7 @@ constexpr uint16_t StationInMemoryBoxColor = TFT_SILVER; // Az állomás memóri
 StatusLine::StatusLine(TFT_eSPI &tft, int16_t x, int16_t y, Si4735Manager *pSi4735Manager, const ColorScheme &colors)
     : UIComponent(tft, Rect(x, y, UIComponent::SCREEN_W, STATUS_LINE_HEIGHT), colors), pSi4735Manager(pSi4735Manager) {
     initializeBoxes();
-    StatusLine::stationInMemory = false; // Kezdetben nincs állomás a memóriában
+    stationInMemory = false; // Kezdetben nincs állomás a memóriában
 }
 
 /**
@@ -107,8 +104,10 @@ void StatusLine::draw() {
         return;
     }
 
-    // Háttér törlése
-    tft.fillRect(bounds.x, bounds.y, bounds.width, bounds.height, colors.screenBackground);
+    // Csak a ténylegesen használt terület törlése, nem a teljes bounds
+    // Kiszámoljuk az utolsó négyzet végének pozícióját
+    uint16_t actualWidth = statusBoxes[9].x + statusBoxes[9].width;
+    tft.fillRect(bounds.x, bounds.y, actualWidth, bounds.height, colors.screenBackground);
 
     // Négyzetek kereteinek kirajzolása
     drawBoxFrames();
@@ -121,7 +120,7 @@ void StatusLine::draw() {
     updateAntCap();
     updateTemperature();
     updateVoltage();
-    updateStationInMemory(StatusLine::stationInMemory);
+    updateStationInMemory(stationInMemory);
 
     needsRedraw = false;
 }
@@ -321,15 +320,12 @@ void StatusLine::updateVoltage() {
  */
 void StatusLine::updateStationInMemory(bool isInMemo) {
 
-    DEBUG("StatusLine::updateStationInMemory: isInMemo=%s\n", isInMemo ? "true" : "false");
-
-    if (StatusLine::stationInMemory != isInMemo) {
-        StatusLine::stationInMemory = isInMemo; // Csak akkor frissítjük, ha változott
-        needsRedraw = true;                     // Újrarajzolást igényel
+    if (stationInMemory != isInMemo) {
+        stationInMemory = isInMemo; // Csak akkor frissítjük, ha változott
+        needsRedraw = true;         // Újrarajzolást igényel
     }
 
     uint16_t color = StatusLine::stationInMemory ? TFT_GREEN : statusBoxes[9].color;
     clearBoxContent(9);
     drawTextInBox(9, "Memo", color);
-    DEBUG("StatusLine::updateStationInMemory: StatusLine::stationInMemory=%s\n", StatusLine::stationInMemory ? "true" : "false");
 }

@@ -151,7 +151,6 @@ bool RadioScreen::checkAndUpdateMemoryStatus() {
 
     // StatusLine frissítése ha létezik
     if (statusLineComp) {
-        DEBUG("Updating StatusLine memory status: %s\n", isInMemory ? "In Memory" : "Not in Memory");
         // Frissítjük a StatusLine komponenst az aktuális állomás memóriában lévő státuszával
         statusLineComp->updateStationInMemory(isInMemory);
     }

@@ -18,7 +18,7 @@ class StatusLine : public UIComponent {
         uint16_t width;
         uint16_t color;
     };
-    static bool stationInMemory; // Memória állomás jelző
+    bool stationInMemory; // Memória állomás jelző
 
 #define STATUS_LINE_BOXES 10
     StatusBox statusBoxes[STATUS_LINE_BOXES];
