@@ -77,21 +77,21 @@ void FMScreen::layoutComponents() {
     // ===================================================================
     uint16_t rdsY = smeterBounds.y + smeterBounds.height + 10;
 
-    // RDS szélesség korlátozása - helyet hagyunk a függőleges gombsornak (72px + 10px margin)
-    uint16_t rdsWidth = UIComponent::SCREEN_W - 90; // 90px helyet hagyunk a jobb oldalon
-    Rect rdsBounds(5, rdsY, rdsWidth, RDSComponent::DEFAULT_HEIGHT);
-
-    // RDS komponens létrehozása a RadioScreen factory metódusával
-    createRDSComponent(rdsBounds); // RDS területek finomhangolása (opcionális - alapértelmezett layout elfogadható)
-    // rdsComponent->setStationNameArea(Rect(10, rdsY, 200, 18));
-    // rdsComponent->setProgramTypeArea(Rect(220, rdsY, 150, 18));
-    // rdsComponent->setDateTimeArea(Rect(380, rdsY, 85, 18));
-    // rdsComponent->setRadioTextArea(Rect(10, rdsY + 20, 460, 18));
+    // RDS komponens létrehozása (már nem kell rdsBounds)
+    createRDSComponent(); // RDS részkomponensek egyedi pozícionálása
+    // Állomásnév - bal oldal
+    rdsComponent->setStationNameArea(Rect(10, rdsY, 180, 18)); // 180px szélesség
+    // Program típus - középen
+    rdsComponent->setProgramTypeArea(Rect(200, rdsY, 120, 18)); // 120px szélesség
+    // Dátum/idő - jobb oldal (de nem túl messze)
+    rdsComponent->setDateTimeArea(Rect(330, rdsY, 80, 18)); // 80px szélesség, 330+80=410px max
+    // Radio text - alsó sor, korlátozva
+    rdsComponent->setRadioTextArea(Rect(10, rdsY + 20, 380, 18)); // 380px szélesség
 
     // ===================================================================
     // STEREO/MONO jelző létrehozása
     // ===================================================================
-    uint16_t stereoY = rdsY + RDSComponent::DEFAULT_HEIGHT + 5; // RDS alatt 5px-el
+    uint16_t stereoY = rdsY + 40; // RDS komponens után (20px RDS magasság + 20px margin)
     Rect stereoBounds(5, stereoY, 50, 20);
     stereoIndicator = std::make_shared<StereoIndicator>(tft, stereoBounds);
     addChild(stereoIndicator);

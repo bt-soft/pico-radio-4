@@ -73,10 +73,10 @@ class RadioScreen : public UIScreen {
 
     /**
      * @brief Létrehozza az RDS komponenst
-     * @param rdsBounds Az RDS komponens határai (Rect)
+     * @param rdsBounds Az RDS komponens határai (opcionális, most már nem szükséges)
      */
-    inline void createRDSComponent(Rect rdsBounds) {
-        rdsComponent = std::make_shared<RDSComponent>(tft, rdsBounds, *pSi4735Manager);
+    inline void createRDSComponent(const Rect &rdsBounds = Rect(0, 0, 0, 0)) {
+        rdsComponent = std::make_shared<RDSComponent>(tft, *pSi4735Manager, rdsBounds);
         addChild(rdsComponent);
     }
 
@@ -120,10 +120,12 @@ class RadioScreen : public UIScreen {
         if (rdsComponent) {
             rdsComponent->clearRdsOnFrequencyChange();
         }
-    } /**
-       * @brief Frekvencia mentése a konfigurációba és band táblába
-       * @details Szinkronizálja az aktuális frekvenciát minden szükséges helyre
-       */
+    }
+
+    /**
+     * @brief Frekvencia mentése a konfigurációba és band táblába
+     * @details Szinkronizálja az aktuális frekvenciát minden szükséges helyre
+     */
     void saveCurrentFrequency();
 
     /**

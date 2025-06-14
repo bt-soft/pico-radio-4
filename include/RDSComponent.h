@@ -125,10 +125,10 @@ class RDSComponent : public UIComponent {
     /**
      * @brief RDSComponent konstruktor
      * @param tft TFT display referencia
-     * @param bounds Komponens határai
      * @param manager Si4735Manager referencia RDS adatok lekérdezéséhez
+     * @param bounds Komponens határai (opcionális, csak kompatibilitásért)
      */
-    RDSComponent(TFT_eSPI &tft, const Rect &bounds, Si4735Manager &manager);
+    RDSComponent(TFT_eSPI &tft, Si4735Manager &manager, const Rect &bounds = Rect(0, 0, 0, 0));
 
     /**
      * @brief Destruktor - erőforrások felszabadítása

@@ -70,16 +70,17 @@ String RDSComponent::convertPtyCodeToString(uint8_t ptyCode) {
 /**
  * @brief RDSComponent konstruktor
  */
-RDSComponent::RDSComponent(TFT_eSPI &tft, const Rect &bounds, Si4735Manager &manager)
+RDSComponent::RDSComponent(TFT_eSPI &tft, Si4735Manager &manager, const Rect &bounds)
     : UIComponent(tft, bounds, ColorScheme::defaultScheme()), si4735Manager(manager), lastScrollUpdate(0), dataChanged(false), scrollSprite(nullptr), scrollOffset(0),
-      radioTextPixelWidth(0), needsScrolling(false), scrollSpriteCreated(false) { // Alapértelmezett színek beállítása
-    stationNameColor = TFT_CYAN;                                                  // Állomásnév - cián
-    programTypeColor = TFT_ORANGE;                                                // Program típus - narancs
-    radioTextColor = TFT_WHITE;                                                   // Radio text - fehér
-    dateTimeColor = TFT_YELLOW;                                                   // Dátum/idő - sárga
-    backgroundColor = TFT_BLACK;                                                  // Háttér - fekete
+      radioTextPixelWidth(0), needsScrolling(false), scrollSpriteCreated(false) {
+    // Alapértelmezett színek beállítása
+    stationNameColor = TFT_CYAN;   // Állomásnév - cián
+    programTypeColor = TFT_ORANGE; // Program típus - narancs
+    radioTextColor = TFT_WHITE;    // Radio text - fehér
+    dateTimeColor = TFT_YELLOW;    // Dátum/idő - sárga
+    backgroundColor = TFT_BLACK;   // Háttér - fekete
 
-    // Alapértelmezett layout számítása
+    // Alapértelmezett pozíciók beállítása (a jelenlegi elrendezés alapján)
     calculateDefaultLayout();
 
     // Kezdetben nincs RDS adat
@@ -96,29 +97,29 @@ RDSComponent::~RDSComponent() { cleanupScrollSprite(); }
 // ===================================================================
 
 /**
- * @brief Alapértelmezett layout számítása
+ * @brief Alapértelmezett layout számítása - most abszolút pozíciókkal
+ * @details A részkomponensek alapértelmezett pozíciói.
+ * Ezek felülírhatók a set...Area() metódusokkal.
  */
 void RDSComponent::calculateDefaultLayout() {
-    const uint16_t margin = 4; // Keret miatti margin
+    // Alapértelmezett pozíciók - ezek később felülírhatók
+    const uint16_t defaultY = 150; // Alapértelmezett Y pozíció
+    const uint16_t margin = 10;
     const uint16_t lineHeight = 18;
     const uint16_t dateTimeWidth = 85;
-    const uint16_t stationNameWidth = 180; // Csökkentett szélesség
+    const uint16_t stationNameWidth = 200;
 
-    // Rendelkezésre álló szélesség számítása
-    uint16_t availableWidth = bounds.width - 2 * margin;
-    uint16_t remainingWidth = availableWidth - stationNameWidth - dateTimeWidth - 2 * 10; // 10px spacing
+    // Állomásnév - bal oldal
+    stationNameArea = Rect(margin, defaultY, stationNameWidth, lineHeight);
 
-    // Állomásnév - felső sor, bal oldal
-    stationNameArea = Rect(bounds.x + margin, bounds.y + margin, stationNameWidth, lineHeight);
+    // Program típus - középen
+    programTypeArea = Rect(220, defaultY, 150, lineHeight);
 
-    // Program típus - felső sor, közép (dinamikus szélesség)
-    uint16_t ptyX = bounds.x + margin + stationNameWidth + 10;
-    programTypeArea = Rect(ptyX, bounds.y + margin, remainingWidth, lineHeight);
+    // Dátum/idő - jobb oldal
+    dateTimeArea = Rect(380, defaultY, dateTimeWidth, lineHeight);
 
-    // Dátum/idő - felső sor, jobb szél
-    dateTimeArea =
-        Rect(bounds.x + bounds.width - margin - dateTimeWidth, bounds.y + margin, dateTimeWidth, lineHeight); // Radio text - alsó sor, teljes szélesség (keret miatt csökkentett)
-    radioTextArea = Rect(bounds.x + margin, bounds.y + margin + lineHeight + 4, bounds.width - 2 * margin, lineHeight * 2);
+    // Radio text - alsó sor
+    radioTextArea = Rect(margin, defaultY + 20, 460, lineHeight);
 }
 
 /**
@@ -213,7 +214,9 @@ void RDSComponent::cleanupScrollSprite() {
 /**
  * @brief RDS adatok frissítése a Si4735Manager-től
  */
-void RDSComponent::updateRdsData() { // Az Si4735Rds osztály cache funkcionalitását használjuk
+void RDSComponent::updateRdsData() {
+
+    // Az Si4735Rds osztály cache funkcionalitását használjuk
     dataChanged = si4735Manager.updateRdsDataWithCache();
 
     // Ha változott a radio text, újraszámítjuk a scroll paramétereket
@@ -245,6 +248,9 @@ void RDSComponent::drawStationName() {
     // Terület törlése
     tft.fillRect(stationNameArea.x, stationNameArea.y, stationNameArea.width, stationNameArea.height, backgroundColor);
 
+    // DEBUG KERET - piros
+    tft.drawRect(stationNameArea.x, stationNameArea.y, stationNameArea.width, stationNameArea.height, TFT_RED);
+
     if (stationName.isEmpty()) {
         return; // Nincs megjeleníthető adat
     }
@@ -252,10 +258,11 @@ void RDSComponent::drawStationName() {
     tft.setFreeFont();
     tft.setTextSize(1);
     tft.setTextColor(stationNameColor, backgroundColor);
-    tft.setTextDatum(TL_DATUM);
+    tft.setTextDatum(ML_DATUM); // Middle Left - függőlegesen középre, balra igazítva
 
-    // Szöveg kirajzolása
-    tft.drawString(stationName, stationNameArea.x, stationNameArea.y);
+    // Szöveg kirajzolása - függőlegesen középre + 1px gap
+    int16_t centerY = stationNameArea.y + stationNameArea.height / 2;
+    tft.drawString(stationName, stationNameArea.x + 5, centerY); // +5px gap a bal oldaltól
 }
 
 /**
@@ -267,17 +274,20 @@ void RDSComponent::drawProgramType() {
     // Terület törlése
     tft.fillRect(programTypeArea.x, programTypeArea.y, programTypeArea.width, programTypeArea.height, backgroundColor);
 
+    // DEBUG KERET - zöld
+    tft.drawRect(programTypeArea.x, programTypeArea.y, programTypeArea.width, programTypeArea.height, TFT_GREEN);
+
     if (programType.isEmpty()) {
         return; // Nincs megjeleníthető adat
     }
-
     tft.setFreeFont();
     tft.setTextSize(1);
     tft.setTextColor(programTypeColor, backgroundColor);
-    tft.setTextDatum(TL_DATUM);
+    tft.setTextDatum(ML_DATUM); // Middle Left - függőlegesen középre, balra igazítva
 
-    // Szöveg kirajzolása
-    tft.drawString(programType, programTypeArea.x, programTypeArea.y);
+    // Szöveg kirajzolása - függőlegesen középre + 1px gap
+    int16_t centerY = programTypeArea.y + programTypeArea.height / 2;
+    tft.drawString(programType, programTypeArea.x + 5, centerY); // +5px gap a bal oldaltól
 }
 
 /**
@@ -286,24 +296,25 @@ void RDSComponent::drawProgramType() {
 void RDSComponent::drawRadioText() {
     String radioText = si4735Manager.getCachedRadioText();
 
+    // Terület törlése
+    tft.fillRect(radioTextArea.x, radioTextArea.y, radioTextArea.width, radioTextArea.height, backgroundColor);
+
+    // DEBUG KERET - sárga
+    tft.drawRect(radioTextArea.x, radioTextArea.y, radioTextArea.width, radioTextArea.height, TFT_YELLOW);
+
     if (radioText.isEmpty()) {
-        // Terület törlése ha nincs adat
-        tft.fillRect(radioTextArea.x, radioTextArea.y, radioTextArea.width, radioTextArea.height, backgroundColor);
         return;
     }
-
     if (!needsScrolling) {
         // Egyszerű megjelenítés, ha elfér
         tft.setFreeFont();
         tft.setTextSize(1);
         tft.setTextColor(radioTextColor, backgroundColor);
-        tft.setTextDatum(TL_DATUM);
+        tft.setTextDatum(ML_DATUM); // Middle Left - függőlegesen középre, balra igazítva
 
-        // Háttér törlése
-        tft.fillRect(radioTextArea.x, radioTextArea.y, radioTextArea.width, radioTextArea.height, backgroundColor);
-
-        // Szöveg kirajzolása
-        tft.drawString(radioText, radioTextArea.x, radioTextArea.y);
+        // Szöveg kirajzolása - függőlegesen középre + 1px gap
+        int16_t centerY = radioTextArea.y + radioTextArea.height / 2;
+        tft.drawString(radioText, radioTextArea.x + 5, centerY); // +5px gap a bal oldaltól
     } else {
         // Scroll esetén sprite használata
         if (!scrollSpriteCreated) {
@@ -322,22 +333,23 @@ void RDSComponent::drawRadioText() {
 void RDSComponent::drawDateTime() {
     String dateTime = si4735Manager.getCachedDateTime();
 
-    if (dateTime.isEmpty()) {
-        // Terület törlése ha nincs adat
-        tft.fillRect(dateTimeArea.x, dateTimeArea.y, dateTimeArea.width, dateTimeArea.height, backgroundColor);
-        return;
-    }
-
-    tft.setFreeFont();
-    tft.setTextSize(1);
-    tft.setTextColor(dateTimeColor, backgroundColor);
-    tft.setTextDatum(TR_DATUM); // Jobbra igazított
-
     // Háttér törlése
     tft.fillRect(dateTimeArea.x, dateTimeArea.y, dateTimeArea.width, dateTimeArea.height, backgroundColor);
 
-    // Szöveg kirajzolása (jobb oldali igazítás)
-    tft.drawString(dateTime, dateTimeArea.x + dateTimeArea.width, dateTimeArea.y);
+    // DEBUG KERET - kék
+    tft.drawRect(dateTimeArea.x, dateTimeArea.y, dateTimeArea.width, dateTimeArea.height, TFT_BLUE);
+
+    if (dateTime.isEmpty()) {
+        return;
+    }
+    tft.setFreeFont();
+    tft.setTextSize(1);
+    tft.setTextColor(dateTimeColor, backgroundColor);
+    tft.setTextDatum(MR_DATUM); // Middle Right - függőlegesen középre, jobbra igazítva
+
+    // Szöveg kirajzolása - függőlegesen középre + 1px gap a jobb oldaltól
+    int16_t centerY = dateTimeArea.y + dateTimeArea.height / 2;
+    tft.drawString(dateTime, dateTimeArea.x + dateTimeArea.width - 1, centerY); // -1px gap a jobb oldaltól
 }
 
 /**
@@ -389,17 +401,11 @@ void RDSComponent::handleRadioTextScroll() {
 
 /**
  * @brief Komponens teljes újrarajzolása
+ * @details Most már nem rajzol közös keretet vagy hátteret,
+ * mivel a részkomponensek függetlenül pozícionálhatók
  */
 void RDSComponent::draw() {
-    // Teljes háttér törlése
-    tft.fillRect(bounds.x, bounds.y, bounds.width, bounds.height, backgroundColor);
-
-    // Keret rajzolása az RDS komponens köré
-    tft.drawRect(bounds.x, bounds.y, bounds.width, bounds.height, TFT_DARKGREY);
-    // Második vonal a szebb hatás érdekében
-    tft.drawRect(bounds.x + 1, bounds.y + 1, bounds.width - 2, bounds.height - 2, TFT_LIGHTGREY);
-
-    // Minden elem újrarajzolása
+    // Minden elem újrarajzolása a saját pozíciójukban
     drawStationName();
     drawProgramType();
     drawRadioText();
