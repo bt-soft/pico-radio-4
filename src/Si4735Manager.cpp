@@ -5,7 +5,7 @@
  * @param config A konfigurációs objektum, amely tartalmazza a beállításokat.
  * @param band A Band objektum, amely kezeli a rádió sávokat.
  */
-Si4735Manager::Si4735Manager() : Si4735Rds(), currentBandIdx(-1) {
+Si4735Manager::Si4735Manager() : Si4735Rds() {
     setAudioMuteMcuPin(PIN_AUDIO_MUTE); // Audio Mute pin
     // Audio unmute
     si4735.setAudioMute(false);
@@ -14,18 +14,14 @@ Si4735Manager::Si4735Manager() : Si4735Rds(), currentBandIdx(-1) {
 /**
  * @brief Inicializáljuk az osztályt, beállítjuk a rádió sávot és hangerőt.
  */
-void Si4735Manager::init() { // Band init, ha változott az épp használt band
-    if (currentBandIdx != config.data.currentBandIdx) {
+void Si4735Manager::init(bool systemStart) {
 
-        // A Band  visszaállítása a konfigból
-        bandInit(currentBandIdx == -1); // Rendszer induláskor -1 a currentBandIdx változást figyelő flag
+    // A Band  visszaállítása a konfigból
+    bandInit(desiredBandIdx == -1); // Rendszer induláskor -1 a currentBandIdx változást figyelő flag
 
-        // A sávra preferált demodulációs mód betöltése
-        bandSet(true); // Hangerő beállítása
-        si4735.setVolume(config.data.currVolume);
-
-        currentBandIdx = config.data.currentBandIdx;
-    }
+    // A sávra preferált demodulációs mód betöltése
+    bandSet(systemStart); // Hangerő beállítása
+    si4735.setVolume(config.data.currVolume);
 
     // Rögtön be is állítjuk az AGC-t
     checkAGC();

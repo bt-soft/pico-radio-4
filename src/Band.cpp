@@ -136,8 +136,9 @@ int8_t Band::getBandIdxByBandName(const char *bandName) {
 const char **Band::getBandNames(uint8_t &count, bool isHamFilter) {
 
     static const char *filteredNames[BANDTABLE_COUNT]; // Tároló a kiválasztott nevekre
-    count = 0;                                         // Kezdőérték
+    memset(filteredNames, 0, sizeof(filteredNames));   // Inicializáljuk a tárolót nullával
 
+    count = 0; // Kezdőérték
     for (size_t i = 0; i < BANDTABLE_COUNT; i++) {
         if (bandTable[i].isHam == isHamFilter) {            // HAM sáv szűrés
             filteredNames[count++] = bandTable[i].bandName; // Közvetlen pointer hozzáadás

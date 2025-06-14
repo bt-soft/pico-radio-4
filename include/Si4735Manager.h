@@ -7,7 +7,7 @@
 class Si4735Manager : public Si4735Rds {
 
   private:
-    int8_t currentBandIdx = -1; // Kezdetben az 1-es band index van beállítva
+    int8_t desiredBandIdx = -1; // Kezdetben az 1-es band index van beállítva
 
   public:
     /**
@@ -18,8 +18,9 @@ class Si4735Manager : public Si4735Rds {
 
     /**
      * @brief Inicializáljuk az osztályt, beállítjuk a rádió sávot és hangerőt.
+     * @param systemStart true rendszer startup: a bandSet useDefaults értékét állítja
      */
-    void init();
+    void init(bool systemStart = false);
 
     /**
      * A BFO lépésközöket állítja be, csak SSB módban működik

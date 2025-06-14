@@ -253,36 +253,9 @@ void RadioScreen::updateCommonHorizontalButtonStates() {
 void RadioScreen::handleHamButton(const UIButton::ButtonEvent &event) {
     if (event.state != UIButton::EventButtonState::Clicked) {
         return;
-    } // Kigyűjtjük a HAM sávok neveit
-    uint8_t hamBandCount;
-    const char **hamBands = pSi4735Manager->getBandNames(hamBandCount, true /* csak a HAM sávok kellenek */);
-
-    // Megkeressük az aktuális sáv indexét a HAM sávok tömbben
-    int currentHamBandIndex = -1; // -1 = nincs találat (nem HAM sávon vagyunk éppen a HAM sávok között)
-    const char *currentBandName = pSi4735Manager->getCurrentBandName();
-    for (int i = 0; i < hamBandCount; i++) {
-        if (strcmp(hamBands[i], currentBandName) == 0) {
-            currentHamBandIndex = i;
-            break;
-        }
     }
 
-    auto hamBandDialog = std::make_shared<MultiButtonDialog>(
-        this, this->tft,                                                              // Képernyő referencia
-        "HAM Radio Bands", "",                                                        // Dialógus címe és üzenete
-        hamBands, hamBandCount,                                                       // Gombok feliratai és számuk
-        [this](int buttonIndex, const char *buttonLabel, MultiButtonDialog *dialog) { // Gomb kattintás kezelése
-            // Átállítjuk a használni kívánt BAND indexét
-            config.data.currentBandIdx = pSi4735Manager->getBandIdxByBandName(buttonLabel);
-            // Átkapcsolunk az AM screen-re (HAM sáv csak az AM sávokon van)
-            getScreenManager()->switchToScreen(SCREEN_NAME_AM);
-        },
-        true,                  // Automatikusan bezárja-e a dialógust gomb kattintáskor
-        currentHamBandIndex,   // Az alapértelmezett (jelenlegi) gomb indexe a HAM sávok tömbben (-1 = nincs, ha nem HAM sáv)
-        true,                  // Ha true, az alapértelmezett gomb le van tiltva; ha false, csak vizuálisan kiemelve
-        Rect(-1, -1, 400, 180) // Dialógus mérete (ha -1, akkor automatikusan a képernyő közepére igazítja)
-    );
-    this->showDialog(hamBandDialog);
+    processBandButton(true); // Ham sáv kezelése
 }
 
 /**
@@ -293,16 +266,32 @@ void RadioScreen::handleHamButton(const UIButton::ButtonEvent &event) {
 void RadioScreen::handleBandButton(const UIButton::ButtonEvent &event) {
     if (event.state != UIButton::EventButtonState::Clicked) {
         return;
-    } // Kigyűjtjük az összes NEM HAM sáv nevét
-    uint8_t bandCount;
-    const char **bandNames = pSi4735Manager->getBandNames(bandCount, false /* csak a NEM HAM sávok kellenek */);
+    }
+
+    processBandButton(false); // Nem Ham sávok kezelése (pl. FM, AM, LW, SW stb.)
+}
+
+/**
+ * @brief Közös BAND gomb eseménykezelő - Sáv (Band) kezelés
+ * @param isHamBand Igaz, ha a Ham sávot kell kezelni, hamis, ha más sáv
+ */
+void RadioScreen::processBandButton(bool isHamBand) {
+
+    uint16_t dialogHeight = isHamBand ? 180 : 250; // Alapértelmezett dialógus magasság
+
+    // Kigyűjtjük a kívánt sávot
+    uint8_t _bandCount;
+    const char **_bandNames = pSi4735Manager->getBandNames(_bandCount, isHamBand);
+    for (int i = 0; i < _bandCount; i++) {
+        DEBUG("RadioScreen::handleBandButton - _bandNames[%d]: %s\n", i, _bandNames[i]);
+    }
 
     // Megkeressük az aktuális sáv indexét a NEM HAM sávok tömbben
-    int currentBandIndex = -1; // -1 = nincs találat (ha nem található az a sáv, amiben éppen vagyunk a nem HAM sávok között)
-    const char *currentBandName = pSi4735Manager->getCurrentBandName();
-    for (int i = 0; i < bandCount; i++) {
-        if (strcmp(bandNames[i], currentBandName) == 0) {
-            currentBandIndex = i;
+    int _currentBandIndex = -1; // -1 = nincs találat (ha nem található az a sáv, amiben éppen vagyunk a nem HAM sávok között)
+    const char *_currentBandName = pSi4735Manager->getCurrentBandName();
+    for (int i = 0; i < _bandCount; i++) {
+        if (strcmp(_bandNames[i], _currentBandName) == 0) {
+            _currentBandIndex = i;
             break;
         }
     }
@@ -310,18 +299,20 @@ void RadioScreen::handleBandButton(const UIButton::ButtonEvent &event) {
     auto bandDialog = std::make_shared<MultiButtonDialog>(
         this, this->tft,                                                              // Képernyő referencia
         "All Radio Bands", "",                                                        // Dialógus címe és üzenete
-        bandNames, bandCount,                                                         // Gombok feliratai és számuk
+        _bandNames, _bandCount,                                                       // Gombok feliratai és számuk
         [this](int buttonIndex, const char *buttonLabel, MultiButtonDialog *dialog) { // Gomb kattintás kezelése
             // Átállítjuk a használni kívánt BAND indexét
             config.data.currentBandIdx = pSi4735Manager->getBandIdxByBandName(buttonLabel);
 
+            pSi4735Manager->init();
+
             // Átkapcsolunk a megfelelő screenre (Itt lehet FM is a kiválasztott sáv)
             getScreenManager()->switchToScreen(pSi4735Manager->isCurrentBandFM() ? SCREEN_NAME_FM : SCREEN_NAME_AM);
         },
-        true,                  // Automatikusan bezárja-e a dialógust gomb kattintáskor
-        currentBandIndex,      // Az alapértelmezett (jelenlegi) gomb indexe a NEM HAM sávok tömbben (-1 = nincs, ha HAM sáv)
-        true,                  // Ha true, az alapértelmezett gomb le van tiltva; ha false, csak vizuálisan kiemelve
-        Rect(-1, -1, 400, 250) // Dialógus mérete (ha -1, akkor automatikusan a képernyő közepére igazítja)
+        true,                           // Automatikusan bezárja-e a dialógust gomb kattintáskor
+        _currentBandIndex,              // Az alapértelmezett (jelenlegi) gomb indexe a NEM HAM sávok tömbjében (-1 = ha nem található a sávok nevei között)
+        true,                           // Ha true, az alapértelmezett gomb le van tiltva; ha false, csak vizuálisan kiemelve
+        Rect(-1, -1, 400, dialogHeight) // Dialógus mérete (ha -1, akkor automatikusan a képernyő közepére igazítja)
     );
     this->showDialog(bandDialog);
 }

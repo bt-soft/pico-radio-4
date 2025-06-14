@@ -137,6 +137,8 @@ bool FMScreen::handleRotary(const RotaryEvent &event) {
         // Memória státusz ellenőrzése és frissítése
         checkAndUpdateMemoryStatus();
 
+        DEBUG("FMScreen::handleRotary - Frequency changed to: %d\n", config.data.currentFrequency);
+
         return true; // Esemény sikeresen kezelve
     }
 

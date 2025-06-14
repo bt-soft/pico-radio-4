@@ -78,11 +78,13 @@ class RadioScreen : public UIScreen {
     // ===================================================================
     // Közös vízszintes gombsor kezelés
     // ===================================================================    /// Közös vízszintes gombsor komponens (alsó navigációs gombok)
-    std::shared_ptr<UIHorizontalButtonBar> horizontalButtonBar; /**
-                                                                 * @brief Közös vízszintes gombsor létrehozása és inicializálása
-                                                                 * @details Létrehozza a közös gombokat, amiket minden RadioScreen használ
-                                                                 * A leszármazott osztályok ezt kiterjeszthetik saját specifikus gombokkal
-                                                                 */
+    std::shared_ptr<UIHorizontalButtonBar> horizontalButtonBar;
+
+    /**
+     * @brief Közös vízszintes gombsor létrehozása és inicializálása
+     * @details Létrehozza a közös gombokat, amiket minden RadioScreen használ
+     * A leszármazott osztályok ezt kiterjeszthetik saját specifikus gombokkal
+     */
     virtual void createCommonHorizontalButtons();
 
     /**
@@ -117,6 +119,13 @@ class RadioScreen : public UIScreen {
      * @details Virtuális függvény - leszármazott osztályok felülírhatják
      */
     virtual void handleBandButton(const UIButton::ButtonEvent &event);
+
+    /**
+     * @brief Közös BAND gomb eseménykezelő - Sáv (Band) kezelés
+     * @param isHamBand Igaz, ha a Ham sávot kell kezelni, hamis, ha más sáv
+     * @details Ez a metódus a közös BAND gomb eseménykezelés logikáját tartalmazza.
+     */
+    void processBandButton(bool isHamBand);
 
     /**
      * @brief SCAN gomb eseménykezelő - Folyamatos keresés

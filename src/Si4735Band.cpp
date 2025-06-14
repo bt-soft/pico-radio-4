@@ -43,10 +43,14 @@ void Si4735Band::bandInit(bool sysStart) {
         // Seek beállítások
         si4735.setSeekAmRssiThreshold(50); // 50dB RSSI threshold
         si4735.setSeekAmSrnThreshold(20);  // 20dB SNR threshold
-    } // Rendszer indítás van?
-    if (sysStart) { // rtv::freqstep = 1000;  // 1kHz
+    }
+
+    // Rendszer indítás van?
+    if (sysStart) {
+        rtv::freqstep = 1000; // hz
         rtv::freqDec = config.data.currentBFO;
         curretBand.lastBFO = config.data.currentBFO;
+
         // curretBand.prefMod = config.data.currentMode;
         curretBand.currFreq = config.data.currentFrequency; // Frekvencia visszaállítása a konfigból
         si4735.setVolume(config.data.currVolume);           // Hangerő
