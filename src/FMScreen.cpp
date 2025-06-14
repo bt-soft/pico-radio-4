@@ -172,13 +172,13 @@ void FMScreen::handleOwnLoop() {
             smeterComp->showRSSI(signalCache.rssi, signalCache.snr, true /* FM mód */);
         }
     } // ===================================================================
-    // RDS adatok valós idejű frissítése (optimalizált gyakoriság)
+    // RDS adatok valós idejű frissítése (optimalizált)
     // ===================================================================
     if (rdsComponent) {
-        // RDS frissítés csak 500ms-ként (2 Hz helyett 100-1000 Hz)
+        // RDS frissítés gyakrabban, de az RDSComponent maga időzít (1-3s adaptívan)
         static uint32_t lastRdsCall = 0;
         uint32_t currentTime = millis();
-        if (currentTime - lastRdsCall >= 500) { // 500ms = 2 Hz
+        if (currentTime - lastRdsCall >= 100) { // 100ms = 10 Hz (nem túl gyakori, de elég a responsiveness-hez)
             rdsComponent->updateRDS();
             lastRdsCall = currentTime;
         }
@@ -213,12 +213,8 @@ void FMScreen::drawContent() {
  * - További állapotok szinkronizálása (AGC, Attenuator, stb.)
  */
 void FMScreen::activate() {
-    DEBUG("FMScreen: activate() - FM képernyő aktiválás, RDS cache törlése\n");
-
-    // RDS cache törlése képernyő váltáskor
-    if (rdsComponent) {
-        rdsComponent->clearRdsOnFrequencyChange();
-    }
+    // RDS cache CSAK akkor törlése, ha tényleg frekvencia változott
+    // NE töröljük minden képernyő aktiváláskor!
 
     // Szülő osztály aktiválása
     UIScreen::activate();
