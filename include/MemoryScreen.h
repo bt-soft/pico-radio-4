@@ -68,12 +68,11 @@ class MemoryScreen : public UIScreen, public IScrollableListDataSource {
     std::vector<StationData> stations;
     int selectedIndex = -1;
     int lastTunedIndex = -1; // Utolsó behangolt állomás indexe optimalizált frissítéshez
-    bool isFmMode = true;
-
-    // Dialógus állapotok
+    bool isFmMode = true;    // Dialógus állapotok
     enum class DialogState { None, AddingStation, EditingStationName, ConfirmingDelete } currentDialogState = DialogState::None;
 
-    StationData pendingStation; // Új állomás hozzáadásakor
+    StationData pendingStation;    // Új állomás hozzáadásakor
+    char deleteMessageBuffer[200]; // Buffer a delete dialógus üzenetéhez
 
     // Metódusok
     void layoutComponents();

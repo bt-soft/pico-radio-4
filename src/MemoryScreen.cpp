@@ -417,14 +417,13 @@ void MemoryScreen::showDeleteConfirmDialog() {
 
     currentDialogState = DialogState::ConfirmingDelete;
 
-    // Egyszerűsített string kezelés - C stílusú string építés
-    char messageBuffer[200];
+    // Stabil tagváltozó buffer használata a string életciklus biztosításához
     const char *stationName = stations[selectedIndex].name;
     String freqStr = formatFrequency(stations[selectedIndex].frequency, isFmMode);
 
-    snprintf(messageBuffer, sizeof(messageBuffer), "Delete station:\n%s\n%s?", stationName, freqStr.c_str());
+    snprintf(deleteMessageBuffer, sizeof(deleteMessageBuffer), "Delete station:\n%s\n%s?", stationName, freqStr.c_str());
 
-    auto confirmDialog = std::make_shared<MessageDialog>(this, tft, Rect(-1, -1, 250, 0), "Confirm Delete", messageBuffer, MessageDialog::ButtonsType::YesNo);
+    auto confirmDialog = std::make_shared<MessageDialog>(this, tft, Rect(-1, -1, 250, 0), "Confirm Delete", deleteMessageBuffer, MessageDialog::ButtonsType::YesNo);
 
     confirmDialog->setDialogCallback([this](UIDialogBase *dialog, UIDialogBase::DialogResult result) {
         if (result == UIDialogBase::DialogResult::Accepted && currentDialogState == DialogState::ConfirmingDelete && selectedIndex >= 0) {

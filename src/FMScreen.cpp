@@ -221,8 +221,7 @@ void FMScreen::activate() {
     // StatusLine frissítése
     checkAndUpdateMemoryStatus();
 
-    // Teljes képernyő újrarajzolásának kényszerítése
-    markForCompleteRedraw();
+    DEBUG("FMScreen activated - updating button states\n");
 }
 
 /**
@@ -422,15 +421,7 @@ void FMScreen::handleMemoButton(const UIButton::ButtonEvent &event) {
     if (event.state != UIButton::EventButtonState::Clicked) {
         return;
     }
-
-    DEBUG("FM Custom Memo button clicked\n");
-
     auto screenManager = getScreenManager();
-    if (!screenManager) {
-        DEBUG("ERROR: Could not get screenManager from FMScreen!\n");
-        return;
-    }
-
     // Ellenőrizzük, hogy az aktuális állomás már a memóriában van-e
     bool isInMemory = checkCurrentFrequencyInMemory();              // RDS állomásnév lekérése (ha van)
     String rdsStationName = pSi4735Manager->getCachedStationName(); // Ha új állomás és van RDS név, akkor automatikus hozzáadás
