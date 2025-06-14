@@ -325,9 +325,7 @@ void Si4735Band::tuneMemoryStation(uint16_t frequency, int16_t bfoOffset, uint8_
     }
 
     // 4. Újra beállítjuk a sávot az új móddal (false -> ne a preferált adatokat töltse be)
-    this->bandSet(false);
-
-    // 5. Explicit módon állítsd be a frekvenciát és a módot a chipen
+    this->bandSet(false); // 5. Explicit módon állítsd be a frekvenciát és a módot a chipen
     si4735.setFrequency(frequency);
 
     // A tényleges frekvenciát olvassuk vissza a chip-ből (lehet, hogy nem pontosan azt állította be, amit kértünk)
@@ -335,6 +333,9 @@ void Si4735Band::tuneMemoryStation(uint16_t frequency, int16_t bfoOffset, uint8_
 
     // Mentjük a frekvenciát a konfigurációba is a perzisztencia érdekében
     config.data.currentFrequency = this->currentBand->currFreq;
+
+    // Ez biztosítja, hogy az S-meter azonnal frissüljön az új frekvencián
+    invalidateSignalCache();
 
     // BFO eltolás visszaállítása SSB/CW esetén ---
     if (demodModIndex == LSB || demodModIndex == USB || demodModIndex == CW) {

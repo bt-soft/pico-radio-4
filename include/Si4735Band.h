@@ -85,6 +85,9 @@ class Si4735Band : public Si4735Runtime, public Band {
 
             // Mentjük a frekvenciát a konfigurációba is a perzisztencia érdekében
             config.data.currentFrequency = currentBand->currFreq;
+
+            // Ez biztosítja, hogy az S-meter azonnal frissüljön az új frekvencián
+            invalidateSignalCache();
         }
 
         return currentBand->currFreq;

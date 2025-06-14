@@ -159,6 +159,14 @@ void Si4735Runtime::updateSignalCacheIfNeeded() {
 }
 
 /**
+ * @brief Invalidálja a signal quality cache-t (következő lekérdezéskor frissül)
+ */
+void Si4735Runtime::invalidateSignalCache() {
+    signalCache.isValid = false;
+    signalCache.timestamp = 0;
+}
+
+/**
  * @brief Lekéri a signal quality adatokat cache-elt módon (max 1mp késleltetés)
  * @return SignalQualityData A cache-elt signal quality adatok
  */

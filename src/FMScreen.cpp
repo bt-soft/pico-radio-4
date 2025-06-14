@@ -128,7 +128,9 @@ bool FMScreen::handleRotary(const RotaryEvent &event) {
         // RDS cache törlése frekvencia változás miatt
         if (rdsComponent) {
             rdsComponent->clearRdsOnFrequencyChange();
-        } // Frekvencia kijelző azonnali frissítése
+        }
+
+        // Frekvencia kijelző azonnali frissítése
         if (freqDisplayComp) {
             uint16_t currentRadioFreq = pSi4735Manager->getCurrentBand().currFreq;
             freqDisplayComp->setFrequency(currentRadioFreq);
