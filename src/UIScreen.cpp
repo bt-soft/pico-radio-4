@@ -1,6 +1,4 @@
 #include "UIScreen.h"
-#include "Config.h"
-#include "SI4735.h"
 
 // ================================
 // Konstruktorok és inicializálás
@@ -378,72 +376,5 @@ void UIScreen::onDialogClosed(UIDialogBase *closedDialog) {
         } else {
             DEBUG("UIScreen::onDialogClosed() - ERROR: Previous dialog pointer is null!\n");
         }
-    }
-}
-
-// ===================================================================
-// Seek callback infrastruktúra
-// ===================================================================
-
-/// Static pointer az aktuális UIScreen instance-ra (seek callback-hez)
-static UIScreen *g_currentSeekingScreen = nullptr;
-
-/**
- * @brief Callback függvény a SI4735::seekStationProgress számára
- * @param frequency Aktuális frekvencia a seek során
- *
- * @details C-style callback, ami frissíti a frekvencia kijelzőt seek közben.
- * A g_currentSeekingScreen static pointer-en keresztül éri el az instance-t.
- */
-void seekProgressCallback(uint16_t frequency) {
-    if (g_currentSeekingScreen && g_currentSeekingScreen->freqDisplayComp) {
-        g_currentSeekingScreen->freqDisplayComp->setFrequency(frequency);
-        g_currentSeekingScreen->freqDisplayComp->draw(); // Azonnali frissítés a kijelzőn
-    }
-}
-
-/**
- * @brief Seek keresés indítása lefelé valós idejű frekvencia frissítéssel
- * @details Beállítja a callback infrastruktúrát és indítja a seek-et
- */
-void UIScreen::seekStationDown() {
-    if (pSi4735Manager) {
-        // Static pointer beállítása a callback számára
-        g_currentSeekingScreen = this;
-
-        // Seek lefelé valós idejű frekvencia frissítéssel
-        pSi4735Manager->getSi4735().seekStationProgress(seekProgressCallback, SEEK_DOWN);
-
-        // Static pointer nullázása
-        g_currentSeekingScreen = nullptr;
-
-        // Seek befejezése után: konfiguráció frissítése
-        config.data.currentFrequency = pSi4735Manager->getSi4735().getCurrentFrequency();
-
-        // El is mentjük a band táblába
-        pSi4735Manager->getCurrentBand().currFreq = config.data.currentFrequency;
-    }
-}
-
-/**
- * @brief Seek keresés indítása felfelé valós idejű frekvencia frissítéssel
- * @details Beállítja a callback infrastruktúrát és indítja a seek-et
- */
-void UIScreen::seekStationUp() {
-    if (pSi4735Manager) {
-        // Static pointer beállítása a callback számára
-        g_currentSeekingScreen = this;
-
-        // Seek felfelé valós idejű frekvencia frissítéssel
-        pSi4735Manager->getSi4735().seekStationProgress(seekProgressCallback, SEEK_UP);
-
-        // Static pointer nullázása
-        g_currentSeekingScreen = nullptr;
-
-        // Seek befejezése után: konfiguráció frissítése
-        config.data.currentFrequency = pSi4735Manager->getSi4735().getCurrentFrequency();
-
-        // El is mentjük a band táblába
-        pSi4735Manager->getCurrentBand().currFreq = config.data.currentFrequency;
     }
 }

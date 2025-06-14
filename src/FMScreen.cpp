@@ -32,7 +32,7 @@ static constexpr uint8_t TEST_BUTTON = 23;      ///< Test képernyőre váltás 
  * - UI komponensek elrendezése (gombsorok, kijelzők)
  * - Event-driven gombkezelés beállítása
  */
-FMScreen::FMScreen(TFT_eSPI &tft, Si4735Manager &si4735Manager) : UIScreen(tft, SCREEN_NAME_FM, &si4735Manager) {
+FMScreen::FMScreen(TFT_eSPI &tft, Si4735Manager &si4735Manager) : RadioScreen(tft, SCREEN_NAME_FM, &si4735Manager) {
     layoutComponents(); // UI komponensek elhelyezése
 }
 
@@ -81,8 +81,8 @@ void FMScreen::layoutComponents() {
     uint16_t rdsWidth = UIComponent::SCREEN_W - 90; // 90px helyet hagyunk a jobb oldalon
     Rect rdsBounds(5, rdsY, rdsWidth, RDSComponent::DEFAULT_HEIGHT);
 
-    rdsComponent = std::make_shared<RDSComponent>(tft, rdsBounds, *pSi4735Manager);
-    addChild(rdsComponent);
+    // RDS komponens létrehozása a RadioScreen factory metódusával
+    createRDSComponent(rdsBounds);
 
     // RDS területek finomhangolása (opcionális - alapértelmezett layout elfogadható)
     // rdsComponent->setStationNameArea(Rect(10, rdsY, 200, 18));
@@ -124,13 +124,14 @@ bool FMScreen::handleRotary(const RotaryEvent &event) {
         // RDS cache törlése frekvencia változás miatt
         if (rdsComponent) {
             rdsComponent->clearRdsOnFrequencyChange();
-        }
-
-        // Frekvencia kijelző azonnali frissítése
+        } // Frekvencia kijelző azonnali frissítése
         if (freqDisplayComp) {
             uint16_t currentRadioFreq = pSi4735Manager->getCurrentBand().currFreq;
             freqDisplayComp->setFrequency(currentRadioFreq);
         }
+
+        // Memória státusz ellenőrzése és frissítése
+        checkAndUpdateMemoryStatus();
 
         return true; // Esemény sikeresen kezelve
     }
@@ -347,17 +348,12 @@ void FMScreen::handleSeekDownButton(const UIButton::ButtonEvent &event) {
     if (event.state == UIButton::EventButtonState::Clicked) {
         if (pSi4735Manager) {
             // RDS cache törlése seek indítása előtt
-            if (rdsComponent) {
-                rdsComponent->clearRdsOnFrequencyChange();
-            }
-
-            // Seek lefelé az UIScreen delegált metódusával
+            clearRDSCache(); // Seek lefelé a RadioScreen metódusával
             seekStationDown();
 
-            // Seek befejezése után: RDS frissítése
-            if (rdsComponent) {
-                rdsComponent->clearRdsOnFrequencyChange();
-            }
+            // Seek befejezése után: RDS és memória státusz frissítése
+            clearRDSCache();
+            checkAndUpdateMemoryStatus();
         }
     }
 }
@@ -373,17 +369,12 @@ void FMScreen::handleSeekUpButton(const UIButton::ButtonEvent &event) {
     if (event.state == UIButton::EventButtonState::Clicked) {
         if (pSi4735Manager) {
             // RDS cache törlése seek indítása előtt
-            if (rdsComponent) {
-                rdsComponent->clearRdsOnFrequencyChange();
-            }
-
-            // Seek felfelé az UIScreen delegált metódusával
+            clearRDSCache(); // Seek felfelé a RadioScreen metódusával
             seekStationUp();
 
-            // Seek befejezése után: RDS frissítése
-            if (rdsComponent) {
-                rdsComponent->clearRdsOnFrequencyChange();
-            }
+            // Seek befejezése után: RDS és memória státusz frissítése
+            clearRDSCache();
+            checkAndUpdateMemoryStatus();
         }
     }
 }

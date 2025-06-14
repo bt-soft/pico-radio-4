@@ -7,12 +7,11 @@
 #ifndef __FM_SCREEN_H
 #define __FM_SCREEN_H
 #include "CommonVerticalButtons.h"
-#include "RDSComponent.h"
+#include "RadioScreen.h"
 #include "UIButton.h"
 #include "UIHorizontalButtonBar.h"
-#include "UIScreen.h"
 
-class FMScreen : public UIScreen, public CommonVerticalButtons::Mixin<FMScreen> {
+class FMScreen : public RadioScreen, public CommonVerticalButtons::Mixin<FMScreen> {
 
   public:
     // ===================================================================
@@ -182,12 +181,13 @@ class FMScreen : public UIScreen, public CommonVerticalButtons::Mixin<FMScreen> 
     /**
      * @brief RDS információs komponens
      * @details Smart pointer az RDS adatok megjelenítéséhez
-     * - RDS állomásnév, program típus megjelenítés
-     * - Radio text scroll támogatás
+     * - RDS állomásnév, program típus megjelenítés     * - Radio text scroll támogatás
      * - Dátum/idő megjelenítés
      * - Automatikus frissítés és optimalizálás
+     *
+     * @note Az rdsComponent most a RadioScreen alaposztályban van
      */
-    std::shared_ptr<RDSComponent> rdsComponent;
+    // Az rdsComponent most a RadioScreen-ben van deklarálva
 };
 
 #endif // __FM_SCREEN_H
