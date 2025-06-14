@@ -17,6 +17,9 @@ UIHorizontalButtonBar::UIHorizontalButtonBar(TFT_eSPI &tft, const Rect &bounds, 
 void UIHorizontalButtonBar::createButtons(const std::vector<ButtonConfig> &buttonConfigs) {
     uint16_t currentX = bounds.x;
 
+    // Gombok függőleges középre igazítása a konténerben
+    uint16_t buttonY = bounds.y + (bounds.height - buttonHeight) / 2;
+
     for (const auto &config : buttonConfigs) {
         // Ellenőrizzük, hogy a gomb még belefér-e a bounds-ba
         if (currentX + buttonWidth > bounds.x + bounds.width) {
@@ -24,9 +27,9 @@ void UIHorizontalButtonBar::createButtons(const std::vector<ButtonConfig> &butto
             break;
         }
 
-        // Gomb létrehozása
+        // Gomb létrehozása - függőlegesen középre igazítva
         auto button =
-            std::make_shared<UIButton>(tft, config.id, Rect(currentX, bounds.y, buttonWidth, buttonHeight), config.label, config.type, config.initialState, config.callback);
+            std::make_shared<UIButton>(tft, config.id, Rect(currentX, buttonY, buttonWidth, buttonHeight), config.label, config.type, config.initialState, config.callback);
 
         // Hozzáadás a konténerhez és a belső listához
         addChild(button);

@@ -170,14 +170,12 @@ void RadioScreen::createCommonHorizontalButtons() {
 
     constexpr uint16_t H_BUTTON_DEFAULT_HEIGHT = 40; // Alapértelmezett gomb magassága a vízszintes gombsorhoz
     constexpr uint16_t H_BUTTON_DEFAULT_WIDTH = 70;  // Egyedi gomb szélessége
-    constexpr uint16_t H_BUTTON_DEFAULT_GAP = 3;     // Gombok közötti távolság
-
-    // ===================================================================
+    constexpr uint16_t H_BUTTON_DEFAULT_GAP = 3;     // Gombok közötti távolság    // ===================================================================
     // Gombsor pozicionálás - Bal alsó sarok
     // ===================================================================
-    constexpr uint16_t buttonBarHeight = H_BUTTON_DEFAULT_HEIGHT + 10;   // Vízszintes gombsor konténer magassága (alapértelmezett + padding)
-    constexpr uint16_t buttonBarX = 0;                                   // Bal szélhez igazítva
-    const uint16_t buttonBarY = UIComponent::SCREEN_H - buttonBarHeight; // Alsó szélhez igazítva
+    constexpr uint16_t buttonBarHeight = H_BUTTON_DEFAULT_HEIGHT + 10;               // Vízszintes gombsor konténer magassága (alapértelmezett + padding)
+    constexpr uint16_t buttonBarX = 0;                                               // Bal szélhez igazítva
+    const uint16_t buttonBarY = UIComponent::SCREEN_H - H_BUTTON_DEFAULT_HEIGHT - 5; // Gombok alsó széle a képernyő alján (5px alsó margin)
 
     // ===================================================================
     // Közös gomb konfigurációk
