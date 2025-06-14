@@ -12,10 +12,31 @@
 // Vízszintes gombsor azonosítók - Képernyő-specifikus navigáció
 // ===================================================================
 namespace FMScreenHorizontalButtonIDs {
-static constexpr uint8_t AM_BUTTON = 20;    ///< AM képernyőre váltás (pushable)
-static constexpr uint8_t TEST_BUTTON = 21;  ///< Test képernyőre váltás (pushable)
-static constexpr uint8_t SETUP_BUTTON = 22; ///< Setup képernyőre váltás (pushable)
+static constexpr uint8_t SEEK_DOWN_BUTTON = 20; ///< Seek lefelé (pushable)
+static constexpr uint8_t SEEK_UP_BUTTON = 21;   ///< Seek felfelé (pushable)
+static constexpr uint8_t AM_BUTTON = 22;        ///< AM képernyőre váltás (pushable)
+static constexpr uint8_t TEST_BUTTON = 23;      ///< Test képernyőre váltás (pushable)
 } // namespace FMScreenHorizontalButtonIDs
+
+// ===================================================================
+// Static callback support a SI4735::seekStationProgress-hez
+// ===================================================================
+
+/// Static pointer az aktuális FMScreen instance-ra (seek callback-hez)
+static FMScreen *g_currentSeekingFMScreen = nullptr;
+
+/**
+ * @brief Callback függvény a SI4735::seekStationProgress számára
+ * @param frequency Aktuális frekvencia a seek során
+ *
+ * @details C-style callback, ami frissíti a frekvencia kijelzőt seek közben.
+ * A g_currentSeekingFMScreen static pointer-en keresztül éri el az instance-t.
+ */
+void seekProgressCallback(uint16_t frequency) {
+    if (g_currentSeekingFMScreen && g_currentSeekingFMScreen->freqDisplayComp) {
+        g_currentSeekingFMScreen->freqDisplayComp->setFrequency(frequency);
+    }
+}
 
 // ===================================================================
 // Konstruktor és inicializálás
@@ -250,13 +271,14 @@ void FMScreen::onDialogClosed(UIDialogBase *closedDialog) {
 
 /**
  * @brief Vízszintes gombsor létrehozása a képernyő alján
- * @details 3 navigációs gomb elhelyezése vízszintes elrendezésben:
+ * @details 4 navigációs gomb elhelyezése vízszintes elrendezésben:
  *
- * Gombsor pozíció: Bal alsó sarok, 3 gomb szélessége
+ * Gombsor pozíció: Bal alsó sarok, 4 gomb szélessége
  * Gombok (balról jobbra):
- * 1. AM - AM képernyőre váltás (Pushable)
- * 2. Test - Test képernyőre váltás (Pushable)
- * 3. Setup - Setup képernyőre váltás (Pushable)
+ * 1. SEEK DOWN - Automatikus hangolás lefelé (Pushable)
+ * 2. SEEK UP - Automatikus hangolás felfelé (Pushable)
+ * 3. AM - AM képernyőre váltás (Pushable)
+ * 4. Test - Test képernyőre váltás (Pushable)
  */
 void FMScreen::createHorizontalButtonBar() {
 
@@ -266,18 +288,26 @@ void FMScreen::createHorizontalButtonBar() {
     const uint16_t buttonBarHeight = 35;                                 // Optimális gombmagasság
     const uint16_t buttonBarX = 0;                                       // Bal szélhez igazítva
     const uint16_t buttonBarY = UIComponent::SCREEN_H - buttonBarHeight; // Alsó szélhez igazítva
-    const uint16_t buttonBarWidth = 220;                                 // 3 gomb + margók optimális szélessége
+    const uint16_t buttonBarWidth = 300;                                 // 4 gomb + margók optimális szélessége
 
     // ===================================================================
-    // Gomb konfigurációk - Navigációs események
+    // Gomb konfigurációk - Seek és navigációs események
     // ===================================================================
     std::vector<UIHorizontalButtonBar::ButtonConfig> buttonConfigs = {
 
-        // 1. AM - AM/MW/LW/SW képernyőre váltás
+        // 1. SEEK DOWN - Automatikus hangolás lefelé
+        {FMScreenHorizontalButtonIDs::SEEK_DOWN_BUTTON, "Seek-", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
+         [this](const UIButton::ButtonEvent &event) { handleSeekDownButton(event); }},
+
+        // 2. SEEK UP - Automatikus hangolás felfelé
+        {FMScreenHorizontalButtonIDs::SEEK_UP_BUTTON, "Seek+", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
+         [this](const UIButton::ButtonEvent &event) { handleSeekUpButton(event); }},
+
+        // 3. AM - AM/MW/LW/SW képernyőre váltás
         {FMScreenHorizontalButtonIDs::AM_BUTTON, "AM", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
          [this](const UIButton::ButtonEvent &event) { handleAMButton(event); }},
 
-        // 2. TEST - Teszt és diagnosztikai képernyőre váltás
+        // 4. TEST - Teszt és diagnosztikai képernyőre váltás
         {FMScreenHorizontalButtonIDs::TEST_BUTTON, "Test", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
          [this](const UIButton::ButtonEvent &event) { handleTestButton(event); }}
 
@@ -323,8 +353,74 @@ void FMScreen::updateHorizontalButtonStates() {
 }
 
 // ===================================================================
-// Vízszintes gomb eseménykezelők - Navigációs funkciók
+// Vízszintes gomb eseménykezelők - Seek és navigációs funkciók
 // ===================================================================
+
+/**
+ * @brief SEEK DOWN gomb eseménykezelő - Automatikus hangolás lefelé
+ * @param event Gomb esemény (Clicked)
+ *
+ * @details Pushable gomb: Automatikus állomáskeresés lefelé
+ * A seek során valós időben frissíti a frekvencia kijelzőt
+ */
+void FMScreen::handleSeekDownButton(const UIButton::ButtonEvent &event) {
+    if (event.state == UIButton::EventButtonState::Clicked) {
+        if (pSi4735Manager) {
+            // RDS cache törlése seek indítása előtt
+            if (rdsComponent) {
+                rdsComponent->clearRdsOnFrequencyChange();
+            }
+
+            // Static pointer beállítása a callback számára
+            g_currentSeekingFMScreen = this;
+
+            // Seek lefelé valós idejű frekvencia frissítéssel
+            pSi4735Manager->getSi4735().seekStationProgress(seekProgressCallback, SEEK_DOWN);
+
+            // Static pointer nullázása
+            g_currentSeekingFMScreen = nullptr;
+
+            // Seek befejezése után: konfiguráció és RDS frissítése
+            config.data.currentFrequency = pSi4735Manager->getCurrentBand().currFreq;
+            if (rdsComponent) {
+                rdsComponent->clearRdsOnFrequencyChange();
+            }
+        }
+    }
+}
+
+/**
+ * @brief SEEK UP gomb eseménykezelő - Automatikus hangolás felfelé
+ * @param event Gomb esemény (Clicked)
+ *
+ * @details Pushable gomb: Automatikus állomáskeresés felfelé
+ * A seek során valós időben frissíti a frekvencia kijelzőt
+ */
+void FMScreen::handleSeekUpButton(const UIButton::ButtonEvent &event) {
+    if (event.state == UIButton::EventButtonState::Clicked) {
+        if (pSi4735Manager) {
+            // RDS cache törlése seek indítása előtt
+            if (rdsComponent) {
+                rdsComponent->clearRdsOnFrequencyChange();
+            }
+
+            // Static pointer beállítása a callback számára
+            g_currentSeekingFMScreen = this;
+
+            // Seek felfelé valós idejű frekvencia frissítéssel
+            pSi4735Manager->getSi4735().seekStationProgress(seekProgressCallback, SEEK_UP);
+
+            // Static pointer nullázása
+            g_currentSeekingFMScreen = nullptr;
+
+            // Seek befejezése után: konfiguráció és RDS frissítése
+            config.data.currentFrequency = pSi4735Manager->getCurrentBand().currFreq;
+            if (rdsComponent) {
+                rdsComponent->clearRdsOnFrequencyChange();
+            }
+        }
+    }
+}
 
 /**
  * @brief AM gomb eseménykezelő - AM családú képernyőre váltás

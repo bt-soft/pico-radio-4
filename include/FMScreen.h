@@ -14,6 +14,9 @@
 
 class FMScreen : public UIScreen, public CommonVerticalButtons::Mixin<FMScreen> {
 
+    // Friend deklaráció a static seek callback számára
+    friend void seekProgressCallback(uint16_t frequency);
+
   public:
     // ===================================================================
     // Konstruktor és destruktor
@@ -110,13 +113,11 @@ class FMScreen : public UIScreen, public CommonVerticalButtons::Mixin<FMScreen> 
      * - Függőleges gombsor (jobb oldal)
      * - Vízszintes gombsor (alul)
      */
-    void layoutComponents();
-
-    /**
-     * @brief Vízszintes gombsor létrehozása - Alsó navigációs gombok
-     * @details 3 navigációs gomb elhelyezése vízszintes elrendezésben:
-     * AM, Test, Setup
-     */
+    void layoutComponents(); /**
+                              * @brief Vízszintes gombsor létrehozása - Alsó navigációs gombok
+                              * @details 4 gomb elhelyezése vízszintes elrendezésben:
+                              * Seek Down, Seek Up, AM, Test
+                              */
     void createHorizontalButtonBar();
 
     // ===================================================================
@@ -130,11 +131,23 @@ class FMScreen : public UIScreen, public CommonVerticalButtons::Mixin<FMScreen> 
      * Szinkronizált állapotok:
      * - AM gomb ↔ aktuális band típus (FM vs AM/MW/LW/SW)
      */
-    void updateHorizontalButtonStates();
-
-    // ===================================================================
+    void updateHorizontalButtonStates(); // ===================================================================
     // Vízszintes gomb eseménykezelők
     // ===================================================================
+
+    /**
+     * @brief SEEK DOWN gomb eseménykezelő - Automatikus hangolás lefelé
+     * @param event Gomb esemény (Clicked)
+     * @details Pushable gomb: Automatikus állomáskeresés lefelé
+     */
+    void handleSeekDownButton(const UIButton::ButtonEvent &event);
+
+    /**
+     * @brief SEEK UP gomb eseménykezelő - Automatikus hangolás felfelé
+     * @param event Gomb esemény (Clicked)
+     * @details Pushable gomb: Automatikus állomáskeresés felfelé
+     */
+    void handleSeekUpButton(const UIButton::ButtonEvent &event);
 
     /**
      * @brief AM gomb eseménykezelő - AM családú képernyőre váltás
@@ -146,19 +159,19 @@ class FMScreen : public UIScreen, public CommonVerticalButtons::Mixin<FMScreen> 
     /**
      * @brief TEST gomb eseménykezelő - Teszt képernyőre váltás
      * @param event Gomb esemény (Clicked)
-     * @details Pushable gomb: Test és diagnosztikai képernyőre navigálás
-     */
+     * @details Pushable gomb: Test és diagnosztikai képernyőre navigálás     */
     void handleTestButton(const UIButton::ButtonEvent &event);
+
     // ===================================================================
     // UI komponens objektumok - Smart pointer kezelés
     // ===================================================================
 
     /**
      * @brief Vízszintes gombsor komponens
-     * @details Smart pointer a 3 navigációs gombhoz (alsó sor)
+     * @details Smart pointer a 4 gombhoz (alsó sor)
      * - Automatikus memória kezelés
      * - Event-driven eseménykezelés
-     * - AM, Test, Setup gombok
+     * - Seek Down, Seek Up, AM, Test gombok
      */
     std::shared_ptr<UIHorizontalButtonBar> horizontalButtonBar;
 
