@@ -150,14 +150,14 @@ class RadioScreen : public UIScreen {
     // ===================================================================
 
     /// S-Meter komponens - jelerősség és jel minőség megjelenítése
-    std::shared_ptr<SMeter> smeterComp;
-
-    /**
-     * @brief Létrehozza az S-Meter komponenst
-     * @param smeterBounds Az S-Meter komponens határai
-     */
+    std::shared_ptr<SMeter> smeterComp; /**
+                                         * @brief Létrehozza az S-Meter komponenst
+                                         * @param smeterBounds Az S-Meter komponens határai
+                                         */
     inline void createSMeterComponent(const Rect &smeterBounds) {
-        smeterComp = std::make_shared<SMeter>(tft, smeterBounds);
+        ColorScheme smeterColors = ColorScheme::defaultScheme();
+        smeterColors.background = TFT_COLOR_BACKGROUND; // Fekete háttér a designhoz
+        smeterComp = std::make_shared<SMeter>(tft, smeterBounds, smeterColors);
         addChild(smeterComp);
     }
 

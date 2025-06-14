@@ -87,23 +87,33 @@ void UIDialogBase::draw() {
  * @details A fejléc kék háttérrel és egyenes sarkokkal rendelkezik.
  */
 void UIDialogBase::drawSelf() {
-    // Dialógus háttér és keret rajzolása - egyenes sarkokkal
-    tft.fillRect(bounds.x, bounds.y, bounds.width, bounds.height, colors.background);
-    tft.drawRect(bounds.x, bounds.y, bounds.width, bounds.height, colors.border); // Fejléc kék háttér - egyenes sarkokkal
+    // Árnyék effekt rajzolása (eltolva jobbra és lefelé)
+    const int shadowOffset = 4;
+    const uint16_t shadowColor = TFT_COLOR(64, 64, 64); // Sötétszürke árnyék
+    tft.fillRect(bounds.x + shadowOffset, bounds.y + shadowOffset, bounds.width, bounds.height, shadowColor);
+
+    // Dialógus háttér rajzolása (az árnyék fölé)
+    tft.fillRect(bounds.x, bounds.y, bounds.width, bounds.height, colors.background); // Vastagabb, világosabb keret több rétegben
+    const uint16_t borderColor = TFT_WHITE;                                           // Fehér keret a jobb láthatóságért
+
+    // 2 pixeles vastagságú keret rajzolása
+    for (int i = 0; i < 2; i++) {
+        tft.drawRect(bounds.x + i, bounds.y + i, bounds.width - 2 * i, bounds.height - 2 * i, borderColor);
+    }
+
+    // Fejléc kék háttér - egyenes sarkokkal (a keret után)
     uint16_t headerColor = UIColorPalette::DIALOG_HEADER_BACKGROUND;
-    tft.fillRect(bounds.x + 1, bounds.y + 1, bounds.width - 2, HEADER_HEIGHT, headerColor);
+    tft.fillRect(bounds.x + 2, bounds.y + 2, bounds.width - 4, HEADER_HEIGHT, headerColor);
 
     // Fejléc elválasztó vonal
-    tft.drawLine(bounds.x + 1, bounds.y + HEADER_HEIGHT, bounds.x + bounds.width - 2, bounds.y + HEADER_HEIGHT, colors.border);
-
-    // Cím kirajzolása
+    tft.drawLine(bounds.x + 2, bounds.y + HEADER_HEIGHT + 2, bounds.x + bounds.width - 3, bounds.y + HEADER_HEIGHT + 2, borderColor); // Cím kirajzolása
     if (title != nullptr) {
         tft.setTextColor(UIColorPalette::DIALOG_HEADER_TEXT, headerColor);
         tft.setFreeFont(&FreeSansBold9pt7b); // Nagyobb, vastagabb font a címnek
         tft.setTextSize(1);                  // A FreeSansBold9pt7b natív mérete
         tft.setTextDatum(ML_DATUM);
-        int16_t titleX = bounds.x + PADDING + 4;
-        int16_t titleY = bounds.y + (HEADER_HEIGHT / 2);
+        int16_t titleX = bounds.x + PADDING + 6;             // 2 pixel keret + 4 padding
+        int16_t titleY = bounds.y + 2 + (HEADER_HEIGHT / 2); // 2 pixel keret eltolás
         tft.drawString(title, titleX, titleY);
     }
 }
