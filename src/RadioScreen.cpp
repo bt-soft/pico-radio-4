@@ -157,3 +157,127 @@ bool RadioScreen::checkAndUpdateMemoryStatus() {
 
     return isInMemory;
 }
+
+// ===================================================================
+// Közös vízszintes gombsor implementáció
+// ===================================================================
+
+/**
+ * @brief Közös vízszintes gombsor létrehozása és inicializálása
+ * @details Létrehozza a közös gombokat, amiket minden RadioScreen használ
+ */
+void RadioScreen::createCommonHorizontalButtons() {
+    // ===================================================================
+    // Gombsor pozicionálás - Bal alsó sarok
+    // ===================================================================
+    const uint16_t buttonBarHeight = 35;                                 // Optimális gombmagasság
+    const uint16_t buttonBarX = 0;                                       // Bal szélhez igazítva
+    const uint16_t buttonBarY = UIComponent::SCREEN_H - buttonBarHeight; // Alsó szélhez igazítva
+
+    // ===================================================================
+    // Közös gomb konfigurációk
+    // ===================================================================
+    std::vector<UIHorizontalButtonBar::ButtonConfig> buttonConfigs = //
+        {
+            // 1. HAM - Ham rádió funkcionalitás
+            {CommonHorizontalButtonIDs::HAM_BUTTON, "Ham", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
+             [this](const UIButton::ButtonEvent &event) { handleHamButton(event); }},
+
+            // 2. BAND - Sáv (Band) kezelés
+            {CommonHorizontalButtonIDs::BAND_BUTTON, "Band", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
+             [this](const UIButton::ButtonEvent &event) { handleBandButton(event); }},
+
+            // 3. SCAN - Folyamatos keresés
+            {CommonHorizontalButtonIDs::SCAN_BUTTON, "Scan", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
+             [this](const UIButton::ButtonEvent &event) { handleScanButton(event); }} //
+        };
+
+    // ===================================================================
+    // Leszármazott osztályok specifikus gombjai
+    // ===================================================================
+    addSpecificHorizontalButtons(buttonConfigs);
+
+    // ===================================================================
+    // Gombsor szélessége dinamikus számítás
+    // ===================================================================
+    const uint16_t buttonWidth = 70;                                                                                 // Egyedi gomb szélessége
+    const uint16_t buttonSpacing = 3;                                                                                // Gombok közötti távolság
+    const uint16_t buttonBarWidth = buttonConfigs.size() * buttonWidth + (buttonConfigs.size() - 1) * buttonSpacing; // Dinamikus szélesség
+
+    // ===================================================================
+    // UIHorizontalButtonBar objektum létrehozása
+    // ===================================================================
+    horizontalButtonBar = std::make_shared<UIHorizontalButtonBar>(     //
+        tft,                                                           // TFT display referencia
+        Rect(buttonBarX, buttonBarY, buttonBarWidth, buttonBarHeight), // Gombsor pozíció és méret
+        buttonConfigs,                                                 // Gomb konfigurációk
+        buttonWidth,                                                   // Egyedi gomb szélessége
+        30,                                                            // Egyedi gomb magassága
+        buttonSpacing                                                  // Gombok közötti távolság
+    );
+
+    // Komponens hozzáadása a képernyőhöz
+    addChild(horizontalButtonBar);
+}
+
+/**
+ * @brief Közös vízszintes gombsor állapotainak szinkronizálása
+ * @details Csak aktiváláskor hívódik meg! Event-driven architektúra.
+ */
+void RadioScreen::updateCommonHorizontalButtonStates() {
+    if (!horizontalButtonBar)
+        return;
+
+    // Alapértelmezett állapotok - a leszármazott osztályok felülírhatják
+    // Ham gomb: alapértelmezetten kikapcsolva
+    horizontalButtonBar->setButtonState(CommonHorizontalButtonIDs::HAM_BUTTON, UIButton::ButtonState::Off);
+
+    // Band gomb: alapértelmezetten kikapcsolva
+    horizontalButtonBar->setButtonState(CommonHorizontalButtonIDs::BAND_BUTTON, UIButton::ButtonState::Off);
+
+    // Scan gomb: alapértelmezetten kikapcsolva
+    horizontalButtonBar->setButtonState(CommonHorizontalButtonIDs::SCAN_BUTTON, UIButton::ButtonState::Off);
+}
+
+// ===================================================================
+// Közös gomb eseménykezelők - Alapértelmezett implementáció
+// ===================================================================
+
+/**
+ * @brief HAM gomb eseménykezelő - Ham rádió funkcionalitás
+ * @param event Gomb esemény (Clicked)
+ * @details Alapértelmezett implementáció - leszármazott osztályok felülírhatják
+ */
+void RadioScreen::handleHamButton(const UIButton::ButtonEvent &event) {
+    if (event.state == UIButton::EventButtonState::Clicked) {
+        // TODO: Ham rádió funkcionalitás implementálása
+        // Jelenleg placeholder - később implementáljuk
+        Serial.println("RadioScreen::handleHamButton - Ham funkció (TODO)");
+    }
+}
+
+/**
+ * @brief BAND gomb eseménykezelő - Sáv (Band) kezelés
+ * @param event Gomb esemény (Clicked)
+ * @details Alapértelmezett implementáció - leszármazott osztályok felülírhatják
+ */
+void RadioScreen::handleBandButton(const UIButton::ButtonEvent &event) {
+    if (event.state == UIButton::EventButtonState::Clicked) {
+        // TODO: Band váltás funkcionalitás implementálása
+        // Jelenleg placeholder - később implementáljuk
+        Serial.println("RadioScreen::handleBandButton - Band váltás (TODO)");
+    }
+}
+
+/**
+ * @brief SCAN gomb eseménykezelő - Folyamatos keresés
+ * @param event Gomb esemény (Clicked)
+ * @details Alapértelmezett implementáció - leszármazott osztályok felülírhatják
+ */
+void RadioScreen::handleScanButton(const UIButton::ButtonEvent &event) {
+    if (event.state == UIButton::EventButtonState::Clicked) {
+        // TODO: Scan (folyamatos keresés) funkcionalitás implementálása
+        // Jelenleg placeholder - később implementáljuk
+        Serial.println("RadioScreen::handleScanButton - Scan funkció (TODO)");
+    }
+}

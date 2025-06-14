@@ -10,17 +10,19 @@
 // ===================================================================
 
 /**
- * @brief Vízszintes gombsor gomb azonosítók (AM képernyő specifikus)
- * @details Alsó navigációs gombsor - képernyőváltáshoz használt gombok
+ * @brief AM képernyő specifikus vízszintes gomb azonosítók
+ * @details Alsó vízszintes gombsor - AM specifikus funkcionalitás
  *
- * **ID tartomány**: 40-42 (nem ütközik a univerzális 10-17 és FM 20-22 tartománnyal)
- * **Funkció**: Képernyők közötti navigáció (FM, Test, Setup)
- * **Gomb típus**: Pushable (egyszeri nyomás → képernyőváltás)
+ * **ID tartomány**: 70-74 (nem ütközik a közös 50-52 és FM 60-61 tartománnyal)
+ * **Funkció**: AM specifikus rádió funkciók
+ * **Gomb típus**: Pushable (egyszeri nyomás → funkció végrehajtása)
  */
 namespace AMScreenHorizontalButtonIDs {
-static constexpr uint8_t FM_BUTTON = 40;    ///< FM képernyőre váltás (pushable)
-static constexpr uint8_t TEST_BUTTON = 41;  ///< Test képernyőre váltás (pushable)
-static constexpr uint8_t SETUP_BUTTON = 42; ///< Setup képernyőre váltás (pushable)
+static constexpr uint8_t BFO_BUTTON = 70;    ///< Beat Frequency Oscillator
+static constexpr uint8_t AFBW_BUTTON = 71;   ///< Audio Filter Bandwidth
+static constexpr uint8_t ANTCAP_BUTTON = 72; ///< Antenna Capacitor
+static constexpr uint8_t DEMOD_BUTTON = 73;  ///< Demodulation
+static constexpr uint8_t STEP_BUTTON = 74;   ///< Frequency Step
 } // namespace AMScreenHorizontalButtonIDs
 
 // =====================================================================
@@ -28,11 +30,11 @@ static constexpr uint8_t SETUP_BUTTON = 42; ///< Setup képernyőre váltás (pu
 // =====================================================================
 
 /**
- * @brief AMScreen konstruktor implementáció - FMScreen mintájára
+ * @brief AMScreen konstruktor implementáció - RadioScreen alaposztályból származik
  * @param tft TFT display referencia
  * @param si4735Manager Si4735 rádió chip kezelő referencia
  */
-AMScreen::AMScreen(TFT_eSPI &tft, Si4735Manager &si4735Manager) : UIScreen(tft, SCREEN_NAME_AM, &si4735Manager) {
+AMScreen::AMScreen(TFT_eSPI &tft, Si4735Manager &si4735Manager) : RadioScreen(tft, SCREEN_NAME_AM, &si4735Manager) {
 
     // UI komponensek létrehozása és elhelyezése
     layoutComponents();
@@ -161,7 +163,8 @@ void AMScreen::activate() {
     // *** EGYETLEN GOMBÁLLAPOT SZINKRONIZÁLÁSI PONT - Event-driven ***
     // ===================================================================
     updateAllVerticalButtonStates(pSi4735Manager); // Univerzális funkcionális gombok (mixin method)
-    updateHorizontalButtonStates();                // AM-specifikus navigációs gombok
+    updateCommonHorizontalButtonStates();          // Közös gombok szinkronizálása
+    updateHorizontalButtonStates();                // AM-specifikus gombok szinkronizálása
 }
 
 /**
@@ -176,16 +179,15 @@ void AMScreen::onDialogClosed(UIDialogBase *closedDialog) {
     DEBUG("AMScreen::onDialogClosed - Dialog closed, checking if last dialog\n");
 
     // Először hívjuk az alap implementációt (stack cleanup, navigation logic)
-    UIScreen::onDialogClosed(closedDialog); // Ha ez volt az utolsó dialógus, frissítsük a gombállapotokat
-    if (!isDialogActive()) {
-        DEBUG("AMScreen::onDialogClosed - Last dialog closed, updating button states\n");
-        updateAllVerticalButtonStates(pSi4735Manager); // Függőleges gombok szinkronizálása
-        updateHorizontalButtonStates();                // Vízszintes gombok szinkronizálása
+    UIScreen::onDialogClosed(closedDialog); // Ha ez volt az utolsó dialógus, frissítsük a gombállapotokat    if (!isDialogActive()) {
+    DEBUG("AMScreen::onDialogClosed - Last dialog closed, updating button states\n");
+    updateAllVerticalButtonStates(pSi4735Manager); // Függőleges gombok szinkronizálása
+    updateCommonHorizontalButtonStates();          // Közös gombok szinkronizálása
+    updateHorizontalButtonStates();                // AM specifikus gombok szinkronizálása
 
-        // A gombsor konténer teljes újrarajzolása, hogy biztosan megjelenjenek a gombok
-        if (horizontalButtonBar) {
-            horizontalButtonBar->markForCompleteRedraw();
-        }
+    // A gombsor konténer teljes újrarajzolása, hogy biztosan megjelenjenek a gombok
+    if (horizontalButtonBar) {
+        horizontalButtonBar->markForCompleteRedraw();
     }
 }
 
@@ -198,109 +200,126 @@ void AMScreen::onDialogClosed(UIDialogBase *closedDialog) {
  */
 void AMScreen::layoutComponents() {              // UI komponensek létrehozása
     createCommonVerticalButtons(pSi4735Manager); // ButtonsGroupManager használata
-    createHorizontalButtonBar();                 // Alsó navigációs gombok
+    createCommonHorizontalButtons();             // Alsó közös + AM specifikus vízszintes gombsor
 }
 
 /**
- * @brief Vízszintes gombsor létrehozása - az FMScreen mintájára
+ * @brief AM specifikus gombok hozzáadása a közös gombokhoz
+ * @param buttonConfigs A már meglévő gomb konfigurációk vektora
+ * @details Felülírja az ős metódusát, hogy hozzáadja az AM specifikus gombokat
  */
-void AMScreen::createHorizontalButtonBar() {
-    // ===================================================================
-    // Gombsor pozicionálás - Bal alsó sarok (dinamikus)
-    // ===================================================================
-    const uint16_t buttonBarHeight = 35;                        // Optimális gombmagasság (FMScreen-hez igazítva)
-    const uint16_t buttonBarX = 0;                              // Bal szélhez igazítva
-    const uint16_t buttonBarY = tft.height() - buttonBarHeight; // Alsó szélhez igazítva (dinamikus)
-    const uint16_t buttonBarWidth = 220;                        // 3 gomb + margók optimális szélessége
+void AMScreen::addSpecificHorizontalButtons(std::vector<UIHorizontalButtonBar::ButtonConfig> &buttonConfigs) {
+    // AM specifikus gombok hozzáadása a közös gombok után
 
-    // ===================================================================
-    // Gomb konfigurációk - Navigációs események
-    // ===================================================================
-    std::vector<UIHorizontalButtonBar::ButtonConfig> configs = {
-        {AMScreenHorizontalButtonIDs::FM_BUTTON, "FM", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, [this](const UIButton::ButtonEvent &e) { handleFMButton(e); }},
-        //
-        {AMScreenHorizontalButtonIDs::TEST_BUTTON, "Test", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
-         [this](const UIButton::ButtonEvent &e) { handleTestButton(e); }}
-        //
-    };
+    // 1. BFO - Beat Frequency Oscillator
+    buttonConfigs.push_back({AMScreenHorizontalButtonIDs::BFO_BUTTON, "BFO", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
+                             [this](const UIButton::ButtonEvent &event) { handleBFOButton(event); }});
 
-    // ===================================================================
-    // UIHorizontalButtonBar objektum létrehozása
-    // ===================================================================
-    horizontalButtonBar = std::make_shared<UIHorizontalButtonBar>(tft, Rect(buttonBarX, buttonBarY, buttonBarWidth, buttonBarHeight), configs,
-                                                                  70, // Egyedi gomb szélessége (pixel)
-                                                                  30, // Egyedi gomb magassága (pixel)
-                                                                  3   // Gombok közötti távolság (pixel)
-    );
+    // 2. AfBW - Audio Filter Bandwidth
+    buttonConfigs.push_back({AMScreenHorizontalButtonIDs::AFBW_BUTTON, "AfBW", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
+                             [this](const UIButton::ButtonEvent &event) { handleAfBWButton(event); }});
 
-    // Komponens hozzáadása a képernyőhöz
-    addChild(horizontalButtonBar);
+    // 3. AntCap - Antenna Capacitor
+    buttonConfigs.push_back({AMScreenHorizontalButtonIDs::ANTCAP_BUTTON, "AntCap", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
+                             [this](const UIButton::ButtonEvent &event) { handleAntCapButton(event); }});
+
+    // 4. Demod - Demodulation
+    buttonConfigs.push_back({AMScreenHorizontalButtonIDs::DEMOD_BUTTON, "Demod", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
+                             [this](const UIButton::ButtonEvent &event) { handleDemodButton(event); }});
+
+    // 5. Step - Frequency Step
+    buttonConfigs.push_back({AMScreenHorizontalButtonIDs::STEP_BUTTON, "Step", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
+                             [this](const UIButton::ButtonEvent &event) { handleStepButton(event); }});
 }
 
 // =====================================================================
-// EVENT-DRIVEN GOMBÁLLAPOT SZINKRONIZÁLÁS - Univerzális rendszer
+// EVENT-DRIVEN GOMBÁLLAPOT SZINKRONIZÁLÁS
 // =====================================================================
 
 /**
- * @brief Vízszintes gombsor állapotainak szinkronizálása - AM képernyő specifikus
- * @details Navigációs gombok állapot kezelése:
+ * @brief AM specifikus vízszintes gombsor állapotainak szinkronizálása
+ * @details Event-driven architektúra: CSAK aktiváláskor hívódik meg!
  *
- * **FM gomb állapot logika**:
- * - Mindig Off állapotban (mivel jelenleg AM képernyőn vagyunk)
- * - Vizuálisan jelzi, hogy nem FM módban vagyunk
- * - Kattintásra átváltás FM képernyőre
- *
- * **Jövőbeli bővítési lehetőségek**:
- * - Test gomb állapot kezelése
- * - Setup gomb állapot kezelése
- * - Band-specifikus vizuális visszajelzések
+ * Szinkronizált állapotok:
+ * - AM specifikus gombok alapértelmezett állapotai
  */
 void AMScreen::updateHorizontalButtonStates() {
-    if (!horizontalButtonBar)
-        return;
-
-    // FM gomb állapot szinkronizálása (AM képernyőn mindig Off)
-    auto fmButton = horizontalButtonBar->getButton(AMScreenHorizontalButtonIDs::FM_BUTTON);
-    if (fmButton) {
-        // FM gomb Off állapotban: jelzi hogy jelenleg AM módban vagyunk
-        fmButton->setButtonState(UIButton::ButtonState::Off);
+    if (!horizontalButtonBar) {
+        return; // Biztonsági ellenőrzés
     }
 
-    // További navigációs gombok állapot kezelése itt...
-    // TODO: Test és Setup gombok állapot szinkronizálása szükség szerint
+    // ===================================================================
+    // AM specifikus gombok állapot szinkronizálása
+    // ===================================================================
+
+    // Minden AM specifikus gomb alapértelmezett állapotban (kikapcsolva)
+    horizontalButtonBar->setButtonState(AMScreenHorizontalButtonIDs::BFO_BUTTON, UIButton::ButtonState::Off);
+    horizontalButtonBar->setButtonState(AMScreenHorizontalButtonIDs::AFBW_BUTTON, UIButton::ButtonState::Off);
+    horizontalButtonBar->setButtonState(AMScreenHorizontalButtonIDs::ANTCAP_BUTTON, UIButton::ButtonState::Off);
+    horizontalButtonBar->setButtonState(AMScreenHorizontalButtonIDs::DEMOD_BUTTON, UIButton::ButtonState::Off);
+    horizontalButtonBar->setButtonState(AMScreenHorizontalButtonIDs::STEP_BUTTON, UIButton::ButtonState::Off);
 }
 
 // =====================================================================
-// Függőleges gomb eseménykezelők - az FMScreen mintájára
-// =====================================================================
-
-// ===================================================================
-// REFAKTORÁLÁS: A függőleges gomb handlereket eltávolítottuk!
-// Most a CommonVerticalButtons osztály statikus metódusait használjuk
-// A teljes gombsor létrehozás is áthelyeződött a közös factory-ba
-// ===================================================================
-
-// =====================================================================
-// Vízszintes gomb eseménykezelők - 3 navigációs gomb
+// AM specifikus gomb eseménykezelők
 // =====================================================================
 
 /**
- * @brief FM gomb eseménykezelő - FM képernyőre váltás
- * @details **KERESZTNAVIGÁCIÓ:** FMScreen-re navigálás
+ * @brief BFO gomb eseménykezelő - Beat Frequency Oscillator
+ * @param event Gomb esemény (Clicked)
+ * @details AM specifikus funkcionalitás - alapértelmezett implementáció
  */
-void AMScreen::handleFMButton(const UIButton::ButtonEvent &event) {
+void AMScreen::handleBFOButton(const UIButton::ButtonEvent &event) {
     if (event.state == UIButton::EventButtonState::Clicked) {
-        // FM képernyőre váltás - keresztnavigáció
-        getScreenManager()->switchToScreen(SCREEN_NAME_FM);
+        // TODO: BFO funkcionalitás implementálása
+        Serial.println("AMScreen::handleBFOButton - BFO funkció (TODO)");
     }
 }
 
 /**
- * @brief TEST gomb eseménykezelő - Teszt képernyőre váltás
+ * @brief AfBW gomb eseménykezelő - Audio Filter Bandwidth
+ * @param event Gomb esemény (Clicked)
+ * @details AM specifikus funkcionalitás - alapértelmezett implementáció
  */
-void AMScreen::handleTestButton(const UIButton::ButtonEvent &event) {
+void AMScreen::handleAfBWButton(const UIButton::ButtonEvent &event) {
     if (event.state == UIButton::EventButtonState::Clicked) {
-        // Test képernyőre váltás
-        getScreenManager()->switchToScreen(SCREEN_NAME_TEST);
+        // TODO: AfBW funkcionalitás implementálása
+        Serial.println("AMScreen::handleAfBWButton - AfBW funkció (TODO)");
+    }
+}
+
+/**
+ * @brief AntCap gomb eseménykezelő - Antenna Capacitor
+ * @param event Gomb esemény (Clicked)
+ * @details AM specifikus funkcionalitás - alapértelmezett implementáció
+ */
+void AMScreen::handleAntCapButton(const UIButton::ButtonEvent &event) {
+    if (event.state == UIButton::EventButtonState::Clicked) {
+        // TODO: AntCap funkcionalitás implementálása
+        Serial.println("AMScreen::handleAntCapButton - AntCap funkció (TODO)");
+    }
+}
+
+/**
+ * @brief Demod gomb eseménykezelő - Demodulation
+ * @param event Gomb esemény (Clicked)
+ * @details AM specifikus funkcionalitás - alapértelmezett implementáció
+ */
+void AMScreen::handleDemodButton(const UIButton::ButtonEvent &event) {
+    if (event.state == UIButton::EventButtonState::Clicked) {
+        // TODO: Demod funkcionalitás implementálása
+        Serial.println("AMScreen::handleDemodButton - Demod funkció (TODO)");
+    }
+}
+
+/**
+ * @brief Step gomb eseménykezelő - Frequency Step
+ * @param event Gomb esemény (Clicked)
+ * @details AM specifikus funkcionalitás - alapértelmezett implementáció
+ */
+void AMScreen::handleStepButton(const UIButton::ButtonEvent &event) {
+    if (event.state == UIButton::EventButtonState::Clicked) {
+        // TODO: Step funkcionalitás implementálása
+        Serial.println("AMScreen::handleStepButton - Step funkció (TODO)");
     }
 }

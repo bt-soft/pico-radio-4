@@ -116,9 +116,8 @@ class FMScreen : public RadioScreen, public CommonVerticalButtons::Mixin<FMScree
     void layoutComponents();
     //
     /**
-     * @brief Vízszintes gombsor létrehozása - Alsó navigációs gombok
-     * @details 4 gomb elhelyezése vízszintes elrendezésben:
-     * Seek Down, Seek Up, AM, Test
+     *@brief Vízszintes gombsor létrehozása - Alsó navigációs gombok
+     *@details Közös gombok + FM specifikus gombok(Seek -, Seek +)
      */
     void createHorizontalButtonBar();
     /**
@@ -130,24 +129,29 @@ class FMScreen : public RadioScreen, public CommonVerticalButtons::Mixin<FMScree
     // ===================================================================
     // Event-driven gombállapot szinkronizálás
     // ===================================================================
-
     /**
-     * @brief Vízszintes gombsor állapotainak szinkronizálása
-     * @details CSAK aktiváláskor hívódik meg! Event-driven architektúra.
-     *
-     * Szinkronizált állapotok:
-     * - AM gomb ↔ aktuális band típus (FM vs AM/MW/LW/SW)
+     *@brief Vízszintes gombsor állapotainak szinkronizálása
+     *@details CSAK aktiváláskor hívódik meg !Event - driven architektúra.
+     **Szinkronizált állapotok:
+     *-Közös gombok állapotai(Ham, Band, Scan)
+     * -FM specifikus gombok állapotai
      */
     void updateHorizontalButtonStates();
+
+    /**
+     * @brief FM specifikus gombok hozzáadása a közös gombokhoz
+     * @param buttonConfigs A már meglévő gomb konfigurációk vektora
+     * @details Felülírja az ős metódusát, hogy hozzáadja az FM specifikus gombokat
+     */
+    virtual void addSpecificHorizontalButtons(std::vector<UIHorizontalButtonBar::ButtonConfig> &buttonConfigs) override;
     //
     // ===================================================================
     // Vízszintes gomb eseménykezelők
     // ===================================================================
-
     /**
-     * @brief SEEK DOWN gomb eseménykezelő - Automatikus hangolás lefelé
-     * @param event Gomb esemény (Clicked)
-     * @details Pushable gomb: Automatikus állomáskeresés lefelé
+     *@brief SEEK DOWN gomb eseménykezelő - Automatikus hangolás lefelé
+     *@param event Gomb esemény(Clicked)
+     * @details Pushable gomb : Automatikus állomáskeresés lefelé
      */
     void handleSeekDownButton(const UIButton::ButtonEvent &event);
 
@@ -157,20 +161,6 @@ class FMScreen : public RadioScreen, public CommonVerticalButtons::Mixin<FMScree
      * @details Pushable gomb: Automatikus állomáskeresés felfelé
      */
     void handleSeekUpButton(const UIButton::ButtonEvent &event);
-
-    /**
-     * @brief AM gomb eseménykezelő - AM családú képernyőre váltás
-     * @param event Gomb esemény (Clicked)
-     * @details Pushable gomb: AM/MW/LW/SW képernyőre navigálás
-     */
-    void handleAMButton(const UIButton::ButtonEvent &event);
-
-    /**
-     * @brief TEST gomb eseménykezelő - Teszt képernyőre váltás
-     * @param event Gomb esemény (Clicked)
-     * @details Pushable gomb: Test és diagnosztikai képernyőre navigálás
-     */
-    void handleTestButton(const UIButton::ButtonEvent &event);
 
     /**
      * @brief Egyedi MEMO gomb eseménykezelő - Intelligens memória kezelés
@@ -183,15 +173,6 @@ class FMScreen : public RadioScreen, public CommonVerticalButtons::Mixin<FMScree
     // ===================================================================
     // UI komponens objektumok - Smart pointer kezelés
     // ===================================================================
-
-    /**
-     * @brief Vízszintes gombsor komponens
-     * @details Smart pointer a 4 gombhoz (alsó sor)
-     * - Automatikus memória kezelés
-     * - Event-driven eseménykezelés
-     * - Seek Down, Seek Up, AM, Test gombok
-     */
-    std::shared_ptr<UIHorizontalButtonBar> horizontalButtonBar;
 
     /**
      * @brief STEREO/MONO jelző komponens
@@ -209,7 +190,7 @@ class FMScreen : public RadioScreen, public CommonVerticalButtons::Mixin<FMScree
      *
      * @note Az rdsComponent most a RadioScreen alaposztályban van
      */
-    // Az rdsComponent most a RadioScreen-ben van deklarálva
+    // Az rdsComponent és horizontalButtonBar most a RadioScreen-ben van deklarálva
 };
 
 #endif // __FM_SCREEN_H

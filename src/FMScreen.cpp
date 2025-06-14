@@ -9,13 +9,11 @@
 #include "rtVars.h"
 
 // ===================================================================
-// Vízszintes gombsor azonosítók - Képernyő-specifikus navigáció
+// FM képernyő specifikus vízszintes gomb azonosítók
 // ===================================================================
 namespace FMScreenHorizontalButtonIDs {
-static constexpr uint8_t SEEK_DOWN_BUTTON = 20; ///< Seek lefelé (pushable)
-static constexpr uint8_t SEEK_UP_BUTTON = 21;   ///< Seek felfelé (pushable)
-static constexpr uint8_t AM_BUTTON = 22;        ///< AM képernyőre váltás (pushable)
-static constexpr uint8_t TEST_BUTTON = 23;      ///< Test képernyőre váltás (pushable)
+static constexpr uint8_t SEEK_DOWN_BUTTON = 60; ///< Seek lefelé (pushable) - FM specifikus
+static constexpr uint8_t SEEK_UP_BUTTON = 61;   ///< Seek felfelé (pushable) - FM specifikus
 } // namespace FMScreenHorizontalButtonIDs
 
 // ===================================================================
@@ -96,13 +94,11 @@ void FMScreen::layoutComponents() {
     uint16_t stereoY = rdsY + 40; // RDS komponens után (20px RDS magasság + 20px margin)
     Rect stereoBounds(5, stereoY, 50, 20);
     stereoIndicator = std::make_shared<StereoIndicator>(tft, stereoBounds);
-    addChild(stereoIndicator);
-
-    // ===================================================================
+    addChild(stereoIndicator); // ===================================================================
     // Gombsorok létrehozása - Event-driven architektúra
     // ===================================================================
     createCommonVerticalButtonsWithCustomMemo(); // ButtonsGroupManager alapú függőleges gombsor egyedi Memo kezelővel
-    createHorizontalButtonBar();                 // Alsó vízszintes gombsor
+    createCommonHorizontalButtons();             // Alsó közös + FM specifikus vízszintes gombsor
 }
 
 // ===================================================================
@@ -260,7 +256,8 @@ void FMScreen::onDialogClosed(UIDialogBase *closedDialog) {
     UIScreen::onDialogClosed(closedDialog); // Ha ez volt az utolsó dialógus, frissítsük a gombállapotokat
     if (!isDialogActive()) {
         updateAllVerticalButtonStates(pSi4735Manager); // Függőleges gombok szinkronizálása
-        updateHorizontalButtonStates();                // Vízszintes gombok szinkronizálása
+        updateCommonHorizontalButtonStates();          // Közös gombok szinkronizálása
+        updateHorizontalButtonStates();                // FM specifikus gombok szinkronizálása
 
         // A gombsor konténer teljes újrarajzolása, hogy biztosan megjelenjenek a gombok
         if (horizontalButtonBar) {
@@ -278,6 +275,35 @@ void FMScreen::onDialogClosed(UIDialogBase *closedDialog) {
 // ===================================================================
 
 /**
+ * @brief FM specifikus gombok hozzáadása a közös gombokhoz
+ * @param buttonConfigs A már meglévő gomb konfigurációk vektora
+ * @details Felülírja az ős metódusát, hogy hozzáadja az FM specifikus gombokat
+ */
+void FMScreen::addSpecificHorizontalButtons(std::vector<UIHorizontalButtonBar::ButtonConfig> &buttonConfigs) {
+    // FM specifikus gombok hozzáadása a közös gombok után
+
+    // 1. SEEK DOWN - Automatikus hangolás lefelé
+    buttonConfigs.push_back({                                               //
+                             FMScreenHorizontalButtonIDs::SEEK_DOWN_BUTTON, //
+                             "Seek-",                                       //
+                             UIButton::ButtonType::Pushable,                //
+                             UIButton::ButtonState::Off,                    //
+                             [this](const UIButton::ButtonEvent &event) {   //
+                                 handleSeekDownButton(event);
+                             }});
+
+    // 2. SEEK UP - Automatikus hangolás felfelé
+    buttonConfigs.push_back({                                             //
+                             FMScreenHorizontalButtonIDs::SEEK_UP_BUTTON, //
+                             "Seek+",                                     //
+                             UIButton::ButtonType::Pushable,              //
+                             UIButton::ButtonState::Off,                  //
+                             [this](const UIButton::ButtonEvent &event) { //
+                                 handleSeekUpButton(event);
+                             }});
+}
+
+/**
  * @brief Vízszintes gombsor létrehozása a képernyő alján
  * @details 4 navigációs gomb elhelyezése vízszintes elrendezésben:
  *
@@ -288,64 +314,12 @@ void FMScreen::onDialogClosed(UIDialogBase *closedDialog) {
  * 3. AM - AM képernyőre váltás (Pushable)
  * 4. Test - Test képernyőre váltás (Pushable)
  */
-void FMScreen::createHorizontalButtonBar() {
-
-    // ===================================================================
-    // Gombsor pozicionálás - Bal alsó sarok
-    // ===================================================================
-    const uint16_t buttonBarHeight = 35;                                 // Optimális gombmagasság
-    const uint16_t buttonBarX = 0;                                       // Bal szélhez igazítva
-    const uint16_t buttonBarY = UIComponent::SCREEN_H - buttonBarHeight; // Alsó szélhez igazítva
-    const uint16_t buttonBarWidth = 300;                                 // 4 gomb + margók optimális szélessége
-
-    // ===================================================================
-    // Gomb konfigurációk - Seek és navigációs események
-    // ===================================================================
-    std::vector<UIHorizontalButtonBar::ButtonConfig> buttonConfigs = {
-
-        // 1. SEEK DOWN - Automatikus hangolás lefelé
-        {FMScreenHorizontalButtonIDs::SEEK_DOWN_BUTTON, "Seek-", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
-         [this](const UIButton::ButtonEvent &event) { handleSeekDownButton(event); }},
-
-        // 2. SEEK UP - Automatikus hangolás felfelé
-        {FMScreenHorizontalButtonIDs::SEEK_UP_BUTTON, "Seek+", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
-         [this](const UIButton::ButtonEvent &event) { handleSeekUpButton(event); }},
-
-        // 3. AM - AM/MW/LW/SW képernyőre váltás
-        {FMScreenHorizontalButtonIDs::AM_BUTTON, "AM", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
-         [this](const UIButton::ButtonEvent &event) { handleAMButton(event); }},
-
-        // 4. TEST - Teszt és diagnosztikai képernyőre váltás
-        {FMScreenHorizontalButtonIDs::TEST_BUTTON, "Test", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
-         [this](const UIButton::ButtonEvent &event) { handleTestButton(event); }}
-
-        //
-    };
-
-    // ===================================================================
-    // UIHorizontalButtonBar objektum létrehozása
-    // ===================================================================
-    horizontalButtonBar = std::make_shared<UIHorizontalButtonBar>(     //
-        tft,                                                           // TFT display referencia
-        Rect(buttonBarX, buttonBarY, buttonBarWidth, buttonBarHeight), // Gombsor pozíció és méret
-        buttonConfigs,                                                 // Gomb konfigurációk
-        70,                                                            // Egyedi gomb szélessége (pixel)
-        30,                                                            // Egyedi gomb magassága (pixel)
-        3                                                              // Gombok közötti távolság (pixel)
-    );
-
-    // Gombsor hozzáadása a képernyő komponens hierarchiájához
-    addChild(horizontalButtonBar);
-}
-
 /**
- * @brief Vízszintes gombsor állapotainak szinkronizálása
+ * @brief FM specifikus vízszintes gombsor állapotainak szinkronizálása
  * @details Event-driven architektúra: CSAK aktiváláskor hívódik meg!
  *
  * Szinkronizált állapotok:
- * - AM gomb ↔ Aktuális band típus (FM vs AM/MW/LW/SW)
- *
- * A Test és Setup gombok pushable típusúak, állapotuk nem változik.
+ * - FM specifikus gombok (Seek-, Seek+) alapértelmezett állapotai
  */
 void FMScreen::updateHorizontalButtonStates() {
     if (!horizontalButtonBar) {
@@ -353,11 +327,12 @@ void FMScreen::updateHorizontalButtonStates() {
     }
 
     // ===================================================================
-    // AM gomb állapot szinkronizálása - Band típus alapján
+    // FM specifikus gombok állapot szinkronizálása
     // ===================================================================
-    uint8_t currentBandType = pSi4735Manager->getCurrentBand().bandType;
-    bool isAMMode = (currentBandType != FM_BAND_TYPE);
-    horizontalButtonBar->setButtonState(FMScreenHorizontalButtonIDs::AM_BUTTON, isAMMode ? UIButton::ButtonState::On : UIButton::ButtonState::Off);
+
+    // Seek gombok alapértelmezett állapotban (kikapcsolva)
+    horizontalButtonBar->setButtonState(FMScreenHorizontalButtonIDs::SEEK_DOWN_BUTTON, UIButton::ButtonState::Off);
+    horizontalButtonBar->setButtonState(FMScreenHorizontalButtonIDs::SEEK_UP_BUTTON, UIButton::ButtonState::Off);
 }
 
 // ===================================================================
@@ -403,32 +378,6 @@ void FMScreen::handleSeekUpButton(const UIButton::ButtonEvent &event) {
             clearRDSCache();
             checkAndUpdateMemoryStatus();
         }
-    }
-}
-
-/**
- * @brief AM gomb eseménykezelő - AM családú képernyőre váltás
- * @param event Gomb esemény (Clicked)
- *
- * @details Pushable gomb: AM/MW/LW/SW képernyőre navigálás
- * Váltás az FM-től eltérő band családra
- */
-void FMScreen::handleAMButton(const UIButton::ButtonEvent &event) {
-    if (event.state == UIButton::EventButtonState::Clicked) {
-        UIScreen::getScreenManager()->switchToScreen(SCREEN_NAME_AM);
-    }
-}
-
-/**
- * @brief TEST gomb eseménykezelő - Teszt képernyőre váltás
- * @param event Gomb esemény (Clicked)
- *
- * @details Pushable gomb: Test és diagnosztikai képernyőre navigálás
- * Fejlesztői és diagnosztikai funkciókhoz
- */
-void FMScreen::handleTestButton(const UIButton::ButtonEvent &event) {
-    if (event.state == UIButton::EventButtonState::Clicked) {
-        UIScreen::getScreenManager()->switchToScreen(SCREEN_NAME_TEST);
     }
 }
 

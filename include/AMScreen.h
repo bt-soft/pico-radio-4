@@ -17,9 +17,9 @@
 #ifndef __AM_SCREEN_H
 #define __AM_SCREEN_H
 #include "CommonVerticalButtons.h"
+#include "RadioScreen.h"
 #include "UIButton.h"
 #include "UIHorizontalButtonBar.h"
-#include "UIScreen.h"
 
 /**
  * @class AMScreen
@@ -42,7 +42,7 @@
  * - LW (Long Wave) - 150-519 kHz
  * - SW (Short Wave) - 2.3-26.1 MHz
  */
-class AMScreen : public UIScreen, public CommonVerticalButtons::Mixin<AMScreen> {
+class AMScreen : public RadioScreen, public CommonVerticalButtons::Mixin<AMScreen> {
 
   public:
     // ===================================================================
@@ -144,58 +144,71 @@ class AMScreen : public UIScreen, public CommonVerticalButtons::Mixin<AMScreen> 
      * - Függőleges gombsor (jobb oldal) - Közös FMScreen-nel
      * - Vízszintes gombsor (alul) - FM gombbal
      */
-    void layoutComponents(); /**
-                              * @brief Vízszintes gombsor létrehozása - Alsó navigációs gombok
-                              * @details 3 navigációs gomb elhelyezése vízszintes elrendezésben:
-                              * FM, Test, Setup (FM gomb az FMScreen-re navigál)
-                              */
-    void createHorizontalButtonBar();
+    void layoutComponents();
 
-    // ===================================================================
+    /**
+     * @brief AM specifikus gombok hozzáadása a közös gombokhoz
+     * @param buttonConfigs A már meglévő gomb konfigurációk vektora
+     * @details Felülírja az ős metódusát, hogy hozzáadja az AM specifikus gombokat
+     */
+    virtual void
+    addSpecificHorizontalButtons(std::vector<UIHorizontalButtonBar::ButtonConfig> &buttonConfigs) override; // ===================================================================
     // Event-driven gombállapot szinkronizálás
     // ===================================================================
 
     /**
-     * @brief Vízszintes gombsor állapotainak szinkronizálása
+     * @brief AM specifikus vízszintes gombsor állapotainak szinkronizálása
      * @details CSAK aktiváláskor hívódik meg! Event-driven architektúra.
      *
      * Szinkronizált állapotok:
-     * - FM gomb ↔ aktuális band típus (AM vs FM)
+     * - AM specifikus gombok alapértelmezett állapotai
      */
     void updateHorizontalButtonStates();
 
     // ===================================================================
-    // Vízszintes gomb eseménykezelők
+    // AM specifikus gomb eseménykezelők
     // ===================================================================
 
     /**
-     * @brief FM gomb eseménykezelő - FM képernyőre váltás
+     * @brief BFO gomb eseménykezelő - Beat Frequency Oscillator
      * @param event Gomb esemény (Clicked)
-     * @details Pushable gomb: FMScreen-re navigálás
-     * Ellentéte az FMScreen AM gombjának
+     * @details AM specifikus funkcionalitás
      */
-    void handleFMButton(const UIButton::ButtonEvent &event);
+    void handleBFOButton(const UIButton::ButtonEvent &event);
 
     /**
-     * @brief TEST gomb eseménykezelő - Teszt képernyőre váltás
+     * @brief AfBW gomb eseménykezelő - Audio Filter Bandwidth
      * @param event Gomb esemény (Clicked)
-     * @details Pushable gomb: Test és diagnosztikai képernyőre navigálás
-     * Azonos logika, mint FMScreen-ben
+     * @details AM specifikus funkcionalitás
      */
-    void handleTestButton(const UIButton::ButtonEvent &event);
+    void handleAfBWButton(const UIButton::ButtonEvent &event);
+
+    /**
+     * @brief AntCap gomb eseménykezelő - Antenna Capacitor
+     * @param event Gomb esemény (Clicked)
+     * @details AM specifikus funkcionalitás
+     */
+    void handleAntCapButton(const UIButton::ButtonEvent &event);
+
+    /**
+     * @brief Demod gomb eseménykezelő - Demodulation
+     * @param event Gomb esemény (Clicked)
+     * @details AM specifikus funkcionalitás
+     */
+    void handleDemodButton(const UIButton::ButtonEvent &event);
+
+    /**
+     * @brief Step gomb eseménykezelő - Frequency Step
+     * @param event Gomb esemény (Clicked)
+     * @details AM specifikus funkcionalitás
+     */
+    void handleStepButton(const UIButton::ButtonEvent &event);
 
     // ===================================================================
     // UI komponens objektumok - Smart pointer kezelés
     // ===================================================================
 
-    /**
-     * @brief Vízszintes gombsor komponens
-     * @details Smart pointer a 3 navigációs gombhoz (alsó sor)
-     * - Automatikus memória kezelés
-     * - Event-driven eseménykezelés
-     * - FM, Test, Setup gombok
-     */
-    std::shared_ptr<UIHorizontalButtonBar> horizontalButtonBar;
+    // A horizontalButtonBar most a RadioScreen-ben van deklarálva
 };
 
 #endif // __AM_SCREEN_H

@@ -17,10 +17,21 @@
 #define __RADIO_SCREEN_H
 
 #include "RDSComponent.h"
+#include "UIHorizontalButtonBar.h"
 #include "UIScreen.h"
 
 // Forward deklaráció a seek callback függvényhez
 void radioSeekProgressCallback(uint16_t frequency);
+
+/**
+ * @brief Közös vízszintes gombsor gomb azonosítók
+ * @details Minden RadioScreen alapú képernyő közös gombjai
+ */
+namespace CommonHorizontalButtonIDs {
+static constexpr uint8_t HAM_BUTTON = 50;  ///< Ham rádió funkcionalitás
+static constexpr uint8_t BAND_BUTTON = 51; ///< Band (sáv) kezelés
+static constexpr uint8_t SCAN_BUTTON = 52; ///< Scan (folyamatos keresés)
+} // namespace CommonHorizontalButtonIDs
 
 /**
  * @class RadioScreen
@@ -64,6 +75,56 @@ class RadioScreen : public UIScreen {
     virtual ~RadioScreen() = default;
 
   protected:
+    // ===================================================================
+    // Közös vízszintes gombsor kezelés
+    // ===================================================================    /// Közös vízszintes gombsor komponens (alsó navigációs gombok)
+    std::shared_ptr<UIHorizontalButtonBar> horizontalButtonBar; /**
+                                                                 * @brief Közös vízszintes gombsor létrehozása és inicializálása
+                                                                 * @details Létrehozza a közös gombokat, amiket minden RadioScreen használ
+                                                                 * A leszármazott osztályok ezt kiterjeszthetik saját specifikus gombokkal
+                                                                 */
+    virtual void createCommonHorizontalButtons();
+
+    /**
+     * @brief Közös vízszintes gombsor állapotainak szinkronizálása
+     * @details Csak aktiváláskor hívódik meg! Event-driven architektúra.
+     * A leszármazott osztályok felülírhatják saját specifikus állapotokkal
+     */
+    virtual void updateCommonHorizontalButtonStates();
+
+    /**
+     * @brief Lehetőség a leszármazott osztályoknak további gombok hozzáadására
+     * @param buttonConfigs A már meglévő gomb konfigurációk vektora
+     * @details A leszármazott osztályok felülírhatják ezt a metódust, hogy
+     * hozzáadhassanak specifikus gombokat a közös gombokhoz
+     */
+    virtual void addSpecificHorizontalButtons(std::vector<UIHorizontalButtonBar::ButtonConfig> &buttonConfigs) {}
+
+    // ===================================================================
+    // Közös gomb eseménykezelők
+    // ===================================================================
+
+    /**
+     * @brief HAM gomb eseménykezelő - Ham rádió funkcionalitás
+     * @param event Gomb esemény (Clicked)
+     * @details Virtuális függvény - leszármazott osztályok felülírhatják
+     */
+    virtual void handleHamButton(const UIButton::ButtonEvent &event);
+
+    /**
+     * @brief BAND gomb eseménykezelő - Sáv (Band) kezelés
+     * @param event Gomb esemény (Clicked)
+     * @details Virtuális függvény - leszármazott osztályok felülírhatják
+     */
+    virtual void handleBandButton(const UIButton::ButtonEvent &event);
+
+    /**
+     * @brief SCAN gomb eseménykezelő - Folyamatos keresés
+     * @param event Gomb esemény (Clicked)
+     * @details Virtuális függvény - leszármazott osztályok felülírhatják
+     */
+    virtual void handleScanButton(const UIButton::ButtonEvent &event);
+
     // ===================================================================
     // RDS komponens kezelés
     // ===================================================================

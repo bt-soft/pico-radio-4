@@ -319,12 +319,7 @@ void StatusLine::updateVoltage() {
  * @param initFont Ha true, akkor a betűtípus inicializálása történik.
  */
 void StatusLine::updateStationInMemory(bool isInMemo) {
-
-    if (stationInMemory != isInMemo) {
-        stationInMemory = isInMemo; // Csak akkor frissítjük, ha változott
-        needsRedraw = true;         // Újrarajzolást igényel
-    }
-
+    stationInMemory = isInMemo;
     uint16_t color = StatusLine::stationInMemory ? TFT_GREEN : statusBoxes[9].color;
     clearBoxContent(9);
     drawTextInBox(9, "Memo", color);
