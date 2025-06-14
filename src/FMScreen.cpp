@@ -93,7 +93,7 @@ void FMScreen::layoutComponents() {
     // ===================================================================
     // Gombsorok létrehozása - Event-driven architektúra
     // ===================================================================
-    createCommonVerticalButtons(pSi4735Manager); // ButtonsGroupManager alapú függőleges gombsor
+    createCommonVerticalButtonsWithCustomMemo(); // ButtonsGroupManager alapú függőleges gombsor egyedi Memo kezelővel
     createHorizontalButtonBar();                 // Alsó vízszintes gombsor
 }
 
@@ -212,11 +212,12 @@ void FMScreen::drawContent() {
  * - További állapotok szinkronizálása (AGC, Attenuator, stb.)
  */
 void FMScreen::activate() {
-    // RDS cache CSAK akkor törlése, ha tényleg frekvencia változott
-    // NE töröljük minden képernyő aktiváláskor!
-
+    DEBUG("FMScreen::activate() called\n");
     // Szülő osztály aktiválása
     UIScreen::activate();
+
+    // StatusLine frissítése
+    checkAndUpdateMemoryStatus();
 }
 
 /**
@@ -403,4 +404,83 @@ void FMScreen::handleTestButton(const UIButton::ButtonEvent &event) {
     if (event.state == UIButton::EventButtonState::Clicked) {
         UIScreen::getScreenManager()->switchToScreen(SCREEN_NAME_TEST);
     }
+}
+
+/**
+ * @brief Egyedi MEMO gomb eseménykezelő - Intelligens memória kezelés
+ * @param event Gomb esemény (Clicked)
+ *
+ * @details Ha az aktuális állomás még nincs a memóriában és van RDS állomásnév,
+ * akkor automatikusan megnyitja a MemoryScreen-t név szerkesztő dialógussal
+ */
+void FMScreen::handleMemoButton(const UIButton::ButtonEvent &event) {
+    if (event.state != UIButton::EventButtonState::Clicked) {
+        return;
+    }
+
+    DEBUG("FM Custom Memo button clicked\n");
+
+    auto screenManager = getScreenManager();
+    if (!screenManager) {
+        DEBUG("ERROR: Could not get screenManager from FMScreen!\n");
+        return;
+    }
+
+    // Ellenőrizzük, hogy az aktuális állomás már a memóriában van-e
+    bool isInMemory = checkCurrentFrequencyInMemory(); // RDS állomásnév lekérése (ha van)
+    String rdsStationName = pSi4735Manager->getCachedStationName();
+
+    // Ha új állomás és van RDS név, akkor automatikus hozzáadás
+    if (!isInMemory && rdsStationName.length() > 0) {
+        DEBUG("Station not in memory and has RDS name: %s\n", rdsStationName.c_str());
+
+        // ScreenManager biztonságos paraméter beállítása
+        screenManager->setMemoryScreenParams(true, rdsStationName.c_str());
+
+        // MemoryScreen megnyitása a ScreenManager buffer-ből
+        screenManager->switchToMemoryScreen();
+    } else {
+        DEBUG("Station already in memory or no RDS name - opening Memory screen normally\n");
+
+        // Normál MemoryScreen megnyitása paraméterek nélkül
+        screenManager->switchToScreen(SCREEN_NAME_MEMORY);
+    }
+}
+
+/**
+ * @brief Egyedi függőleges gombok létrehozása - Memo gomb override-dal
+ * @details Felülírja a CommonVerticalButtons alapértelmezett Memo kezelőjét
+ */
+void FMScreen::createCommonVerticalButtonsWithCustomMemo() {
+    // Alapértelmezett gombdefiníciók lekérése
+    const auto &baseDefs = CommonVerticalButtons::getButtonDefinitions();
+
+    // Egyedi gombdefiníciók lista létrehozása
+    std::vector<ButtonGroupDefinition> customDefs;
+    customDefs.reserve(baseDefs.size());
+
+    // Végigmegyünk az alapértelmezett definíciókon
+    for (const auto &def : baseDefs) {
+        std::function<void(const UIButton::ButtonEvent &)> callback;
+
+        // Memo gomb speciális kezelése
+        if (def.id == VerticalButtonIDs::MEMO) {
+            // Egyedi Memo handler használata
+            callback = [this](const UIButton::ButtonEvent &e) { this->handleMemoButton(e); };
+        } else if (def.handler != nullptr) {
+            // Többi gomb: eredeti handler használata
+            callback = [si4735Manager = pSi4735Manager, screen = this, handler = def.handler](const UIButton::ButtonEvent &e) { handler(e, si4735Manager, screen); };
+        } else {
+            // No-op callback üres handlerekhez
+            callback = [](const UIButton::ButtonEvent &e) { /* no-op */ };
+        }
+
+        // Gombdefiníció hozzáadása a listához
+        customDefs.push_back({def.id, def.label, def.type, callback, def.initialState,
+                              60, // uniformWidth
+                              def.height});
+    }
+
+    // Gombok létrehozása és elhelyezése
+    ButtonsGroupManager<FMScreen>::layoutVerticalButtonGroup(customDefs, &createdVerticalButtons, 0, 0, 5, 60, 32, 3, 4);
 }

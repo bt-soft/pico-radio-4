@@ -129,6 +129,12 @@ class RadioScreen : public UIScreen {
     /**
      * @brief Ellenőrzi, hogy az aktuális frekvencia benne van-e a memóriában
      * @return true ha a frekvencia elmentett állomás, false egyébként
+     */
+    bool checkCurrentFrequencyInMemory() const;
+
+    /**
+     * @brief Ellenőrzi, hogy az aktuális frekvencia benne van-e a memóriában
+     * @return true ha a frekvencia elmentett állomás, false egyébként
      *
      * @details Ellenőrzi az aktuális frekvenciát a StationStore memóriában.
      * Ha talál egyezést, frissíti a StatusLine státuszát is.

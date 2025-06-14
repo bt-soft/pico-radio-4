@@ -112,11 +112,8 @@ void RadioScreen::saveCurrentFrequency() {
 /**
  * @brief Ellenőrzi, hogy az aktuális frekvencia benne van-e a memóriában
  * @return true ha a frekvencia elmentett állomás, false egyébként
- *
- * @details Ellenőrzi az aktuális frekvenciát a StationStore memóriában.
- * Ha talál egyezést, frissíti a StatusLine státuszát is.
  */
-bool RadioScreen::checkAndUpdateMemoryStatus() {
+bool RadioScreen::checkCurrentFrequencyInMemory() const {
     if (!pSi4735Manager) {
         return false;
     }
@@ -138,9 +135,29 @@ bool RadioScreen::checkAndUpdateMemoryStatus() {
         isInMemory = (foundIndex >= 0);
     }
 
+    return isInMemory;
+}
+
+/**
+ * @brief Ellenőrzi, hogy az aktuális frekvencia benne van-e a memóriában
+ * @return true ha a frekvencia elmentett állomás, false egyébként
+ *
+ * @details Ellenőrzi az aktuális frekvenciát a StationStore memóriában.
+ * Ha talál egyezést, frissíti a StatusLine státuszát is.
+ */
+bool RadioScreen::checkAndUpdateMemoryStatus() {
+    DEBUG("RadioScreen::checkAndUpdateMemoryStatus() called\n");
+
+    bool isInMemory = checkCurrentFrequencyInMemory();
+
+    DEBUG("Station in memory: %s\n", isInMemory ? "YES" : "NO");
+
     // StatusLine frissítése ha létezik
     if (statusLineComp) {
         statusLineComp->updateStationInMemory(isInMemory);
+        DEBUG("StatusLine updated with memory status\n");
+    } else {
+        DEBUG("No StatusLine component to update\n");
     }
 
     return isInMemory;

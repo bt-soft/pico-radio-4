@@ -10,6 +10,7 @@
 #include "EmptyScreen.h"
 #include "FMScreen.h"
 #include "IScreenManager.h"
+#include "MemoryScreen.h"
 #include "ScreenSaverScreen.h"
 #include "TestScreen.h"
 #include "UIScreen.h"
@@ -51,6 +52,9 @@ class ScreenManager : public IScreenManager {
 
     // Előző képernyő neve
     String getPreviousScreenName() const { return previousScreenName; }
+
+    // Paraméter buffer a biztonságos paraméter átadáshoz
+    MemoryScreenParams memoryScreenParamsBuffer;
 
   public:
     ScreenManager(TFT_eSPI &tft) : tft(tft), previousScreenName(nullptr), lastActivityTime(millis()) { registerDefaultScreenFactories(); }
@@ -253,6 +257,14 @@ class ScreenManager : public IScreenManager {
             }
         }
     }
+
+    // MemoryScreen paraméter kezelés - IScreenManager interface implementáció
+    void setMemoryScreenParams(bool autoAdd, const char *rdsName = nullptr) override {
+        memoryScreenParamsBuffer = MemoryScreenParams(autoAdd, rdsName);
+        DEBUG("ScreenManager: Set MemoryScreen params - autoAdd: %s, RDS: '%s'\n", autoAdd ? "true" : "false", rdsName ? rdsName : "");
+    }
+
+    void switchToMemoryScreen() override { switchToScreen(SCREEN_NAME_MEMORY, &memoryScreenParamsBuffer); }
 
   private:
     void registerDefaultScreenFactories();

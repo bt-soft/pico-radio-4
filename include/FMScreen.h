@@ -7,6 +7,7 @@
 #ifndef __FM_SCREEN_H
 #define __FM_SCREEN_H
 #include "CommonVerticalButtons.h"
+#include "MemoryScreen.h"
 #include "RadioScreen.h"
 #include "UIButton.h"
 #include "UIHorizontalButtonBar.h"
@@ -119,6 +120,11 @@ class FMScreen : public RadioScreen, public CommonVerticalButtons::Mixin<FMScree
      * Seek Down, Seek Up, AM, Test
      */
     void createHorizontalButtonBar();
+    /**
+     * @brief Egyedi függőleges gombok létrehozása - Memo gomb override-dal
+     * @details Felülírja a CommonVerticalButtons alapértelmezett Memo kezelőjét
+     */
+    void createCommonVerticalButtonsWithCustomMemo();
 
     // ===================================================================
     // Event-driven gombállapot szinkronizálás
@@ -165,6 +171,14 @@ class FMScreen : public RadioScreen, public CommonVerticalButtons::Mixin<FMScree
      */
     void handleTestButton(const UIButton::ButtonEvent &event);
 
+    /**
+     * @brief Egyedi MEMO gomb eseménykezelő - Intelligens memória kezelés
+     * @param event Gomb esemény (Clicked)
+     * @details Ha az aktuális állomás még nincs a memóriában és van RDS állomásnév,
+     * akkor automatikusan megnyitja a MemoryScreen-t név szerkesztő dialógussal
+     */
+    void handleMemoButton(const UIButton::ButtonEvent &event);
+
     // ===================================================================
     // UI komponens objektumok - Smart pointer kezelés
     // ===================================================================
@@ -181,7 +195,8 @@ class FMScreen : public RadioScreen, public CommonVerticalButtons::Mixin<FMScree
     /**
      * @brief RDS információs komponens
      * @details Smart pointer az RDS adatok megjelenítéséhez
-     * - RDS állomásnév, program típus megjelenítés     * - Radio text scroll támogatás
+     * - RDS állomásnév, program típus megjelenítés
+     * - Radio text scroll támogatás
      * - Dátum/idő megjelenítés
      * - Automatikus frissítés és optimalizálás
      *

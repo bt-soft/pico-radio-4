@@ -13,6 +13,24 @@
 #include <vector>
 
 /**
+ * @brief Paraméter struktúra az FMScreen-ből való navigáláshoz
+ * @details Egyszerű struktúra a statikus allokációval
+ */
+struct MemoryScreenParams {
+    bool autoAddStation = false;                         ///< Automatikusan nyissa meg a station add dialógust
+    char rdsStationName[STATION_NAME_BUFFER_SIZE] = {0}; ///< RDS állomásnév előtöltéshez
+
+    MemoryScreenParams() = default;
+
+    MemoryScreenParams(bool autoAdd, const char *stationName = nullptr) : autoAddStation(autoAdd) {
+        if (stationName && strlen(stationName) > 0) {
+            strncpy(rdsStationName, stationName, sizeof(rdsStationName) - 1);
+            rdsStationName[sizeof(rdsStationName) - 1] = '\0';
+        }
+    }
+};
+
+/**
  * @brief Memória képernyő állomások kezeléséhez
  * @details Listázza, szerkeszti és kezeli a tárolt állomásokat
  */
@@ -24,14 +42,13 @@ class MemoryScreen : public UIScreen, public IScrollableListDataSource {
      * @param si4735Manager Si4735 rádió chip kezelő referencia
      */
     MemoryScreen(TFT_eSPI &tft, Si4735Manager &si4735Manager);
-    virtual ~MemoryScreen();
-
-    // UIScreen interface
+    virtual ~MemoryScreen(); // UIScreen interface
     virtual bool handleRotary(const RotaryEvent &event) override;
     virtual void handleOwnLoop() override;
     virtual void drawContent() override;
     virtual void activate() override;
     virtual void onDialogClosed(UIDialogBase *closedDialog) override;
+    virtual void setParameters(void *params) override;
 
     // IScrollableListDataSource interface
     virtual int getItemCount() const override;
@@ -93,6 +110,9 @@ class MemoryScreen : public UIScreen, public IScrollableListDataSource {
   private:
     // Konstansok
     static constexpr const char *CURRENT_TUNED_ICON = "> ";
+
+    // Paraméterek FMScreen-ből
+    MemoryScreenParams screenParams;
 };
 
 #endif // __MEMORY_SCREEN_H

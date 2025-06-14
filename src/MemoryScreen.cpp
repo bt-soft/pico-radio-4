@@ -276,9 +276,15 @@ void MemoryScreen::activate() {
         // Ha a sáv típus nem változott, csak a behangolt állomás jelzését frissítjük optimalizáltan
         refreshTunedIndicationOptimized();
     }
-
     updateHorizontalButtonStates();
-    UIScreen::activate();
+    UIScreen::activate(); // FMScreen-ből való automatikus station add ellenőrzése
+    if (screenParams.autoAddStation) {
+        DEBUG("MemoryScreen: Auto-adding station with RDS name: '%s'\n", screenParams.rdsStationName);
+        // Automatikus "Add Curr" gomb megnyomás szimulálása
+        handleAddCurrentButton(UIButton::ButtonEvent{ADD_CURRENT_BUTTON, "Add Curr", UIButton::EventButtonState::Clicked});
+        // Paraméterek törlése, hogy ne ismétlődjön
+        screenParams.autoAddStation = false;
+    }
 }
 
 void MemoryScreen::onDialogClosed(UIDialogBase *closedDialog) {
@@ -293,6 +299,21 @@ void MemoryScreen::onDialogClosed(UIDialogBase *closedDialog) {
     // A gombsor konténer teljes újrarajzolása, hogy biztosan megjelenjenek a gombok
     if (horizontalButtonBar) {
         horizontalButtonBar->markForCompleteRedraw();
+    }
+}
+
+/**
+ * @brief Paraméterek beállítása FMScreen-ből való navigáláskor
+ * @param params MemoryScreenParams struktúra pointere
+ */
+void MemoryScreen::setParameters(void *params) {
+    if (params) {
+        screenParams = *static_cast<MemoryScreenParams *>(params);
+        DEBUG("MemoryScreen: Parameters received - autoAdd: %s, RDS name: '%s'\n", screenParams.autoAddStation ? "true" : "false", screenParams.rdsStationName);
+    } else {
+        // Paraméterek resetelése
+        screenParams = MemoryScreenParams();
+        DEBUG("MemoryScreen: Parameters reset\n");
     }
 }
 
@@ -339,9 +360,14 @@ void MemoryScreen::handleBackButton(const UIButton::ButtonEvent &event) {
 
 void MemoryScreen::showAddStationDialog() {
     currentDialogState = DialogState::AddingStation;
-    pendingStation = getCurrentStationData();
+    pendingStation = getCurrentStationData(); // RDS állomásnév használata kezdeti értékként, ha van
+    String initialStationName = "";
+    if (screenParams.rdsStationName[0] != '\0') {
+        initialStationName = String(screenParams.rdsStationName);
+        DEBUG("MemoryScreen: Using RDS station name as default: '%s'\n", screenParams.rdsStationName);
+    }
 
-    auto keyboardDialog = std::make_shared<VirtualKeyboardDialog>(this, tft, "Add Station", "", MAX_STATION_NAME_LEN, [this](const String &newText) {
+    auto keyboardDialog = std::make_shared<VirtualKeyboardDialog>(this, tft, "Add Station", initialStationName, MAX_STATION_NAME_LEN, [this](const String &newText) {
         // Szöveg változás callback - itt nem csinálunk semmit
     });
 
@@ -384,6 +410,10 @@ void MemoryScreen::showEditStationDialog() {
     showDialog(keyboardDialog);
 }
 
+/**
+ * @brief Törlés megerősítő dialógus megjelenítése
+ * @details Megjeleníti a törlés megerősítő dialógust a kiválasztott állomás törléséhez
+ */
 void MemoryScreen::showDeleteConfirmDialog() {
     if (selectedIndex < 0 || selectedIndex >= stations.size()) {
         return;
