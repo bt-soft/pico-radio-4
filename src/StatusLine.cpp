@@ -4,6 +4,9 @@
 #include "Si4735Runtime.h"
 #include "rtvars.h"
 
+// Statikus változó definíciója
+bool StatusLine::stationInMemory = false;
+
 // Állandók a komponens méreteihez
 constexpr uint8_t STATUS_LINE_X = 0;
 constexpr uint8_t STATUS_LINE_Y = 0;
@@ -46,6 +49,7 @@ constexpr uint16_t StationInMemoryBoxColor = TFT_SILVER; // Az állomás memóri
 StatusLine::StatusLine(TFT_eSPI &tft, int16_t x, int16_t y, Si4735Manager *pSi4735Manager, const ColorScheme &colors)
     : UIComponent(tft, Rect(x, y, UIComponent::SCREEN_W, STATUS_LINE_HEIGHT), colors), pSi4735Manager(pSi4735Manager) {
     initializeBoxes();
+    StatusLine::stationInMemory = false; // Kezdetben nincs állomás a memóriában
 }
 
 /**
@@ -108,7 +112,6 @@ void StatusLine::draw() {
 
     // Négyzetek kereteinek kirajzolása
     drawBoxFrames();
-
     updateBfo();
     updateAgc();
     updateMode();
@@ -118,7 +121,7 @@ void StatusLine::draw() {
     updateAntCap();
     updateTemperature();
     updateVoltage();
-    updateStationInMemory(false);
+    updateStationInMemory(StatusLine::stationInMemory);
 
     needsRedraw = false;
 }
@@ -317,8 +320,16 @@ void StatusLine::updateVoltage() {
  * @param initFont Ha true, akkor a betűtípus inicializálása történik.
  */
 void StatusLine::updateStationInMemory(bool isInMemo) {
-    uint16_t color = isInMemo ? TFT_GREEN : statusBoxes[9].color;
 
+    DEBUG("StatusLine::updateStationInMemory: isInMemo=%s\n", isInMemo ? "true" : "false");
+
+    if (StatusLine::stationInMemory != isInMemo) {
+        StatusLine::stationInMemory = isInMemo; // Csak akkor frissítjük, ha változott
+        needsRedraw = true;                     // Újrarajzolást igényel
+    }
+
+    uint16_t color = StatusLine::stationInMemory ? TFT_GREEN : statusBoxes[9].color;
     clearBoxContent(9);
     drawTextInBox(9, "Memo", color);
+    DEBUG("StatusLine::updateStationInMemory: StatusLine::stationInMemory=%s\n", StatusLine::stationInMemory ? "true" : "false");
 }

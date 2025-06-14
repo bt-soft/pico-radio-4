@@ -218,8 +218,14 @@ void FMScreen::activate() {
     // StationStore újratöltése az EEPROM-ból (ha frissültek az adatok)
     fmStationStore.load();
 
-    // StatusLine frissítése
+    // StatusLine frissítése - kis késleltetéssel, hogy a képernyő teljesen felépüljön
+    delay(10);
     checkAndUpdateMemoryStatus();
+
+    // StatusLine explicit újrarajzolása
+    if (statusLineComp) {
+        statusLineComp->markForRedraw();
+    }
 
     DEBUG("FMScreen activated - updating button states\n");
 }
