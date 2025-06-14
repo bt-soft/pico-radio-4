@@ -94,17 +94,21 @@ void AMScreen::handleOwnLoop() {
     // *** OPTIMALIZÁLT ARCHITEKTÚRA - NINCS GOMBÁLLAPOT POLLING! ***
     // ===================================================================
 
-    // S-Meter (jelerősség és SNR) valós idejű frissítése AM módban
-    static unsigned long lastSMeterUpdate = 0;
-    if (millis() - lastSMeterUpdate > 200) { // 200ms frissítési gyakorisággal
-        // TODO: S-Meter megjelenítés frissítése AM módban
-        // if (smeterComp) {
-        //     SignalQualityData signalCache = pSi4735Manager->getSignalQuality();
-        //     if (signalCache.isValid) {
-        //         smeterComp->showRSSI(signalCache.rssi, signalCache.snr, false /* AM mód */);
-        //     }
-        // }
-        lastSMeterUpdate = millis();
+    // ===================================================================
+    // S-Meter (jelerősség) időzített frissítése - Optimalizált
+    // ===================================================================
+    static uint32_t lastSmeterUpdate = 0;
+    uint32_t currentTime = millis();
+
+    // S-meter frissítés 250ms-enként (4 Hz) - elegendő a vizuális visszajelzéshez
+    if (smeterComp && (currentTime - lastSmeterUpdate >= 250)) {
+        // Cache-elt jelerősség adatok lekérése a Si4735Manager-től
+        SignalQualityData signalCache = pSi4735Manager->getSignalQuality();
+        if (signalCache.isValid) {
+            // RSSI és SNR megjelenítése AM módban
+            smeterComp->showRSSI(signalCache.rssi, signalCache.snr, false /* AM mód */);
+        }
+        lastSmeterUpdate = currentTime;
     }
 }
 

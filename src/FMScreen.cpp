@@ -166,15 +166,20 @@ bool FMScreen::handleRotary(const RotaryEvent &event) {
 void FMScreen::handleOwnLoop() {
 
     // ===================================================================
-    // S-Meter (jelerősség) valós idejű frissítése
+    // S-Meter (jelerősség) időzített frissítése - Optimalizált
     // ===================================================================
-    if (smeterComp) {
+    static uint32_t lastSmeterUpdate = 0;
+    uint32_t currentTime = millis();
+
+    // S-meter frissítés 250ms-enként (4 Hz) - elegendő a vizuális visszajelzéshez
+    if (smeterComp && (currentTime - lastSmeterUpdate >= 250)) {
         // Cache-elt jelerősség adatok lekérése a Si4735Manager-től
         SignalQualityData signalCache = pSi4735Manager->getSignalQuality();
         if (signalCache.isValid) {
             // RSSI és SNR megjelenítése FM módban
             smeterComp->showRSSI(signalCache.rssi, signalCache.snr, true /* FM mód */);
         }
+        lastSmeterUpdate = currentTime;
     }
 
     // ===================================================================
@@ -239,6 +244,8 @@ void FMScreen::drawContent() {
  * - További állapotok szinkronizálása (AGC, Attenuator, stb.)
  */
 void FMScreen::activate() {
+
+    DEBUG("FMScreen::activate() - Képernyő aktiválása");
 
     // Szülő osztály aktiválása (RadioScreen -> UIScreen)
     // *** Ez automatikusan meghívja a signal cache invalidálást ***
@@ -394,9 +401,11 @@ void FMScreen::handleSeekUpButton(const UIButton::ButtonEvent &event) {
  * akkor automatikusan megnyitja a MemoryScreen-t név szerkesztő dialógussal
  */
 void FMScreen::handleMemoButton(const UIButton::ButtonEvent &event) {
+
     if (event.state != UIButton::EventButtonState::Clicked) {
         return;
     }
+
     auto screenManager = getScreenManager();
     // Ellenőrizzük, hogy az aktuális állomás már a memóriában van-e
     bool isInMemory = checkCurrentFrequencyInMemory();              // RDS állomásnév lekérése (ha van)
@@ -418,6 +427,7 @@ void FMScreen::handleMemoButton(const UIButton::ButtonEvent &event) {
  * @details Felülírja a CommonVerticalButtons alapértelmezett Memo kezelőjét
  */
 void FMScreen::createCommonVerticalButtonsWithCustomMemo() {
+
     // Alapértelmezett gombdefiníciók lekérése
     const auto &baseDefs = CommonVerticalButtons::getButtonDefinitions();
 
