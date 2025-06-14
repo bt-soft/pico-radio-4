@@ -322,4 +322,7 @@ void StatusLine::updateStationInMemory(bool isInMemo) {
 
     clearBoxContent(9);
     drawTextInBox(9, "Memo", color);
+
+    // Explicit újrarajzolás jelzése, hogy vizuálisan is frissüljön
+    markForRedraw();
 }

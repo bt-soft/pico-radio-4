@@ -215,8 +215,14 @@ void FMScreen::activate() {
     // Szülő osztály aktiválása
     UIScreen::activate();
 
+    // StationStore újratöltése az EEPROM-ból (ha frissültek az adatok)
+    fmStationStore.load();
+
     // StatusLine frissítése
     checkAndUpdateMemoryStatus();
+
+    // Teljes képernyő újrarajzolásának kényszerítése
+    markForCompleteRedraw();
 }
 
 /**
