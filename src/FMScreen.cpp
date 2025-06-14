@@ -82,13 +82,19 @@ void FMScreen::layoutComponents() {
     Rect rdsBounds(5, rdsY, rdsWidth, RDSComponent::DEFAULT_HEIGHT);
 
     // RDS komponens létrehozása a RadioScreen factory metódusával
-    createRDSComponent(rdsBounds);
-
-    // RDS területek finomhangolása (opcionális - alapértelmezett layout elfogadható)
+    createRDSComponent(rdsBounds); // RDS területek finomhangolása (opcionális - alapértelmezett layout elfogadható)
     // rdsComponent->setStationNameArea(Rect(10, rdsY, 200, 18));
     // rdsComponent->setProgramTypeArea(Rect(220, rdsY, 150, 18));
     // rdsComponent->setDateTimeArea(Rect(380, rdsY, 85, 18));
     // rdsComponent->setRadioTextArea(Rect(10, rdsY + 20, 460, 18));
+
+    // ===================================================================
+    // STEREO/MONO jelző létrehozása
+    // ===================================================================
+    uint16_t stereoY = rdsY + RDSComponent::DEFAULT_HEIGHT + 5; // RDS alatt 5px-el
+    Rect stereoBounds(5, stereoY, 50, 20);
+    stereoIndicator = std::make_shared<StereoIndicator>(tft, stereoBounds);
+    addChild(stereoIndicator);
 
     // ===================================================================
     // Gombsorok létrehozása - Event-driven architektúra
@@ -167,8 +173,7 @@ void FMScreen::handleOwnLoop() {
             // RSSI és SNR megjelenítése FM módban
             smeterComp->showRSSI(signalCache.rssi, signalCache.snr, true /* FM mód */);
         }
-    }
-    // ===================================================================
+    } // ===================================================================
     // RDS adatok valós idejű frissítése (optimalizált)
     // ===================================================================
     if (rdsComponent) {
@@ -181,6 +186,15 @@ void FMScreen::handleOwnLoop() {
             rdsComponent->updateRDS();
             lastRdsCall = currentTime;
         }
+    }
+
+    // ===================================================================
+    // STEREO/MONO jelző frissítése
+    // ===================================================================
+    if (stereoIndicator && pSi4735Manager) {
+        // Si4735 stereo állapot lekérdezése
+        bool isStereo = pSi4735Manager->getSi4735().getCurrentPilot();
+        stereoIndicator->setStereo(isStereo);
     }
 }
 
@@ -214,9 +228,6 @@ void FMScreen::drawContent() {
 void FMScreen::activate() {
     // Szülő osztály aktiválása
     UIScreen::activate();
-
-    // StationStore újratöltése az EEPROM-ból (ha frissültek az adatok)
-    // fmStationStore.load();
 
     // StatusLine frissítése
     checkAndUpdateMemoryStatus();

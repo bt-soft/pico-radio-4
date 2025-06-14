@@ -9,6 +9,7 @@
 #include "CommonVerticalButtons.h"
 #include "MemoryScreen.h"
 #include "RadioScreen.h"
+#include "StereoIndicator.h"
 #include "UIButton.h"
 #include "UIHorizontalButtonBar.h"
 
@@ -191,6 +192,12 @@ class FMScreen : public RadioScreen, public CommonVerticalButtons::Mixin<FMScree
      * - Seek Down, Seek Up, AM, Test gombok
      */
     std::shared_ptr<UIHorizontalButtonBar> horizontalButtonBar;
+
+    /**
+     * @brief STEREO/MONO jelző komponens
+     * @details Piros háttérrel STEREO, kék háttérrel MONO megjelenítés
+     */
+    std::shared_ptr<StereoIndicator> stereoIndicator;
 
     /**
      * @brief RDS információs komponens
