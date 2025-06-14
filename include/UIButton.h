@@ -510,18 +510,22 @@ class UIButton : public UIComponent {
      * @details Ha a felirat megváltozik, frissíti a gomb szélességét, ha az automatikus méretezés engedélyezve van.
      */
     void setLabel(const char *newLabel) {
-        bool labelChanged =
-            (label == nullptr && newLabel != nullptr) || (label != nullptr && newLabel == nullptr) || (label != nullptr && newLabel != nullptr && strcmp(label, newLabel) != 0);
+        /*
+        // Ezt a részt kommenteljük ki, mert a label komparálása nem működik, sok helyen lokális változóra mutat a label pointere
+         bool labelChanged = (label == nullptr && newLabel != nullptr) || (label != nullptr && newLabel == nullptr) || (label != nullptr && newLabel != nullptr && strcmp(label,
+         newLabel) != 0);
+         if (labelChanged) {
+         */
+        label = newLabel;
 
-        if (labelChanged) {
-            label = newLabel;
-
-            if (autoSizeToText) {
-                updateWidthToFitText(); // Ez már tartalmazza a markForRedraw-t, ha a szélesség változik
-            } else {
-                markForRedraw(); // Csak újrarajzolás, méret nem változik
-            }
+        if (autoSizeToText) {
+            updateWidthToFitText(); // Ez már tartalmazza a markForRedraw-t, ha a szélesség változik
+        } else {
+            markForRedraw(); // Csak újrarajzolás, méret nem változik
         }
+        /*
+         }
+        */
     }
 
     /**

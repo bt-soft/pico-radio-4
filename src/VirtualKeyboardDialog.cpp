@@ -288,8 +288,7 @@ void VirtualKeyboardDialog::updateButtonLabels() {
             char newChar = getKeyChar(baseChar, shiftActive);
             keyLabelStorage[buttonIndex][0] = newChar;
             keyLabelStorage[buttonIndex][1] = '\0';
-            keyButtons[buttonIndex]->setLabel(keyLabelStorage[buttonIndex]);
-            keyButtons[buttonIndex]->markForRedraw();
+            keyButtons[buttonIndex]->setLabel(keyLabelStorage[buttonIndex]); // A setLabel() automatikusan hívja a markForRedraw-t, ha a címke változik
             buttonIndex++;
         }
     }
