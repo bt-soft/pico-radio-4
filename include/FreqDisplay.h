@@ -306,9 +306,10 @@ class FreqDisplay : public UIComponent {
     /**
      * @brief Beállítja a megjelenítendő frekvenciát, teljes újrarajzolással
      * @param freq Az új frekvencia érték
+     * @param hideUnderline Ha true, az aláhúzás elrejtve lesz
      * @details Ez a metódus teljesen újrarajzolja a komponenst, beleértve a háttér törlését és az összes elemet.
      */
-    void setFrequencyWithFullDraw(uint16_t freq);
+    void setFrequencyWithFullDraw(uint16_t freq, bool hideUnderline = false);
 
     /**
      * @brief Beállítja az egyedi színkonfigurációt (pl. képernyővédő módhoz)

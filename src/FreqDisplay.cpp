@@ -132,11 +132,14 @@ void FreqDisplay::setFrequency(uint16_t freq) {
  * @param freq Az új frekvencia érték
  * @brief Ez a metódus teljes újrarajzolást kér, függetlenül attól, hogy a frekvencia megváltozott-e.
  */
-void FreqDisplay::setFrequencyWithFullDraw(uint16_t freq) {
+void FreqDisplay::setFrequencyWithFullDraw(uint16_t freq, bool hideUnderline) {
     // Teljes újrarajzolás kérése, függetlenül attól, hogy a frekvencia megváltozott-e
     currentDisplayFrequency = freq;
-    redrawOnlyFrequencyDigits = false; // Teljes újrarajzolás
-    markForRedraw();                   // Teljes újrarajzolás szükséges
+    redrawOnlyFrequencyDigits = false; // Teljes újrarajzolás lesz
+
+    this->hideUnderline = hideUnderline; // Aláhúzás állapotának beállítása
+
+    markForRedraw(); // Teljes újrarajzolás indítása
 }
 
 /**
