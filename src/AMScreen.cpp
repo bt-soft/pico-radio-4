@@ -143,7 +143,7 @@ bool AMScreen::handleRotary(const RotaryEvent &event) {
 
     // Frekvencia kijelző azonnali frissítése
     if (freqDisplayComp) {
-        // SSB/CW módban mindig frissítjük a kijelzőt, mert a finomhangolás (freqDec)
+        // SSB/CW módban mindig frissítjük a kijelzőt, mert a finomhangolás (rtv::freqDec)
         // változhat anélkül, hogy a chip frekvencia megváltozna
         freqDisplayComp->setFrequency(newFreq, isCurrentDemodSSBorCW);
     }
