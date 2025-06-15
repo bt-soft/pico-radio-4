@@ -32,7 +32,7 @@ constexpr int FREQ_7SEGMENT_HEIGHT = 38; ///< A 7-szegmenses font magassága pix
 // X pozíciója (spritePushX) ebből és a sprite szélességéből számolódik.
 // TODO: ezt majd javítani, ez így nem jó!!
 #warning "RefXDefault, RefXFmAm, RefXSeek, RefXBfo értékek hardcoded értékek, nem dinamikusan számoltak, javítani!"
-constexpr uint16_t RefXDefault = 222; ///< Alapértelmezett mód (SSB/CW normál)
+constexpr uint16_t RefXDefault = 200; ///< SSB/CW mód
 constexpr uint16_t RefXFmAm = 160;    ///< FM/AM módokban
 constexpr uint16_t RefXSeek = 144;    ///< SEEK mód során
 constexpr uint16_t RefXBfo = 115;     ///< BFO mód során
@@ -216,30 +216,31 @@ uint32_t FreqDisplay::calcFreqSpriteXPosition() const {
 void FreqDisplay::drawFrequencySpriteOnly(const String &freq_str, const char *mask, const FreqSegmentColors &colors) {
     using namespace FreqDisplayConstants;
 
-    // Font beállítása a maszk szélességének meghatározásához
+    // Font beállítása a maszk szélességének meghatározásához (SevenSegmentFreq stílusban)
     spr.setFreeFont(&DSEG7_Classic_Mini_Regular_34);
     uint16_t contentWidth = spr.textWidth(mask); // Sprite szélessége a maszk alapján
+    // uint16_t freqWidth = spr.textWidth(freq_str); // Frekvencia string szélessége
 
     // Sprite pozícionálás számítása
     uint32_t spriteRightEdgeX_relative = calcFreqSpriteXPosition();
     uint16_t spritePushX = bounds.x + spriteRightEdgeX_relative - contentWidth; // Bal széle
     uint16_t spritePushY = bounds.y + SpriteYOffset;                            // Teteje
 
-    // Sprite létrehozása és konfigurálása
+    // Sprite létrehozása és konfigurálása (SevenSegmentFreq stílusban)
     spr.createSprite(contentWidth, FREQ_7SEGMENT_HEIGHT);
     spr.fillSprite(this->colors.background); // Háttér törlése
     spr.setTextSize(1);
     spr.setTextPadding(0);
     spr.setFreeFont(&DSEG7_Classic_Mini_Regular_34);
-    spr.setTextDatum(BR_DATUM); // Jobb alsó sarokhoz igazítás
+    spr.setTextDatum(BR_DATUM); // Jobb alsó sarokhoz igazítás - KULCS!
 
-    // Inaktív számjegyek rajzolása (ha engedélyezve van)
+    // Inaktív számjegyek rajzolása (ha engedélyezve van) - SevenSegmentFreq stílusban
     if (config.data.tftDigitLigth) {
         spr.setTextColor(colors.inactive);
         spr.drawString(mask, contentWidth, FREQ_7SEGMENT_HEIGHT);
     }
 
-    // Aktív frekvencia számok rajzolása
+    // Aktív frekvencia számok rajzolása - SevenSegmentFreq stílusban
     spr.setTextColor(colors.active);
     spr.drawString(freq_str, contentWidth, FREQ_7SEGMENT_HEIGHT);
 
@@ -262,7 +263,7 @@ void FreqDisplay::drawFrequencySpriteOnly(const String &freq_str, const char *ma
 void FreqDisplay::drawFrequencyInternal(const String &freq_str, const char *mask, const FreqSegmentColors &colors, const char *unit) {
     using namespace FreqDisplayConstants;
 
-    // Font beállítása és sprite méret számítása
+    // Font beállítása és sprite méret számítása (SevenSegmentFreq stílusban)
     spr.setFreeFont(&DSEG7_Classic_Mini_Regular_34);
     uint16_t contentWidth = spr.textWidth(mask);
 
@@ -271,21 +272,21 @@ void FreqDisplay::drawFrequencyInternal(const String &freq_str, const char *mask
     uint16_t spritePushX = bounds.x + spriteRightEdgeX_relative - contentWidth;
     uint16_t spritePushY = bounds.y + SpriteYOffset;
 
-    // Sprite létrehozása és frekvencia rajzolása
+    // Sprite létrehozása és frekvencia rajzolása (SevenSegmentFreq stílusban)
     spr.createSprite(contentWidth, FREQ_7SEGMENT_HEIGHT);
     spr.fillSprite(this->colors.background);
     spr.setTextSize(1);
     spr.setTextPadding(0);
     spr.setFreeFont(&DSEG7_Classic_Mini_Regular_34);
-    spr.setTextDatum(BR_DATUM); // Jobb alsó sarokhoz igazítás
+    spr.setTextDatum(BR_DATUM); // Jobb alsó sarokhoz igazítás - KULCS!
 
-    // Inaktív (háttér) számjegyek
+    // Inaktív (háttér) számjegyek rajzolása (SevenSegmentFreq stílusban)
     if (config.data.tftDigitLigth) {
         spr.setTextColor(colors.inactive);
         spr.drawString(mask, contentWidth, FREQ_7SEGMENT_HEIGHT);
     }
 
-    // Aktív frekvencia számok
+    // Aktív frekvencia számok rajzolása (SevenSegmentFreq stílusban)
     spr.setTextColor(colors.active);
     spr.drawString(freq_str, contentWidth, FREQ_7SEGMENT_HEIGHT);
 
@@ -388,14 +389,20 @@ String FreqDisplay::formatSsbCwFrequency(uint16_t currentFrequencyValue) {
     // Ez az érték kerül levonásra a chip frekvenciától a helyes megjelenítéshez
     uint32_t displayFreqHz = (uint32_t)currentFrequencyValue * 1000 - rtv::freqDec;
 
-    // Debug információ - SSB/CW finomhangolás követése
-    DEBUG("SSB/CW: chipFreq=%d kHz, freqDec=%d Hz, displayFreq=%d Hz\n", currentFrequencyValue, rtv::freqDec, displayFreqHz);
-
     long khz_part = displayFreqHz / 1000;
     int hz_tens_part = abs((int)(displayFreqHz % 1000)) / 10;
+    char buffer[16];
+    // Formázás a "88 888.88" maszknak megfelelően: "x xxx.xx" vagy " xxxx.xx"
+    long khz_thousands = khz_part / 1000;
+    long khz_remainder = khz_part % 1000;
 
-    char buffer[12];
-    sprintf(buffer, "%ld.%02d", khz_part, hz_tens_part);
+    if (khz_thousands > 0) {
+        // Ha van ezres rész, akkor "x xxx.xx" formátum
+        sprintf(buffer, "%ld %03ld.%02d", khz_thousands, khz_remainder, hz_tens_part);
+    } else {
+        // Ha nincs ezres rész, akkor " xxxx.xx" formátum (space a vezető null helyett)
+        sprintf(buffer, " %ld.%02d", khz_remainder, hz_tens_part);
+    }
     return String(buffer);
 }
 
@@ -584,7 +591,7 @@ FreqDisplay::FrequencyDisplayData FreqDisplay::prepareFmDisplayData(uint16_t fre
  * @brief AM mód megjelenítési adatainak előkészítése sávtípus szerint
  *
  * MW/LW sávok: egész kHz értékek (pl. 1440 kHz)
- * SW sávok: MHz formátum 3 tizedesjeggyel (pl. 15.230 MHz)
+ * SW sávok: MHz formátum 3 tizedesjegy pontossággal (pl. 15.230 MHz)
  *
  * @param frequency A nyers frekvencia érték
  * @param bandType A sáv típusa (MW_BAND_TYPE, LW_BAND_TYPE, vagy SW)
@@ -621,19 +628,13 @@ FreqDisplay::FrequencyDisplayData FreqDisplay::prepareAmDisplayData(uint16_t fre
 bool FreqDisplay::determineFreqStrAndMaskForOptimizedDraw(uint16_t frequency, String &outFreqStr, const char *&outMask) {
 
     const uint8_t currDemod = pSi4735Manager->getCurrentBand().currMod;
-
     if (currDemod == LSB || currDemod == USB || currDemod == CW) {
         if (rtv::bfoOn) { // BFO érték kijelzése
             outFreqStr = String(rtv::currentBFOmanu);
             outMask = "-888";
         } else { // Normál SSB/CW frekvencia
-            uint32_t bfoOffset = rtv::lastBFO;
-            uint32_t displayFreqHz = (uint32_t)frequency * 1000 - bfoOffset;
-            char s[12];
-            long khz_part = displayFreqHz / 1000;
-            int hz_tens_part = abs((int)(displayFreqHz % 1000)) / 10;
-            sprintf(s, "%ld.%02d", khz_part, hz_tens_part);
-            outFreqStr = String(s);
+            // Ugyanazt a formázást használjuk, mint a formatSsbCwFrequency függvény
+            outFreqStr = formatSsbCwFrequency(frequency);
             outMask = "88 888.88";
         }
     } else if (currDemod == FM) {
@@ -919,4 +920,101 @@ void FreqDisplay::updateFrequencyStep(int digitIndex) {
         default:
             break;
     }
+}
+
+/**
+ * @brief Karakterenkénti frekvencia rajzolás space gap-ekkel
+ *
+ * Ez a függvény karakterenként rajzolja a frekvenciát és a maszkot,
+ * a space karakterek helyén megfelelő gap-et hagyva.
+ *
+ * @param sprite A sprite objektum amire rajzolunk
+ * @param freq_str A frekvencia string
+ * @param mask A maszk string
+ * @param colors A színkonfiguráció
+ * @param totalWidth A sprite teljes szélessége
+ */
+void FreqDisplay::drawFrequencyWithSpaceGaps(TFT_eSprite &sprite, const String &freq_str, const char *mask, const FreqSegmentColors &colors, uint16_t totalWidth) {
+    sprite.setFreeFont(&DSEG7_Classic_Mini_Regular_34);
+    sprite.setTextSize(1);
+    sprite.setTextDatum(TL_DATUM); // Bal felső sarokhoz igazítás karakterenkénti rajzoláshoz
+
+    // Konstansok
+    const int SPACE_GAP_WIDTH = 8; // Gap szélessége space karakterek helyén
+
+    int maskLen = strlen(mask);
+    int freqLen = freq_str.length();
+
+    // Pozíciók számítása - a frekvencia stringet jobbra igazítjuk a maszkhoz
+    // Visszafelé dolgozunk: maszk végétől visszafelé a frekvencia string végéig
+
+    // Pozíciók tömb létrehozása minden maszk karakterhez
+    int positions[32]; // Max 32 karakter
+    int currentX = 0;
+
+    // Első menet: pozíciók kiszámítása
+    for (int i = 0; i < maskLen; i++) {
+        positions[i] = currentX;
+        if (mask[i] == ' ') {
+            currentX += SPACE_GAP_WIDTH;
+        } else {
+            currentX += sprite.textWidth("8"); // Standard digit szélesség
+        }
+    }
+
+    // Második menet: karakterek rajzolása jobbra igazítással
+    int freqIndex = freqLen - 1; // Frekvencia string végétől indulunk
+
+    for (int maskIndex = maskLen - 1; maskIndex >= 0 && freqIndex >= 0; maskIndex--) {
+        char maskChar = mask[maskIndex];
+
+        if (maskChar == ' ') {
+            // Space karakternél nem rajzolunk semmit, csak továbbmegyünk
+            continue;
+        } else {
+            char freqChar = freq_str.charAt(freqIndex);
+            String singleChar = String(freqChar);
+
+            // Inaktív karakter rajzolása (ha engedélyezve)
+            if (config.data.tftDigitLigth) {
+                sprite.setTextColor(colors.inactive);
+                sprite.drawString(String(maskChar), positions[maskIndex], 0);
+            }
+
+            // Aktív karakter rajzolása
+            sprite.setTextColor(colors.active);
+            sprite.drawString(singleChar, positions[maskIndex], 0);
+
+            freqIndex--; // Frekvencia stringben visszalépünk
+        }
+    }
+}
+
+/**
+ * @brief Kiszámítja a frekvencia string szélességét space gap-ekkel együtt
+ *
+ * @param mask A maszk string, ami tartalmazza a space karaktereket
+ * @return A teljes szélesség pixelben
+ */
+uint16_t FreqDisplay::calculateWidthWithSpaceGaps(const char *mask) {
+    tft.setFreeFont(&DSEG7_Classic_Mini_Regular_34);
+    tft.setTextSize(1);
+
+    const int SPACE_GAP_WIDTH = 8; // Gap szélessége space karakterek helyén
+    uint16_t totalWidth = 0;
+    int maskLen = strlen(mask);
+
+    for (int i = 0; i < maskLen; i++) {
+        char maskChar = mask[i];
+
+        if (maskChar == ' ') {
+            // Space karakter - gap hozzáadása
+            totalWidth += SPACE_GAP_WIDTH;
+        } else {
+            // Normál karakter szélessége
+            totalWidth += tft.textWidth(String(maskChar));
+        }
+    }
+
+    return totalWidth;
 }

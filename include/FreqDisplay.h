@@ -267,6 +267,23 @@ class FreqDisplay : public UIComponent {
     void drawFrequencySpriteOnly(const String &freq_str, const char *mask, const FreqSegmentColors &colors);
 
     /**
+     * @brief Karakterenkénti frekvencia rajzolás space gap-ekkel
+     * @param sprite A sprite objektum
+     * @param freq_str A frekvencia string
+     * @param mask A maszk string
+     * @param colors A színkonfiguráció
+     * @param totalWidth A sprite teljes szélessége
+     */
+    void drawFrequencyWithSpaceGaps(TFT_eSprite &sprite, const String &freq_str, const char *mask, const FreqSegmentColors &colors, uint16_t totalWidth);
+
+    /**
+     * @brief Kiszámítja a frekvencia string szélességét space gap-ekkel együtt
+     * @param mask A maszk string
+     * @return A teljes szélesség pixelben
+     */
+    uint16_t calculateWidthWithSpaceGaps(const char *mask);
+
+    /**
      * @brief Meghatározza a frekvencia stringet és maszkot optimalizált rajzoláshoz
      * @param frequency A frekvencia érték
      * @param outFreqStr [out] A frekvencia string

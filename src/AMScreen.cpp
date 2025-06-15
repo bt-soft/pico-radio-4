@@ -86,8 +86,6 @@ bool AMScreen::handleRotary(const RotaryEvent &event) {
 
         } else {
 
-            DEBUG("SSB/CW hangolás: irány=%s, freqstep=%d, freqDec előtte=%d\n", (event.direction == RotaryEvent::Direction::Up) ? "UP" : "DOWN", rtv::freqstep, rtv::freqDec);
-
             // Hangolás felfelé
             if (event.direction == RotaryEvent::Direction::Up) {
 
@@ -126,8 +124,6 @@ bool AMScreen::handleRotary(const RotaryEvent &event) {
             }
             rtv::currentBFO = rtv::freqDec;
             rtv::lastBFO = rtv::currentBFO;
-
-            DEBUG("SSB/CW hangolás után: freqDec=%d, currentBFO=%d, lastBFO=%d\n", rtv::freqDec, rtv::currentBFO, rtv::lastBFO);
         }
 
         // Lekérdezzük a beállított frekvenciát
