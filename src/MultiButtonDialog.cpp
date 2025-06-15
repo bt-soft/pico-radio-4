@@ -235,3 +235,39 @@ void MultiButtonDialog::setDisableDefaultButton(bool disable) {
         layoutDialogContent();
     }
 }
+
+/**
+ * @brief MultiButtonDialog konstruktor const char* alapú alapértelmezett gombbal.
+ *
+ * Ez a konstruktor megkeresi a defaultButtonLabel indexét az options tömbben,
+ * majd meghívja az eredeti konstruktort az index értékkel.
+ */
+MultiButtonDialog::MultiButtonDialog(UIScreen *parentScreen, TFT_eSPI &tft, const char *title, const char *message, const char *const *options, uint8_t numOptions,
+                                     ButtonClickCallback buttonClickCb, bool autoClose, const char *defaultButtonLabel, bool disableDefaultButton, const Rect &bounds,
+                                     const ColorScheme &cs)
+    : MultiButtonDialog(parentScreen, tft, title, message, options, numOptions, buttonClickCb, autoClose, findButtonIndex(options, numOptions, defaultButtonLabel),
+                        disableDefaultButton, bounds, cs) {
+    // Az eredetikonstruktor delegáláson keresztül hívódik meg
+    // A findButtonIndex segédfüggvény megkeresi a megfelelő indexet
+}
+
+/**
+ * @brief Segédfüggvény a gomb index megkereséséhez felirat alapján.
+ * @param options Gombok feliratainak tömbje
+ * @param numOptions A gombok száma
+ * @param buttonLabel A keresett gomb felirata
+ * @return A gomb indexe, vagy -1 ha nem található
+ */
+int MultiButtonDialog::findButtonIndex(const char *const *options, uint8_t numOptions, const char *buttonLabel) {
+    if (buttonLabel == nullptr) {
+        return -1; // Nincs alapértelmezett gomb
+    }
+
+    for (uint8_t i = 0; i < numOptions; i++) {
+        if (options[i] != nullptr && strcmp(options[i], buttonLabel) == 0) {
+            return static_cast<int>(i);
+        }
+    }
+
+    return -1; // Nem található
+}

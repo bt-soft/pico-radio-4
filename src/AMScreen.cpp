@@ -384,6 +384,7 @@ void AMScreen::handleAfBWButton(const UIButton::ButtonEvent &event) {
     }
 
     uint8_t currMod = pSi4735Manager->getCurrentBand().currMod; // Demodulációs mód
+    const char *currentBw = pSi4735Manager->getCurrentBandWidthLabel();
 
     // Megállapítjuk a lehetséges sávszélességek tömbjét
     const char *title;
@@ -411,17 +412,6 @@ void AMScreen::handleAfBWButton(const UIButton::ButtonEvent &event) {
         labels = pSi4735Manager->getBandWidthLabels(Band::bandWidthSSB, labelsCount);
     }
 
-    const char *currentBw = pSi4735Manager->getCurrentBandWidthLabel();
-
-    // Megkeressük a jelenlegi sávszélesség indexét a labels tömbben
-    int _currentAfBwIndex = -1; // Alapértelmezett: nem találtuk meg
-    for (size_t i = 0; i < labelsCount; i++) {
-        if (strcmp(labels[i], currentBw) == 0) {
-            _currentAfBwIndex = static_cast<int>(i);
-            break;
-        }
-    }
-
     auto afBwDialog = std::make_shared<MultiButtonDialog>(
         this, this->tft,                                                                       // Képernyő referencia
         title, "",                                                                             // Dialógus címe és üzenete
@@ -439,10 +429,9 @@ void AMScreen::handleAfBWButton(const UIButton::ButtonEvent &event) {
 
             // Beállítjuk a rádió chip-en a kiválasztott HF sávszélességet
             pSi4735Manager->setBandWidth();
-
         },
         true,              // Automatikusan bezárja-e a dialógust gomb kattintáskor
-        _currentAfBwIndex, // Az alapértelmezett (jelenlegi) gomb indexe
+        currentBw,         // Az alapértelmezett (jelenlegi) gomb felirata
         true,              // Ha true, az alapértelmezett gomb le van tiltva; ha false, csak vizuálisan kiemelve
         Rect(-1, -1, w, h) // Dialógus mérete (ha -1, akkor automatikusan a képernyő közepére igazítja)
     );

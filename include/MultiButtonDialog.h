@@ -35,6 +35,9 @@ class MultiButtonDialog : public UIDialogBase, public ButtonsGroupManager<MultiB
     int _defaultButtonIndex = -1;                       // Az alapértelmezett gomb indexe (-1 = nincs)
     bool _disableDefaultButton = true;                  // Ha true, az alapértelmezett gomb le van tiltva
 
+    // Segédfüggvény a gomb index megkereséséhez felirat alapján
+    static int findButtonIndex(const char *const *options, uint8_t numOptions, const char *buttonLabel);
+
     // Virtuális metódusok felülírása
     virtual void createDialogContent() override;
     virtual void layoutDialogContent() override;
@@ -68,6 +71,37 @@ class MultiButtonDialog : public UIDialogBase, public ButtonsGroupManager<MultiB
         bool autoClose = true,                               // Automatikus bezárás gomb kattintáskor
         int defaultButtonIndex = -1,                         // Az alapértelmezett gomb indexe (-1 = nincs)
         bool disableDefaultButton = true,                    // Ha true, az alapértelmezett gomb le van tiltva
+        const Rect &bounds = {-1, -1, 0, 0},                 // A dialógus határai (alapértelmezett: automatikus méret és középre igazítás)
+        const ColorScheme &cs = ColorScheme::defaultScheme() // Színséma (alapértelmezett: alapértelmezett színséma)
+    );
+
+    /**
+     * @brief MultiButtonDialog konstruktor const char* alapú alapértelmezett gombbal.
+     *
+     * @param parentScreen A szülő UIScreen.
+     * @param tft TFT_eSPI referencia.
+     * @param title A dialógus címe.
+     * @param message Az üzenet szövege.
+     * @param options Gombok feliratainak tömbje.
+     * @param numOptions A gombok száma.
+     * @param buttonClickCb Gomb kattintás callback (opcionális).
+     * @param autoClose Automatikusan bezárja-e a dialógust gomb kattintáskor (alapértelmezett: true).
+     * @param defaultButtonLabel Az alapértelmezett (jelenlegi) gomb felirata, amely kiemelve jelenik meg (nullptr = nincs, alapértelmezett).
+     * @param disableDefaultButton Ha true, az alapértelmezett gomb le van tiltva; ha false, csak vizuálisan kiemelve (alapértelmezett: true).
+     * @param bounds A dialógus határai (opcionális, automatikus méret és középre igazítás).
+     * @param cs Színséma (opcionális).
+     */
+    MultiButtonDialog(                                       //
+        UIScreen *parentScreen,                              // A szülő UIScreen
+        TFT_eSPI &tft,                                       // TFT_eSPI referencia
+        const char *title,                                   // A dialógus címe
+        const char *message,                                 // Az üzenet szövege
+        const char *const *options,                          // Gombok feliratai
+        uint8_t numOptions,                                  // Gombok száma
+        ButtonClickCallback buttonClickCb,                   // Gomb kattintás callback
+        bool autoClose,                                      // Automatikus bezárás gomb kattintáskor
+        const char *defaultButtonLabel,                      // Az alapértelmezett gomb felirata (nullptr = nincs)
+        bool disableDefaultButton,                           // Ha true, az alapértelmezett gomb le van tiltva
         const Rect &bounds = {-1, -1, 0, 0},                 // A dialógus határai (alapértelmezett: automatikus méret és középre igazítás)
         const ColorScheme &cs = ColorScheme::defaultScheme() // Színséma (alapértelmezett: alapértelmezett színséma)
     );
