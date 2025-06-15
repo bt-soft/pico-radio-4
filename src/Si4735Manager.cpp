@@ -16,10 +16,10 @@ Si4735Manager::Si4735Manager() : Si4735Rds() {
  */
 void Si4735Manager::init(bool systemStart) {
 
-    DEBUG("Si4735Manager::init() -> Start\n");
+    DEBUG("Si4735Manager::init(%s) -> Start\n", systemStart ? "true" : "false");
 
     // A Band  visszaállítása a konfigból
-    bandInit(desiredBandIdx == -1); // Rendszer induláskor -1 a currentBandIdx változást figyelő flag
+    bandInit(systemStart); // Rendszer induláskor
 
     // A sávra preferált demodulációs mód betöltése
     bandSet(systemStart); // Hangerő beállítása
@@ -38,12 +38,12 @@ void Si4735Manager::setStep() {
     uint8_t currMod = currentBand.currMod;
 
     if (rtv::bfoOn && (currMod == LSB or currMod == USB or currMod == CW)) {
-        if (config.data.currentBFOStep == 1)
-            config.data.currentBFOStep = 10;
-        else if (config.data.currentBFOStep == 10)
-            config.data.currentBFOStep = 25;
+        if (rtv::currentBFOStep == 1)
+            rtv::currentBFOStep = 10;
+        else if (rtv::currentBFOStep == 10)
+            rtv::currentBFOStep = 25;
         else
-            config.data.currentBFOStep = 1;
+            rtv::currentBFOStep = 1;
     }
     if (!rtv::SCANbut) {
         useBand();

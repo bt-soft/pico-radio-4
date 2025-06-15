@@ -5,6 +5,9 @@
 #include "defines.h"
 #include "rtVars.h"
 
+// Forward declaration
+class BandStore;
+
 // Band index
 #define FM_BAND_TYPE 0
 #define MW_BAND_TYPE 1
@@ -20,6 +23,7 @@
 
 // Egységes BandTable struktúra
 struct BandTable {
+    // KOnstans adatok
     const char *bandName; // Sáv neve
     uint8_t bandType;     // Sáv típusa (FM, MW, LW vagy SW)
     uint16_t prefMod;     // Preferált moduláció (AM, FM, USB, LSB, CW)
@@ -29,16 +33,11 @@ struct BandTable {
     uint8_t defStep;      // Alapértelmezett lépésköz (növelés/csökkentés)
     bool isHam;           // HAM sáv-e?
 
-    // Változó adatok
-    // Mentendő adatok a konfigurációba
+    // Változó és mentendő adatok
     uint16_t currFreq; // Aktuális frekvencia
     uint8_t currStep;  // Aktuális lépésköz (növelés/csökkentés)
     uint8_t currMod;   // Aktuális mód/modulációs típus (FM, AM, LSB, USB, CW)
-
-    //----
-    uint16_t antCap;     // Antenna Tuning Capacitor
-    int16_t lastBFO;     // Utolsó BFO érték
-    int16_t lastmanuBFO; // Utolsó manuális BFO érték X-Tal segítségével
+    uint16_t antCap;   // Antenna Tuning Capacitor
 };
 
 // Sávszélesség struktúra (Címke és Érték)
@@ -57,6 +56,9 @@ struct FrequencyStep {
  * Band class
  */
 class Band {
+  private:
+    // BandStore pointer a mentett adatok kezeléséhez
+    BandStore *bandStore;
 
   public:
     // BandMode description
@@ -70,10 +72,15 @@ class Band {
     // Lépésköz konfigurációk (érték beállításához)
     static const FrequencyStep stepSizeAM[4];
     static const FrequencyStep stepSizeFM[3];
-
     static const FrequencyStep stepSizeBFO[4];
     Band();
     virtual ~Band() = default;
+
+    /**
+     * @brief BandStore beállítása
+     * @param store A BandStore objektum pointere
+     */
+    void setBandStore(BandStore *store) { bandStore = store; }
 
     /**
      * @brief Band tábla dinamikus adatainak egyszeri inicializálása
@@ -81,6 +88,16 @@ class Band {
      * @param forceReinit Ha true, akkor újrainicializálja a dinamikus adatokat, függetlenül a jelenlegi állapotuktól
      */
     void initializeBandTableData(bool forceReinit = false);
+
+    /**
+     * @brief Band adatok mentése a BandStore-ba
+     */
+    void saveBandData();
+
+    /**
+     * @brief Band adatok betöltése a BandStore-ból
+     */
+    void loadBandData();
 
     /**
      * @brief A Default Antenna Tuning Capacitor értékének lekérdezése
@@ -271,7 +288,7 @@ class Band {
 
         // BFO esetén az érték az érték :')
         if (rtv::bfoOn) {
-            snprintf(formattedStepStr, sizeof(formattedStepStr), "%dHz", config.data.currentBFOStep);
+            snprintf(formattedStepStr, sizeof(formattedStepStr), "%dHz", rtv::currentBFOStep);
             return formattedStepStr; // Visszaadjuk a buffer pointerét
         }
         const char *currentStepStr = nullptr;

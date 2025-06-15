@@ -15,17 +15,21 @@ extern bool mute;
 extern uint16_t freqDispX;
 extern uint16_t freqDispY;
 
-extern uint8_t freqstepnr;  // A frekvencia kijelző digit száma, itt jelezzük
-                            // SSB/CW-ben, hogy mi a frekvencia lépés
+extern uint8_t freqstepnr; // A frekvencia kijelző digit száma, itt jelezzük
+                           // SSB/CW-ben, hogy mi a frekvencia lépés
 extern uint16_t freqstep;
 extern int16_t freqDec;
 
-// BFO
-extern bool bfoOn;  // BFO mód aktív?
-extern bool bfoTr;  // BFO kijelző animáció trigger
-// extern int16_t currentBFOmanu; // Ezt a configban tároljuk:
-// config.data.currentBFOmanu extern uint8_t currentBFOStep; // Ezt a configban
-// tároljuk: config.data.currentBFOStep
+// BFO állapotok
+extern bool bfoOn; // BFO mód aktív?
+extern bool bfoTr; // BFO kijelző animáció trigger
+
+// BFO értékek
+extern int16_t currentBFO;
+extern int16_t lastBFO;        // Utolsó BFO érték
+extern int16_t currentBFOmanu; // Manuális BFO eltolás (pl. -999 ... +999 Hz)
+extern int16_t lastmanuBFO;    // Utolsó manuális BFO érték X-Tal segítségével
+extern uint8_t currentBFOStep; // BFO lépésköz (pl. 1, 10, 25 Hz)
 
 // Mute
 #define AUDIO_MUTE_ON true
@@ -48,6 +52,6 @@ extern bool SEEK;
 // CW shift
 extern bool CWShift;
 
-}  // namespace rtv
+} // namespace rtv
 
-#endif  //__RTVARS_H
+#endif //__RTVARS_H

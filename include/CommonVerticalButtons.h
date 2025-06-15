@@ -247,9 +247,12 @@ class CommonVerticalButtons {
             "Frequency Input", nullptr,                           // Cím és üzenet
             si4735Manager,                                        // Si4735Manager referencia
             [si4735Manager, screen](uint16_t newFrequency) {      // Frekvencia változás callback
-                config.data.currentFrequency = newFrequency;
-                si4735Manager->getSi4735().setFrequency(config.data.currentFrequency);
-                screen->getFreqDisplayComp()->setFrequency(config.data.currentFrequency);
+                // Elkérjük az aktuális band táblát
+                BandTable &currentBand = si4735Manager->getCurrentBand();
+
+                currentBand.currFreq = newFrequency;                              // Beálítjuk a band táblában az új frekit
+                si4735Manager->getSi4735().setFrequency(currentBand.currFreq);    // Ráhangolódunk a rádióval
+                screen->getFreqDisplayComp()->setFrequency(currentBand.currFreq); // A kijelzőt is beállítjuk
             });
 
         screen->showDialog(freqDialog);

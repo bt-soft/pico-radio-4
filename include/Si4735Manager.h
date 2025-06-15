@@ -6,9 +6,6 @@
 
 class Si4735Manager : public Si4735Rds {
 
-  private:
-    int8_t desiredBandIdx = -1; // Kezdetben az 1-es band index van beállítva
-
   public:
     /**
      * @brief Konstruktor, amely inicializálja a Si4735 eszközt.

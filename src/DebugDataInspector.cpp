@@ -12,7 +12,7 @@ void DebugDataInspector::printFmStationData(const FmStationList_t &fmData) {
     DEBUG("=== DebugDataInspector -> FM Station Store ===\n");
     for (size_t i = 0; i < fmData.count; ++i) {
         const StationData &station = fmData.stations[i];
-        DEBUG("  Station %d: Freq: %d, Name: %s, Mod: %d, BFO: %d, BW: %d\n", i, station.frequency, station.name, station.modulation, station.bfoOffset, station.bandwidthIndex);
+        DEBUG("  Station %d: Freq: %d, Name: %s, Mod: %d, BW: %d\n", i, station.frequency, station.name, station.modulation, station.bandwidthIndex);
     }
     DEBUG("====================\n");
 #endif
@@ -27,7 +27,7 @@ void DebugDataInspector::printAmStationData(const AmStationList_t &amData) {
     Serial.println("=== DebugDataInspector -> AM Station Store ===");
     for (size_t i = 0; i < amData.count; ++i) {
         const StationData &station = amData.stations[i];
-        DEBUG("  Station %d: Freq: %d, Name: %s, Mod: %d, BFO: %d, BW: %d\n", i, station.frequency, station.name, station.modulation, station.bfoOffset, station.bandwidthIndex);
+        DEBUG("  Station %d: Freq: %d, Name: %s, Mod: %d, BW: %d\n", i, station.frequency, station.name, station.modulation, station.bandwidthIndex);
     }
     DEBUG("====================\n");
 #endif
@@ -41,7 +41,6 @@ void DebugDataInspector::printConfigData(const Config_t &configData) {
 #ifdef __DEBUG
     DEBUG("=== DebugDataInspector -> Config Data ===\n");
     DEBUG("  currentBandIdx: %u\n", configData.currentBandIdx);
-    DEBUG("  currentFrequency: %u\n", configData.currentFrequency);
     DEBUG("  bwIdxAM: %u\n", configData.bwIdxAM);
     DEBUG("  bwIdxFM: %u\n", configData.bwIdxFM);
     DEBUG("  bwIdxMW: %u\n", configData.bwIdxMW);
@@ -49,9 +48,6 @@ void DebugDataInspector::printConfigData(const Config_t &configData) {
     DEBUG("  ssIdxMW: %u\n", configData.ssIdxMW);
     DEBUG("  ssIdxAM: %u\n", configData.ssIdxAM);
     DEBUG("  ssIdxFM: %u\n", configData.ssIdxFM);
-    DEBUG("  currentBFO: %d\n", configData.currentBFO);
-    DEBUG("  currentBFOStep: %u\n", configData.currentBFOStep);
-    DEBUG("  currentBFOmanu: %d\n", configData.currentBFOmanu);
     DEBUG("  currentSquelch: %u\n", configData.currentSquelch);
     DEBUG("  squelchUsesRSSI: %s\n", configData.squelchUsesRSSI ? "true" : "false");
     DEBUG("  rdsEnabled: %s\n", configData.rdsEnabled ? "true" : "false");

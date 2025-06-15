@@ -4,6 +4,7 @@
 // Először a típusdefiníciók kellenek
 #include "BaseStationStore.h"
 #include "DebugDataInspector.h"
+#include "EepromLayout.h" // EEPROM címek konstansokhoz
 #include "StationData.h"
 
 // Üres alapértelmezett listák deklarációja (definíció a .cpp fájlban)

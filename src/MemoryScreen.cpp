@@ -470,7 +470,7 @@ void MemoryScreen::tuneToStation(int index) {
         if (pSi4735Manager->isCurrentBandFM()) {
             pSi4735Manager->clearRdsCache(); // RDS törlése FM módban
         }
-        pSi4735Manager->tuneMemoryStation(station.frequency, station.bfoOffset, station.bandIndex, station.modulation, station.bandwidthIndex);
+        pSi4735Manager->tuneMemoryStation(station.bandIndex, station.frequency, station.modulation, station.bandwidthIndex);
     }
 }
 
@@ -559,9 +559,8 @@ StationData MemoryScreen::getCurrentStationData() {
         // Si4735Manager közvetlenül örökli a Band metódusokat
         auto &currentBand = pSi4735Manager->getCurrentBand();
 
-        station.frequency = currentBand.currFreq;
-        station.bfoOffset = currentBand.lastBFO;
         station.bandIndex = config.data.currentBandIdx; // Band index a config-ból
+        station.frequency = currentBand.currFreq;
         station.modulation = currentBand.currMod;
         station.bandwidthIndex = 0; // TODO: Ha van bandwidth index tárolás
     }
@@ -641,16 +640,7 @@ bool MemoryScreen::isStationCurrentlyTuned(const StationData &station) {
     // Alapvető összehasonlítás: frekvencia és moduláció
     bool basicMatch = (station.frequency == currentStation.frequency && station.modulation == currentStation.modulation);
 
-    if (!basicMatch) {
-        return false;
-    }
-
-    // SSB/CW módoknál a BFO offset is egyeznie kell
-    if (station.modulation == LSB || station.modulation == USB || station.modulation == CW) {
-        return (station.bfoOffset == currentStation.bfoOffset);
-    }
-    // AM/FM módoknál csak frekvencia és moduláció kell egyezzen
-    return true;
+    return basicMatch;
 }
 
 uint8_t MemoryScreen::getCurrentStationCount() const { return isFmMode ? fmStationStore.getStationCount() : amStationStore.getStationCount(); }

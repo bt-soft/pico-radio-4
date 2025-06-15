@@ -95,16 +95,13 @@ void RadioScreen::seekStationUp() {
 // ===================================================================
 
 /**
- * @brief Frekvencia mentése a konfigurációba és band táblába
+ * @brief Frekvencia mentése a band táblába
  * @details Szinkronizálja az aktuális frekvenciát minden szükséges helyre
  */
 void RadioScreen::saveCurrentFrequency() {
     if (pSi4735Manager) {
         // Aktuális frekvencia lekérése a SI4735-ből
         uint32_t currentFreq = pSi4735Manager->getSi4735().getCurrentFrequency();
-
-        // Konfiguráció frissítése
-        config.data.currentFrequency = currentFreq;
 
         // Band tábla frissítése
         pSi4735Manager->getCurrentBand().currFreq = currentFreq;

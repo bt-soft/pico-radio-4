@@ -7,8 +7,7 @@
  */
 const Config_t DEFAULT_CONFIG = {
     //-- Band
-    .currentBandIdx = 0,      // Default band, FM
-    .currentFrequency = 9390, // Alapértelmezett frekvencia (93.90 MHz FM)
+    .currentBandIdx = 0, // Default band, FM
 
     // BandWidht
     .bwIdxAM = 0,  // BandWidth AM - Band::bandWidthAM index szerint -> "6.0" kHz
@@ -21,11 +20,6 @@ const Config_t DEFAULT_CONFIG = {
     .ssIdxMW = 2, // Band::stepSizeAM[] index szerint -> 9kHz
     .ssIdxAM = 1, // Band::stepSizeAM[] index szerint -> 5kHz
     .ssIdxFM = 1, // Band::stepSizeFM[] index szerint -> 100kHz
-
-    // BFO
-    .currentBFO = 0,
-    .currentBFOStep = 25, // BFO lépésköz (pl. 1, 10, 25 Hz)
-    .currentBFOmanu = 0,  // Manuális BFO eltolás (pl. -999 ... +999 Hz)
 
     // Squelch
     .currentSquelch = 0,     // Squelch szint (0...50)
@@ -74,3 +68,7 @@ const Config_t DEFAULT_CONFIG = {
 
 // Globális konfiguráció példány
 Config config;
+
+// Globális BandStore példány
+#include "BandStore.h"
+BandStore bandStore;

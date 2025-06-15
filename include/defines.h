@@ -30,7 +30,7 @@
 #define MEMORY_INFO_INTERVAL 20 * 1000 // 20mp
 
 // Soros portra várakozás a debug üzenetek előtt
- #define DEBUG_WAIT_FOR_SERIAL
+#define DEBUG_WAIT_FOR_SERIAL
 
 #endif
 
@@ -52,7 +52,7 @@
 //--- ScreenSaver
 #define SCREEN_SAVER_TIMEOUT_MIN 1
 #define SCREEN_SAVER_TIMEOUT_MAX 60
-#define SCREEN_SAVER_TIMEOUT 1 // 1 perc a képernyővédő időzítése - tesztelés
+#define SCREEN_SAVER_TIMEOUT 10 // 1 perc a képernyővédő időzítése - tesztelés
 
 //--- CW Decoder ---
 #define CW_DECODER_DEFAULT_FREQUENCY 750 // Alapértelmezett CW dekóder frekvencia (Hz)

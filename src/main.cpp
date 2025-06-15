@@ -16,12 +16,15 @@
 #include "utils.h"
 
 //-------------------- Config
+#include "BandStore.h"
 #include "Config.h"
+#include "EepromLayout.h"
 #include "StationStore.h"
 #include "StoreEepromBase.h"
 extern Config config;
 extern FmStationStore fmStationStore;
 extern AmStationStore amStationStore;
+extern BandStore bandStore;
 
 //------------------ TFT
 #include <TFT_eSPI.h>
@@ -139,10 +142,9 @@ void setup() {
     }
 
     // Beállítjuk a touch scren-t
-    tft.setTouch(config.data.tftCalibrateData);
-
-    // Állomáslisták betöltése az EEPROM-ból (a config után!) // <-- ÚJ
-    tft.drawString("Loading stations...", tft.width() / 2, 200);
+    tft.setTouch(config.data.tftCalibrateData); // Állomáslisták és band adatok betöltése az EEPROM-ból (a config után!)
+    tft.drawString("Loading stations & bands...", tft.width() / 2, 200);
+    bandStore.load(); // Band adatok betöltése
     fmStationStore.load();
     amStationStore.load();
 
@@ -158,12 +160,12 @@ void setup() {
     Wire.setSDA(PIN_SI4735_I2C_SDA); // I2C for SI4735 SDA
     Wire.setSCL(PIN_SI4735_I2C_SCL); // I2C for SI4735 SCL
     Wire.begin();
-    delay(300);
-
-    // Si4735Manager inicializálása itt
+    delay(300); // Si4735Manager inicializálása itt
     splash.updateProgress(2, 6, "Initializing SI4735 Manager...");
     if (si4735Manager == nullptr) {
         si4735Manager = new Si4735Manager();
+        // BandStore beállítása a Si4735Manager-ben
+        si4735Manager->setBandStore(&bandStore);
     }
 
     // KRITIKUS: Band tábla dinamikus adatainak EGYSZERI inicializálása RÖGTÖN a Si4735Manager létrehozása után!
@@ -192,6 +194,8 @@ void setup() {
     // Lépés 5: Frekvencia beállítások
     splash.updateProgress(5, 6, "Setting up radio...");
     si4735Manager->init(true);
+    si4735Manager->getSi4735().setVolume(config.data.currVolume); // Hangerő visszaállítása
+
     delay(100);
 
     // Kezdő képernyőtípus beállítása
@@ -239,6 +243,7 @@ void loop() {
     static uint32_t lastEepromSaveCheck = 0;
     if (millis() - lastEepromSaveCheck >= EEPROM_SAVE_CHECK_INTERVAL) {
         config.checkSave();
+        bandStore.checkSave(); // Band adatok mentése
         fmStationStore.checkSave();
         amStationStore.checkSave();
         lastEepromSaveCheck = millis();
@@ -264,7 +269,9 @@ void loop() {
 
     static bool lastTouchState = false;
     static uint16_t lastTouchX = 0, lastTouchY = 0;
-    bool touched = touchedRaw && validCoordinates; // Touch press event (immediate response)
+    bool touched = touchedRaw && validCoordinates;
+
+    // Touch press event (immediate response)
     if (touched && !lastTouchState) {
         TouchEvent touchEvent(touchX, touchY, true);
         if (screenManager)
@@ -302,7 +309,9 @@ void loop() {
             buttonState = RotaryEvent::ButtonState::Clicked;
         } else if (encoderState.buttonState == RotaryEncoder::ButtonState::DoubleClicked) {
             buttonState = RotaryEvent::ButtonState::DoubleClicked;
-        } // Esemény továbbítása a ScreenManager-nek
+        }
+
+        // Esemény továbbítása a ScreenManager-nek
         RotaryEvent rotaryEvent(direction, buttonState, encoderState.value);
         if (screenManager)
             screenManager->handleRotary(rotaryEvent);
@@ -318,7 +327,9 @@ void loop() {
     // Képernyőkezelő loop hívása
     if (screenManager) {
         screenManager->loop();
-    } // Képernyő rajzolása (csak szükség esetén, korlátozott gyakorisággal)
+    }
+
+    // Képernyő rajzolása (csak szükség esetén, korlátozott gyakorisággal)
     static uint32_t lastDrawTime = 0;
     const uint32_t DRAW_INTERVAL = 16; // ~60 FPS (16ms között rajzolás) - UI gyorsabb frissítés
     if (millis() - lastDrawTime >= DRAW_INTERVAL) {

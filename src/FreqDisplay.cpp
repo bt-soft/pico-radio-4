@@ -365,8 +365,7 @@ void FreqDisplay::displaySsbCwFrequency(uint16_t currentFrequencyValue, const Fr
  * @return Formázott frekvencia string (pl. "14205.50")
  */
 String FreqDisplay::formatSsbCwFrequency(uint16_t currentFrequencyValue) {
-    BandTable &currentBand = pSi4735Manager->getCurrentBand();
-    uint32_t bfoOffset = currentBand.lastBFO;
+    uint32_t bfoOffset = rtv::lastBFO;
     uint32_t displayFreqHz = (uint32_t)currentFrequencyValue * 1000 - bfoOffset;
 
     long khz_part = displayFreqHz / 1000;
@@ -434,7 +433,7 @@ void FreqDisplay::drawBfoMode(const String &formattedFreq, const FreqSegmentColo
     using namespace FreqDisplayConstants;
 
     // BFO érték kijelzése
-    drawFrequencyInternal(String(config.data.currentBFOmanu), F("-888"), colors, nullptr);
+    drawFrequencyInternal(String(rtv::currentBFOmanu), F("-888"), colors, nullptr);
 
     // "Hz" egység
     drawTextAtPosition("Hz", bounds.x + BfoHzLabelXOffset, bounds.y + BfoHzLabelYOffset, 2, BL_DATUM, colors.indicator);
@@ -607,10 +606,10 @@ bool FreqDisplay::determineFreqStrAndMaskForOptimizedDraw(uint16_t frequency, St
 
     if (currDemod == LSB || currDemod == USB || currDemod == CW) {
         if (rtv::bfoOn) { // BFO érték kijelzése
-            outFreqStr = String(config.data.currentBFOmanu);
+            outFreqStr = String(rtv::currentBFOmanu);
             outMask = F("-888");
         } else { // Normál SSB/CW frekvencia
-            uint32_t bfoOffset = pSi4735Manager->getCurrentBand().lastBFO;
+            uint32_t bfoOffset = rtv::lastBFO;
             uint32_t displayFreqHz = (uint32_t)frequency * 1000 - bfoOffset;
             char s[12];
             long khz_part = displayFreqHz / 1000;

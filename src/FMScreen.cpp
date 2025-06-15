@@ -121,8 +121,9 @@ bool FMScreen::handleRotary(const RotaryEvent &event) {
     if (!isDialogActive() && event.buttonState != RotaryEvent::ButtonState::Clicked) {
 
         // Frekvencia léptetés és automatikus mentés a band táblába
-        // Beállítjuk a chip-en és le is mentjük a konfigba a frekvenciát
-        config.data.currentFrequency = pSi4735Manager->stepFrequency(event.value);
+        // Beállítjuk a chip-en és le is mentjük a band táblába a frekvenciát
+        uint16_t currFreq = pSi4735Manager->stepFrequency(event.value); // Léptetjük a rádiót
+        pSi4735Manager->getCurrentBand().currFreq = currFreq;           // Beállítjuk a band táblában a frekit
 
         // RDS cache törlése frekvencia változás miatt
         if (rdsComponent) {
@@ -131,8 +132,7 @@ bool FMScreen::handleRotary(const RotaryEvent &event) {
 
         // Frekvencia kijelző azonnali frissítése
         if (freqDisplayComp) {
-            uint16_t currentRadioFreq = pSi4735Manager->getCurrentBand().currFreq;
-            freqDisplayComp->setFrequency(currentRadioFreq);
+            freqDisplayComp->setFrequency(currFreq);
         }
 
         // Memória státusz ellenőrzése és frissítése

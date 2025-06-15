@@ -16,6 +16,7 @@
  * @date 2025
  */
 #include "SystemInfoDialog.h"
+#include "EepromLayout.h" // EEPROM konstansokhoz
 
 /**
  * @brief SystemInfoDialog konstruktor

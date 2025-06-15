@@ -180,7 +180,7 @@ void StatusLine::updateBfo() {
     char bfoText[10]; // Buffer a szövegnek (pl. "25Hz" vagy " BFO ")
     if (rtv::bfoOn) {
         // Formázzuk a lépésközt és a "Hz"-t a bufferbe
-        snprintf(bfoText, sizeof(bfoText), "%dHz", config.data.currentBFOStep);
+        snprintf(bfoText, sizeof(bfoText), "%dHz", rtv::currentBFOStep);
     } else {
         strcpy(bfoText, " BFO ");
     }

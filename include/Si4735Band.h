@@ -28,14 +28,18 @@ class Si4735Band : public Si4735Runtime, public Band {
      */
     void setBandWidth();
 
-  public:
-    /**
-     * @brief Si4735Band osztály konstruktora
-     */
+  public: /**
+           * @brief Si4735Band osztály konstruktora
+           */
     Si4735Band() : Si4735Runtime(), Band(), ssbLoaded(false) {
 
         // currentBand = &getCurrentBand();
     }
+
+    /**
+     * @brief BandStore beállítása (örökölt a Band osztályból)
+     */
+    using Band::setBandStore;
 
     /**
      * @brief band inicializálása
@@ -80,9 +84,7 @@ class Si4735Band : public Si4735Runtime, public Band {
             targetFreq = currentBand.minimumFreq;
         } else if (targetFreq > currentBand.maximumFreq) {
             targetFreq = currentBand.maximumFreq;
-        }
-
-        // Csak akkor változtatunk, ha tényleg más a cél frekvencia
+        } // Csak akkor változtatunk, ha tényleg más a cél frekvencia
         if (targetFreq != currentBand.currFreq) {
             // Beállítjuk a frekvenciát
             si4735.setFrequency(targetFreq);
@@ -90,8 +92,8 @@ class Si4735Band : public Si4735Runtime, public Band {
             // El is mentjük a band táblába
             currentBand.currFreq = si4735.getCurrentFrequency();
 
-            // Mentjük a frekvenciát a konfigurációba is a perzisztencia érdekében
-            config.data.currentFrequency = currentBand.currFreq;
+            // Band adatok mentését megjelöljük
+            saveBandData();
 
             // Ez biztosítja, hogy az S-meter azonnal frissüljön az új frekvencián
             invalidateSignalCache();
@@ -102,13 +104,12 @@ class Si4735Band : public Si4735Runtime, public Band {
 
     /**
      * @brief A hangolás a memória állomásra
-     * @param frequency A hangolási frekvencia
-     * @param bfoOffset A BFO eltolás (ha van)
      * @param bandIndex A band indexe (FM, MW, SW, LW)
+     * @param frequency A hangolási frekvencia
      * @param demodModIndex A demodulációs mód indexe (FM, AM, LSB, USB, CW)
      * @param bandwidthIndex A sávszélesség indexe
      */
-    void tuneMemoryStation(uint16_t frequency, int16_t bfoOffset, uint8_t bandIndex, uint8_t demodModIndex, uint8_t bandwidthIndex);
+    void tuneMemoryStation(uint8_t bandIndex, uint16_t frequency, uint8_t demodModIndex, uint8_t bandwidthIndex);
 };
 
 #endif // __SI4735_BAND_H

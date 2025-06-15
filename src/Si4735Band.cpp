@@ -7,10 +7,21 @@
 
 /**
  * Band inicializálása konfig szerint
+ * @param sysStart Rendszer indítás van?
+ *                 Ha true, akkor a konfigból betölti az alapértelmezett értékeket
  */
 void Si4735Band::bandInit(bool sysStart) {
 
-    DEBUG("Si4735Band::BandInit() ->currentBandIdx: %d\n", config.data.currentBandIdx);
+    DEBUG("Si4735Band::BandInit() ->currentBandIdx: %d\n", config.data.currentBandIdx); // Rendszer indítás van?
+    if (sysStart) {
+        DEBUG("Si4735Band::bandInit() -> System start, loading defaults...\n");
+
+        // Band adatok betöltése a BandStore-ból
+        loadBandData();
+
+        rtv::freqstep = 1000; // hz
+        rtv::freqDec = rtv::currentBFO;
+    }
 
     // Currentband beállítása
     BandTable &currentBand = getCurrentBand();
@@ -41,19 +52,6 @@ void Si4735Band::bandInit(bool sysStart) {
         // Seek beállítások
         si4735.setSeekAmRssiThreshold(50); // 50dB RSSI threshold
         si4735.setSeekAmSrnThreshold(20);  // 20dB SNR threshold
-    }
-
-    // Rendszer indítás van?
-    if (sysStart) {
-        DEBUG("Si4735Band::bandInit() -> System start, loading defaults...\n");
-
-        rtv::freqstep = 1000; // hz
-        rtv::freqDec = config.data.currentBFO;
-        currentBand.lastBFO = config.data.currentBFO;
-
-        // curretBand.prefMod = config.data.currentMode;
-        currentBand.currFreq = config.data.currentFrequency; // Frekvencia visszaállítása a konfigból
-        si4735.setVolume(config.data.currVolume);            // Hangerő
     }
 }
 
@@ -210,7 +208,7 @@ void Si4735Band::useBand() {
 
                 // BFO beállítása                        // CW mód: Fix BFO offset (pl. 700 Hz) + manuális finomhangolás
                 const int16_t cwBaseOffset = isCWMode ? config.data.cwReceiverOffsetHz : 0; // Alap CW eltolás a configból
-                si4735.setSSBBfo(cwBaseOffset + config.data.currentBFO + config.data.currentBFOmanu);
+                si4735.setSSBBfo(cwBaseOffset + rtv::currentBFO + rtv::currentBFOmanu);
                 rtv::CWShift = isCWMode; // Jelezzük a kijelzőnek
 
                 // SSB/CW esetén a lépésköz a chipen mindig 1kHz, de a finomhangolás BFO-val történik
@@ -312,21 +310,25 @@ void Si4735Band::setBandWidth() {
 }
 
 /**
- *
+ * @brief Hangolás a memória állomásra
+ * @param bandIndex A band indexe, amelyre hangolunk
+ * @param frequency A hangolási frekvencia (Hz)
+ * @param demodModIndex A demodulációs mód indexe (FM, AM, LSB, USB, CW)
+ * @param bandwidthIndex A sávszélesség indexe
  */
-void Si4735Band::tuneMemoryStation(uint16_t frequency, int16_t bfoOffset, uint8_t bandIndex, uint8_t demodModIndex, uint8_t bandwidthIndex) {
-
-    BandTable &currentBand = getCurrentBand();
+void Si4735Band::tuneMemoryStation(uint8_t bandIndex, uint16_t frequency, uint8_t demodModIndex, uint8_t bandwidthIndex) {
 
     // 1. Elkérjük a Band táblát
-    config.data.currentBandIdx = bandIndex; // Band index beállítása
+    BandTable &currentBand = getCurrentBand();
+
+    // Band index beállítása a konfigban
+    config.data.currentBandIdx = bandIndex;
 
     // 2. Demodulátor beállítása a chipen.  Ha CW módra
     uint8_t savedMod = demodModIndex; // A demodulációs mód kiemelése
 
     if (savedMod != CW and rtv::CWShift == true) {
-        currentBand.lastBFO = 0;
-        config.data.currentBFO = currentBand.lastBFO;
+        // TODO: ezt még kidolgozni
         rtv::CWShift = false;
     }
 
@@ -350,26 +352,17 @@ void Si4735Band::tuneMemoryStation(uint16_t frequency, int16_t bfoOffset, uint8_
     // A tényleges frekvenciát olvassuk vissza a chip-ből (lehet, hogy nem pontosan azt állította be, amit kértünk)
     currentBand.currFreq = si4735.getCurrentFrequency();
 
-    // Mentjük a frekvenciát a konfigurációba is a perzisztencia érdekében
-    config.data.currentFrequency = currentBand.currFreq;
-
     // BFO eltolás visszaállítása SSB/CW esetén ---
     if (demodModIndex == LSB || demodModIndex == USB || demodModIndex == CW) {
-        currentBand.lastBFO = bfoOffset;    // Mentett BFO visszaállítása a sáv változóba
-        config.data.currentBFO = bfoOffset; // Mentett BFO visszaállítása az aktuális hangolási változóba
-        rtv::freqDec = bfoOffset;           // Rotary változó szinkronizálása
-
         const int16_t cwBaseOffset = (demodModIndex == CW) ? config.data.cwReceiverOffsetHz : 0;
 
-        // A visszaállított BFO (+ az AKTUÁLIS manuális finomítás) használata
-        int16_t bfoToSet = cwBaseOffset + config.data.currentBFO + config.data.currentBFOmanu;
-        si4735.setSSBBfo(bfoToSet);
+        si4735.setSSBBfo(cwBaseOffset);
         rtv::CWShift = (demodModIndex == CW); // CW shift állapot frissítése
 
     } else {
         // AM/FM esetén biztosítjuk, hogy a BFO nullázva legyen
-        currentBand.lastBFO = 0;
-        config.data.currentBFO = 0;
+        rtv::lastBFO = 0;
+        rtv::currentBFO = 0;
         rtv::freqDec = 0;
         rtv::CWShift = false;
     }
