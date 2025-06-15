@@ -5,7 +5,7 @@
 #include "StoreBase.h"
 #include "defines.h"
 
-// Forward deklaráció a Band osztályhoz, hogy elérjük a BANDTABLE_COUNT konstanst
+// Forward deklaráció a Band osztályhoz
 class Band;
 
 // BandTable változó adatainak struktúrája (mentéshez)
@@ -16,12 +16,9 @@ struct BandTableData_t {
     uint16_t antCap;   // Antenna capacitor
 };
 
-// Külső konstans deklaráció a Band.cpp-ből
-extern const size_t BANDTABLE_COUNT;
-
 // Teljes Band adatok struktúrája (az összes band számára)
 struct BandStoreData_t {
-    BandTableData_t bands[30]; // Maximum 30 band (konstans érték a forward deklaráció miatt)
+    BandTableData_t bands[BANDTABLE_SIZE]; // Band tábla mérete (defines.h-ból)
 };
 
 /**
@@ -47,14 +44,13 @@ class BandStore : public StoreBase<BandStoreData_t> {
 
     // Felülírjuk a mentést/betöltést a megfelelő EEPROM címmel
     uint16_t performSave() override { return StoreEepromBase<BandStoreData_t>::save(getData(), EEPROM_BAND_DATA_ADDR, getClassName()); }
+    uint16_t performLoad() override { return StoreEepromBase<BandStoreData_t>::load(getData(), EEPROM_BAND_DATA_ADDR, getClassName()); }
 
-    uint16_t performLoad() override {
-        return StoreEepromBase<BandStoreData_t>::load(getData(), EEPROM_BAND_DATA_ADDR, getClassName());
-    } /**
-       * Alapértelmezett értékek betöltése - minden adat nullázása
-       */
+    /**
+     * Alapértelmezett értékek betöltése - minden adat nullázása
+     */
     void loadDefaults() override {
-        for (uint8_t i = 0; i < BANDTABLE_COUNT; i++) {
+        for (uint8_t i = 0; i < BANDTABLE_SIZE; i++) {
             data.bands[i].currFreq = 0;
             data.bands[i].currStep = 0;
             data.bands[i].currMod = 0;
@@ -68,7 +64,7 @@ class BandStore : public StoreBase<BandStoreData_t> {
      */
     BandStore() {
         // Minden band adatát nullázzuk inicializáláskor
-        for (uint8_t i = 0; i < BANDTABLE_COUNT; i++) {
+        for (uint8_t i = 0; i < BANDTABLE_SIZE; i++) {
             data.bands[i].currFreq = 0;
             data.bands[i].currStep = 0;
             data.bands[i].currMod = 0;
@@ -79,7 +75,7 @@ class BandStore : public StoreBase<BandStoreData_t> {
        * @param bandTable A BandTable tömb referenciája
        */
     void loadToBandTable(BandTable *bandTable) {
-        for (uint8_t i = 0; i < BANDTABLE_COUNT; i++) {
+        for (uint8_t i = 0; i < BANDTABLE_SIZE; i++) {
             if (data.bands[i].currFreq != 0) {
                 bandTable[i].currFreq = data.bands[i].currFreq;
                 bandTable[i].currStep = data.bands[i].currStep;
@@ -87,12 +83,14 @@ class BandStore : public StoreBase<BandStoreData_t> {
                 bandTable[i].antCap = data.bands[i].antCap;
             }
         }
-    } /**
-       * BandTable változó adatainak mentése a store-ba
-       * @param bandTable A BandTable tömb referenciája
-       */
+    }
+
+    /**
+     * BandTable változó adatainak mentése a store-ba
+     * @param bandTable A BandTable tömb referenciája
+     */
     void saveFromBandTable(const BandTable *bandTable) {
-        for (uint8_t i = 0; i < BANDTABLE_COUNT; i++) {
+        for (uint8_t i = 0; i < BANDTABLE_SIZE; i++) {
             data.bands[i].currFreq = bandTable[i].currFreq;
             data.bands[i].currStep = bandTable[i].currStep;
             data.bands[i].currMod = bandTable[i].currMod;

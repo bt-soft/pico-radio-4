@@ -70,6 +70,9 @@
 //--- Array Utils ---
 #define ARRAY_ITEM_COUNT(array) (sizeof(array) / sizeof(array[0]))
 
+//--- Band Table ---
+#define BANDTABLE_SIZE 30 // A band tábla mérete (bandTable[] tömb)
+
 //--- C String compare -----
 #define STREQ(a, b) (strcmp((a), (b)) == 0)
 

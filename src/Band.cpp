@@ -37,9 +37,6 @@ BandTable bandTable[] = {
     {"SW", SW_BAND_TYPE, AM, 100, 30000, 15500, 5, false, 0, 0, 0, 0}     // Whole SW    29
 };
 
-/// Itt határozzuk meg a BAND_COUNT értékét!
-const size_t BANDTABLE_COUNT = ARRAY_ITEM_COUNT(bandTable);
-
 // BandMode description
 const char *Band::bandModeDesc[5] = {"FM", "LSB", "USB", "AM", "CW"};
 
@@ -82,16 +79,23 @@ Band::Band() : bandStore(nullptr) {}
  */
 void Band::initializeBandTableData(bool forceReinit) {
 
-    DEBUG("Band::initializeBandTableData() called. forceReinit: %s\n", forceReinit ? "true" : "false");
-
-    // Ha forceReinit true, akkor betöltjük a mentett adatokat
+    DEBUG("Band::initializeBandTableData() called. forceReinit: %s\n", forceReinit ? "true" : "false"); // Ha forceReinit true, akkor betöltjük a mentett adatokat
     if (forceReinit && bandStore != nullptr) {
+
+        // Ellenőrizzük, hogy a bandTable tömb mérete megegyezik-e a BANDTABLE_SIZE konstanssal
+        size_t actualBandTableSize = ARRAY_ITEM_COUNT(bandTable);
+        if (actualBandTableSize != BANDTABLE_SIZE) {
+            DEBUG("ERROR: A bandTable size eltér! Tényleges: %d, előre definiált: %d\n", actualBandTableSize, BANDTABLE_SIZE);
+            DEBUG("Javítsd ki a defines.h BANDTABLE_SIZE értékét %d-re!\n", actualBandTableSize);
+            // Itt esetleg lehetne hibakezelés, de most csak figyelmeztetünk
+        }
+
         DEBUG("Band::initializeBandTableData() -> Loading band data from store...\n");
         loadBandData();
     }
 
     // A BandTable dinamikus adatainak inicializálása - változó adatok beállítása, ha még nincsenek inicializálva
-    for (uint8_t i = 0; i < BANDTABLE_COUNT; i++) {
+    for (uint8_t i = 0; i < BANDTABLE_SIZE; i++) {
 
         // Ha még nem volt az EEPROM mentésből visszaállítás, akkor most bemásoljuk a default értékeket a változó értékekbe
         if (bandTable[i].currFreq == 0 || forceReinit) {
@@ -127,7 +131,7 @@ void Band::initializeBandTableData(bool forceReinit) {
 BandTable &Band::getBandByIdx(uint8_t bandIdx) {
 
     static BandTable emptyBand = {"", 0, 0, 0, 0, 0, 0, false, 0, 0, 0, 0}; // Üres rekord
-    if (bandIdx >= BANDTABLE_COUNT) {
+    if (bandIdx >= BANDTABLE_SIZE) {
         return emptyBand; // Érvénytelen index esetén üres rekordot adunk vissza
     }
 
@@ -142,7 +146,7 @@ BandTable &Band::getBandByIdx(uint8_t bandIdx) {
  */
 int8_t Band::getBandIdxByBandName(const char *bandName) {
 
-    for (size_t i = 0; i < BANDTABLE_COUNT; i++) {
+    for (size_t i = 0; i < BANDTABLE_SIZE; i++) {
         if (strcmp(bandName, bandTable[i].bandName) == 0) {
             return i; // Megtaláltuk az indexet
         }
@@ -153,7 +157,7 @@ int8_t Band::getBandIdxByBandName(const char *bandName) {
 /**
  * Band tábla méretének lekérdezése
  */
-uint8_t Band::getBandTableSize() { return BANDTABLE_COUNT; }
+uint8_t Band::getBandTableSize() { return BANDTABLE_SIZE; }
 
 /**
  * Szűrt band nevek számának lekérdezése
@@ -162,7 +166,7 @@ uint8_t Band::getBandTableSize() { return BANDTABLE_COUNT; }
  */
 uint8_t Band::getFilteredBandCount(bool isHamFilter) {
     uint8_t count = 0;
-    for (size_t i = 0; i < BANDTABLE_COUNT; i++) {
+    for (size_t i = 0; i < BANDTABLE_SIZE; i++) {
         if (bandTable[i].isHam == isHamFilter) {
             count++;
         }
@@ -181,8 +185,7 @@ void Band::getBandNames(const char **names, uint8_t &count, bool isHamFilter) {
 
     count = 0;                                           // Kezdőérték
     uint8_t maxSize = getFilteredBandCount(isHamFilter); // Maximális méret kiszámítása
-
-    for (size_t i = 0; i < BANDTABLE_COUNT && count < maxSize; i++) {
+    for (size_t i = 0; i < BANDTABLE_SIZE && count < maxSize; i++) {
         if (bandTable[i].isHam == isHamFilter) {    // HAM sáv szűrés
             names[count++] = bandTable[i].bandName; // Közvetlen pointer hozzáadás
         }

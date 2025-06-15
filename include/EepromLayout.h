@@ -4,6 +4,7 @@
 #include "ConfigData.h"  // Config_t struktúra
 #include "StationData.h" // FmStationList_t, AmStationList_t struktúrák
 #include "StoreEepromBase.h"
+#include "defines.h" // BANDTABLE_SIZE konstanshoz
 
 // Forward deklaráció a BandStoreData_t-hez
 struct BandStoreData_t;
@@ -39,8 +40,8 @@ constexpr size_t CONFIG_REQUIRED_SIZE = StoreEepromBase<Config_t>::getRequiredSi
 /** Band adatok kezdőcíme */
 constexpr uint16_t EEPROM_BAND_DATA_ADDR = EEPROM_CONFIG_START_ADDR + CONFIG_REQUIRED_SIZE;
 
-/** Band adatok mérete: 30 band × (2+1+1+2) bájt + 2 bájt CRC = 182 bájt */
-constexpr size_t BAND_STORE_REQUIRED_SIZE = (30 * (sizeof(uint16_t) + sizeof(uint8_t) + sizeof(uint8_t) + sizeof(uint16_t))) + sizeof(uint16_t);
+/** Band adatok mérete: BANDTABLE_SIZE band × (2+1+1+2) bájt + 2 bájt CRC */
+constexpr size_t BAND_STORE_REQUIRED_SIZE = (BANDTABLE_SIZE * (sizeof(uint16_t) + sizeof(uint8_t) + sizeof(uint8_t) + sizeof(uint16_t))) + sizeof(uint16_t);
 
 /** FM állomások kezdőcíme */
 constexpr uint16_t EEPROM_FM_STATIONS_ADDR = EEPROM_BAND_DATA_ADDR + BAND_STORE_REQUIRED_SIZE;
