@@ -111,12 +111,14 @@ FreqDisplay::FreqDisplay(TFT_eSPI &tft_param, const Rect &bounds_param, Si4735Ma
  * @brief Beállítja a megjelenítendő frekvenciát
  *
  * Ez a metódus frissíti a kijelzendő frekvenciát, és optimalizált
- * újrarajzolást kér, ha a frekvencia valóban megváltozott.
+ * újrarajzolást kér, ha a frekvencia valóban megváltozott, vagy ha
+ * a forceRedraw paraméter true.
  *
  * @param freq Az új frekvencia érték
+ * @param forceRedraw Ha true, akkor újrarajzol, még ha a frekvencia nem változott is
  */
-void FreqDisplay::setFrequency(uint16_t freq) {
-    if (currentDisplayFrequency != freq) {
+void FreqDisplay::setFrequency(uint16_t freq, bool forceRedraw) {
+    if (forceRedraw || currentDisplayFrequency != freq) {
         currentDisplayFrequency = freq;
         // Optimalizált rajzolás engedélyezése: csak a frekvencia számjegyek
         // frissítése, nem a teljes komponens újrarajzolása
@@ -382,8 +384,12 @@ void FreqDisplay::displaySsbCwFrequency(uint16_t currentFrequencyValue, const Fr
  * @return Formázott frekvencia string (pl. "14205.50")
  */
 String FreqDisplay::formatSsbCwFrequency(uint16_t currentFrequencyValue) {
-    uint32_t bfoOffset = rtv::lastBFO;
-    uint32_t displayFreqHz = (uint32_t)currentFrequencyValue * 1000 - bfoOffset;
+    // Az rtv::freqDec tartalmazza a finomhangolási eltolást Hz-ben
+    // Ez az érték kerül levonásra a chip frekvenciától a helyes megjelenítéshez
+    uint32_t displayFreqHz = (uint32_t)currentFrequencyValue * 1000 - rtv::freqDec;
+
+    // Debug információ - SSB/CW finomhangolás követése
+    DEBUG("SSB/CW: chipFreq=%d kHz, freqDec=%d Hz, displayFreq=%d Hz\n", currentFrequencyValue, rtv::freqDec, displayFreqHz);
 
     long khz_part = displayFreqHz / 1000;
     int hz_tens_part = abs((int)(displayFreqHz % 1000)) / 10;

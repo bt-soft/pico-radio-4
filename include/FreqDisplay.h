@@ -296,12 +296,12 @@ class FreqDisplay : public UIComponent {
      * @brief Virtuális destruktor
      */
     virtual ~FreqDisplay() = default;
-
     /**
      * @brief Beállítja a megjelenítendő frekvenciát, csak a digiteket rajzolja újra
      * @param freq Az új frekvencia érték
+     * @param forceRedraw Ha true, akkor újrarajzol, még ha a frekvencia nem változott is
      */
-    void setFrequency(uint16_t freq);
+    void setFrequency(uint16_t freq, bool forceRedraw = false);
 
     /**
      * @brief Beállítja a megjelenítendő frekvenciát, teljes újrarajzolással

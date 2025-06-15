@@ -74,7 +74,9 @@ bool AMScreen::handleRotary(const RotaryEvent &event) {
     // Az SI4735 osztály cache-ból olvassuk az aktuális frekvenciát, nem használunk chip olvasást
     uint16_t currentFrequency = pSi4735Manager->getSi4735().getCurrentFrequency();
 
-    if (pSi4735Manager->isCurrentDemodSSBorCW()) {
+    bool isCurrentDemodSSBorCW = pSi4735Manager->isCurrentDemodSSBorCW();
+
+    if (isCurrentDemodSSBorCW) {
 
         if (rtv::bfoOn) {
 
@@ -83,6 +85,8 @@ bool AMScreen::handleRotary(const RotaryEvent &event) {
             rtv::currentBFOmanu = constrain(rtv::currentBFOmanu, -999, 999);
 
         } else {
+
+            DEBUG("SSB/CW hangolás: irány=%s, freqstep=%d, freqDec előtte=%d\n", (event.direction == RotaryEvent::Direction::Up) ? "UP" : "DOWN", rtv::freqstep, rtv::freqDec);
 
             // Hangolás felfelé
             if (event.direction == RotaryEvent::Direction::Up) {
@@ -122,6 +126,8 @@ bool AMScreen::handleRotary(const RotaryEvent &event) {
             }
             rtv::currentBFO = rtv::freqDec;
             rtv::lastBFO = rtv::currentBFO;
+
+            DEBUG("SSB/CW hangolás után: freqDec=%d, currentBFO=%d, lastBFO=%d\n", rtv::freqDec, rtv::currentBFO, rtv::lastBFO);
         }
 
         // Lekérdezzük a beállított frekvenciát
@@ -136,14 +142,14 @@ bool AMScreen::handleRotary(const RotaryEvent &event) {
     } else {
         // Léptetjük a rádiót, ez el is menti a band táblába
         newFreq = pSi4735Manager->stepFrequency(event.value);
-    }
-
-    // AGC
+    } // AGC
     pSi4735Manager->checkAGC();
 
     // Frekvencia kijelző azonnali frissítése
     if (freqDisplayComp) {
-        freqDisplayComp->setFrequency(newFreq);
+        // SSB/CW módban mindig frissítjük a kijelzőt, mert a finomhangolás (freqDec)
+        // változhat anélkül, hogy a chip frekvencia megváltozna
+        freqDisplayComp->setFrequency(newFreq, isCurrentDemodSSBorCW);
     }
 
     // Memória státusz ellenőrzése és frissítése
