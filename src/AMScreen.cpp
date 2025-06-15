@@ -63,26 +63,25 @@ AMScreen::AMScreen(TFT_eSPI &tft, Si4735Manager &si4735Manager) : RadioScreen(tf
 bool AMScreen::handleRotary(const RotaryEvent &event) {
 
     // Biztonsági ellenőrzés: csak aktív dialógus nélkül és nem klikk eseménykor
-    if (!isDialogActive() && event.buttonState != RotaryEvent::ButtonState::Clicked) {
-
-        // Frekvencia léptetés és automatikus mentés a band táblába
-        // Beállítjuk a chip-en és le is mentjük a band táblába a frekvenciát
-        uint16_t currFreq = pSi4735Manager->stepFrequency(event.value); // Léptetjük a rádiót
-        pSi4735Manager->getCurrentBand().currFreq = currFreq;           // Beállítjuk a band táblában a frekit
-
-        // Frekvencia kijelző azonnali frissítése
-        if (freqDisplayComp) {
-            freqDisplayComp->setFrequency(currFreq);
-        }
-
-        // Memória státusz ellenőrzése és frissítése
-        checkAndUpdateMemoryStatus();
-
-        return true; // Esemény sikeresen kezelve
+    if (isDialogActive() || event.buttonState == RotaryEvent::ButtonState::Clicked) {
+        // Nem kezeltük az eseményt, továbbítjuk a szülő osztálynak (dialógusokhoz)
+        return UIScreen::handleRotary(event);
     }
 
-    // Ha nem kezeltük az eseményt, továbbítjuk a szülő osztálynak (dialógusokhoz)
-    return UIScreen::handleRotary(event);
+    // Frekvencia léptetés és automatikus mentés a band táblába
+    // Beállítjuk a chip-en és le is mentjük a band táblába a frekvenciát
+    uint16_t currFreq = pSi4735Manager->stepFrequency(event.value); // Léptetjük a rádiót
+    pSi4735Manager->getCurrentBand().currFreq = currFreq;           // Beállítjuk a band táblában a frekit
+
+    // Frekvencia kijelző azonnali frissítése
+    if (freqDisplayComp) {
+        freqDisplayComp->setFrequency(currFreq);
+    }
+
+    // Memória státusz ellenőrzése és frissítése
+    checkAndUpdateMemoryStatus();
+
+    return true; // Esemény sikeresen kezelve
 }
 
 /**
@@ -383,7 +382,9 @@ void AMScreen::handleAfBWButton(const UIButton::ButtonEvent &event) {
         return; // Csak kattintásra reagálunk
     }
 
-    uint8_t currMod = pSi4735Manager->getCurrentBand().currMod; // Demodulációs mód
+    // Aktuális demodulációs mód
+    uint8_t currMod = pSi4735Manager->getCurrentBand().currMod;
+    // Jelenlegi sávszélesség felirata
     const char *currentBw = pSi4735Manager->getCurrentBandWidthLabel();
 
     // Megállapítjuk a lehetséges sávszélességek tömbjét
@@ -436,9 +437,6 @@ void AMScreen::handleAfBWButton(const UIButton::ButtonEvent &event) {
         Rect(-1, -1, w, h) // Dialógus mérete (ha -1, akkor automatikusan a képernyő közepére igazítja)
     );
     this->showDialog(afBwDialog);
-
-    // Placeholder: gomb állapot frissítése ha szükséges
-    // horizontalButtonBar->setButtonState(AMScreenHorizontalButtonIDs::AFBW_BUTTON, UIButton::ButtonState::Off);
 }
 
 /**
@@ -476,8 +474,85 @@ void AMScreen::handleDemodButton(const UIButton::ButtonEvent &event) {
  * @details AM specifikus funkcionalitás - alapértelmezett implementáció
  */
 void AMScreen::handleStepButton(const UIButton::ButtonEvent &event) {
-    if (event.state == UIButton::EventButtonState::Clicked) {
-        // TODO: Step funkcionalitás implementálása
-        Serial.println("AMScreen::handleStepButton - Step funkció (TODO)");
+    if (event.state != UIButton::EventButtonState::Clicked) {
+        return;
     }
+
+    // Aktuális demodulációs mód
+    uint8_t currMod = pSi4735Manager->getCurrentBand().currMod;
+
+    // Az aktuális freki lépés felirata
+    const char *currentStepStr = pSi4735Manager->currentStepSizeStr();
+
+    // Megállapítjuk a lehetséges lépések méretét
+    const char *title;
+    size_t labelsCount;
+    const char **labels;
+    uint16_t w = 200;
+    uint16_t h = 130;
+
+    if (rtv::bfoOn) {
+        title = "Step tune BFO";
+        labels = pSi4735Manager->getStepSizeLabels(Band::stepSizeBFO, labelsCount);
+
+    } else if (currMod == FM) {
+        title = "Step tune FM";
+        labels = pSi4735Manager->getStepSizeLabels(Band::stepSizeFM, labelsCount);
+        w = 300;
+        h = 100;
+    } else {
+        title = "Step tune AM/SSB";
+        labels = pSi4735Manager->getStepSizeLabels(Band::stepSizeAM, labelsCount);
+        w = 300;
+        h = 120;
+    }
+
+    auto stepDialog = std::make_shared<MultiButtonDialog>(
+        this, this->tft,                                                                       // Képernyő referencia
+        title, "",                                                                             // Dialógus címe és üzenete
+        labels, labelsCount,                                                                   // Gombok feliratai és számuk
+        [this, currMod](int buttonIndex, const char *buttonLabel, MultiButtonDialog *dialog) { // Gomb kattintás kezelése
+                                                                                               // Kikeressük az aktuális Band rekordot
+            BandTable &currentband = pSi4735Manager->getCurrentBand();
+
+            // Kikeressük az aktuális Band típust
+            uint8_t currentBandType = currentband.bandType;
+
+            // SSB módban a BFO be van kapcsolva?
+            if (rtv::bfoOn && pSi4735Manager->isCurrentDemodSSB()) {
+
+                // BFO step állítás
+                rtv::currentBFOStep = pSi4735Manager->getStepSizeByIndex(Band::stepSizeBFO, buttonIndex);
+
+                // SSB módban beállítjuk a BFO lépésközt
+                pSi4735Manager->setBFOStep();
+
+            } else { // Nem SSB + BFO módban vagyunk
+
+                // Beállítjuk a konfigban a stepSize-t
+                if (currMod == FM) {
+                    // FM módban
+                    config.data.ssIdxFM = buttonIndex;
+                    currentband.currStep = pSi4735Manager->getStepSizeByIndex(Band::stepSizeFM, buttonIndex);
+
+                } else {
+                    // AM módban
+                    if (currentBandType == MW_BAND_TYPE or currentBandType == LW_BAND_TYPE) {
+                        // MW vagy LW módban
+                        config.data.ssIdxMW = buttonIndex;
+                    } else {
+                        // Sima AM vagy SW módban
+                        config.data.ssIdxAM = buttonIndex;
+                    }
+                }
+                currentband.currStep = pSi4735Manager->getStepSizeByIndex(Band::stepSizeAM, buttonIndex);
+            }
+        },
+        true,              // Automatikusan bezárja-e a dialógust gomb kattintáskor
+        currentStepStr,    // Az alapértelmezett (jelenlegi) gomb felirata
+        true,              // Ha true, az alapértelmezett gomb le van tiltva; ha false, csak vizuálisan kiemelve
+        Rect(-1, -1, w, h) // Dialógus mérete (ha -1, akkor automatikusan a képernyő közepére igazítja)
+    );
+
+    this->showDialog(stepDialog);
 }
