@@ -180,14 +180,12 @@ void AMScreen::activate() {
  * (Volume, Attenuator, Squelch, Frequency) után.
  */
 void AMScreen::onDialogClosed(UIDialogBase *closedDialog) {
-    DEBUG("AMScreen::onDialogClosed - Dialog closed, checking if last dialog\n");
 
     // Először hívjuk az alap implementációt (stack cleanup, navigation logic)
     UIScreen::onDialogClosed(closedDialog);
 
     // Ha ez volt az utolsó dialógus, frissítsük a gombállapotokat
     if (!isDialogActive()) {
-        DEBUG("AMScreen::onDialogClosed - Last dialog closed, updating button states\n");
         updateAllVerticalButtonStates(pSi4735Manager); // Függőleges gombok szinkronizálása
         updateCommonHorizontalButtonStates();          // Közös gombok szinkronizálása
         updateHorizontalButtonStates();                // AM specifikus gombok szinkronizálása

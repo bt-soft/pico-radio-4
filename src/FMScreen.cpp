@@ -60,7 +60,6 @@ void FMScreen::layoutComponents() {
     freqDisplayComp->setHideUnderline(true); // Alulvonás elrejtése a frekvencia kijelzőn
 
     // ===================================================================
-    // S-Meter (jelerősség mérő) pozicionálás    // ===================================================================
     // S-Meter komponens létrehozása - RadioScreen közös implementáció
     // ===================================================================
     uint16_t smeterWidth = UIComponent::SCREEN_W - 90; // 90px helyet hagyunk a jobb oldalon
@@ -251,7 +250,9 @@ void FMScreen::activate() {
 void FMScreen::onDialogClosed(UIDialogBase *closedDialog) {
 
     // Először hívjuk az alap implementációt (stack cleanup, navigation logic)
-    UIScreen::onDialogClosed(closedDialog); // Ha ez volt az utolsó dialógus, frissítsük a gombállapotokat
+    UIScreen::onDialogClosed(closedDialog);
+
+    // Ha ez volt az utolsó dialógus, frissítsük a gombállapotokat
     if (!isDialogActive()) {
         updateAllVerticalButtonStates(pSi4735Manager); // Függőleges gombok szinkronizálása
         updateCommonHorizontalButtonStates();          // Közös gombok szinkronizálása
