@@ -2,6 +2,7 @@
 #include "Band.h"
 #include "CommonVerticalButtons.h"
 #include "FreqDisplay.h"
+#include "MultiButtonDialog.h"
 #include "StatusLine.h"
 #include "defines.h"
 #include "rtVars.h"
@@ -352,9 +353,9 @@ void AMScreen::updateBFOButtonState() {
  */
 void AMScreen::handleBFOButton(const UIButton::ButtonEvent &event) {
     if (event.state == UIButton::EventButtonState::Clicked) {
+
         // Csak SSB/CW módban működik
         if (!pSi4735Manager->isCurrentDemodSSB()) {
-            DEBUG("AMScreen::handleBFOButton - BFO button disabled in non-SSB mode\n");
             return;
         }
 
@@ -373,15 +374,82 @@ void AMScreen::handleBFOButton(const UIButton::ButtonEvent &event) {
 }
 
 /**
- * @brief AfBW gomb eseménykezelő - Audio Filter Bandwidth
+ * @brief AfBW gomb eseménykezelő - Audio Frequency Bandwidth
  * @param event Gomb esemény (Clicked)
- * @details AM specifikus funkcionalitás - alapértelmezett implementáció
+ * @details AM specifikus funkcionalitás - sávszélesség váltás
  */
 void AMScreen::handleAfBWButton(const UIButton::ButtonEvent &event) {
-    if (event.state == UIButton::EventButtonState::Clicked) {
-        // TODO: AfBW funkcionalitás implementálása
-        Serial.println("AMScreen::handleAfBWButton - AfBW funkció (TODO)");
+    if (event.state != UIButton::EventButtonState::Clicked) {
+        return; // Csak kattintásra reagálunk
     }
+
+    uint8_t currMod = pSi4735Manager->getCurrentBand().currMod; // Demodulációs mód
+
+    // Megállapítjuk a lehetséges sávszélességek tömbjét
+    const char *title;
+    size_t labelsCount;
+    const char **labels;
+    uint16_t w = 250;
+    uint16_t h = 170;
+
+    if (currMod == FM) {
+        title = "FM Filter in kHz";
+        labels = pSi4735Manager->getBandWidthLabels(Band::bandWidthFM, labelsCount);
+
+    } else if (currMod == AM) {
+        title = "AM Filter in kHz";
+        w = 300;
+        h = 180;
+
+        labels = pSi4735Manager->getBandWidthLabels(Band::bandWidthAM, labelsCount);
+
+    } else {
+        title = "SSB/CW Filter in kHz";
+        w = 300;
+        h = 150;
+
+        labels = pSi4735Manager->getBandWidthLabels(Band::bandWidthSSB, labelsCount);
+    }
+
+    const char *currentBw = pSi4735Manager->getCurrentBandWidthLabel();
+
+    // Megkeressük a jelenlegi sávszélesség indexét a labels tömbben
+    int _currentAfBwIndex = -1; // Alapértelmezett: nem találtuk meg
+    for (size_t i = 0; i < labelsCount; i++) {
+        if (strcmp(labels[i], currentBw) == 0) {
+            _currentAfBwIndex = static_cast<int>(i);
+            break;
+        }
+    }
+
+    auto afBwDialog = std::make_shared<MultiButtonDialog>(
+        this, this->tft,                                                                       // Képernyő referencia
+        title, "",                                                                             // Dialógus címe és üzenete
+        labels, labelsCount,                                                                   // Gombok feliratai és számuk
+        [this, currMod](int buttonIndex, const char *buttonLabel, MultiButtonDialog *dialog) { // Gomb kattintás kezelése
+            //
+
+            if (currMod == AM) {
+                config.data.bwIdxAM = pSi4735Manager->getBandWidthIndexByLabel(Band::bandWidthAM, buttonLabel);
+            } else if (currMod == FM) {
+                config.data.bwIdxFM = pSi4735Manager->getBandWidthIndexByLabel(Band::bandWidthFM, buttonLabel);
+            } else {
+                config.data.bwIdxSSB = pSi4735Manager->getBandWidthIndexByLabel(Band::bandWidthSSB, buttonLabel);
+            }
+
+            // Beállítjuk a rádió chip-en a kiválasztott HF sávszélességet
+            pSi4735Manager->setBandWidth();
+
+        },
+        true,              // Automatikusan bezárja-e a dialógust gomb kattintáskor
+        _currentAfBwIndex, // Az alapértelmezett (jelenlegi) gomb indexe
+        true,              // Ha true, az alapértelmezett gomb le van tiltva; ha false, csak vizuálisan kiemelve
+        Rect(-1, -1, w, h) // Dialógus mérete (ha -1, akkor automatikusan a képernyő közepére igazítja)
+    );
+    this->showDialog(afBwDialog);
+
+    // Placeholder: gomb állapot frissítése ha szükséges
+    // horizontalButtonBar->setButtonState(AMScreenHorizontalButtonIDs::AFBW_BUTTON, UIButton::ButtonState::Off);
 }
 
 /**

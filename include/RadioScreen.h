@@ -86,11 +86,13 @@ class RadioScreen : public UIScreen {
      * @details Létrehozza a közös gombokat, amiket minden RadioScreen használ
      * A leszármazott osztályok ezt kiterjeszthetik saját specifikus gombokkal
      */
-    virtual void createCommonHorizontalButtons(); /**
-                                                   * @brief Közös vízszintes gombsor állapotainak szinkronizálása
-                                                   * @details Csak aktiváláskor hívódik meg! Event-driven architektúra.
-                                                   * A leszármazott osztályok felülírhatják saját specifikus állapotokkal
-                                                   */
+    virtual void createCommonHorizontalButtons();
+
+    /**
+     * @brief Közös vízszintes gombsor állapotainak szinkronizálása
+     * @details Csak aktiváláskor hívódik meg! Event-driven architektúra.
+     * A leszármazott osztályok felülírhatják saját specifikus állapotokkal
+     */
     virtual void updateCommonHorizontalButtonStates();
 
     // ===================================================================

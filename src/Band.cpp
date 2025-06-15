@@ -197,7 +197,6 @@ void Band::getBandNames(const char **names, uint8_t &count, bool isHamFilter) {
  */
 void Band::saveBandData() {
     if (bandStore != nullptr) {
-        DEBUG("Band::saveBandData() -> Saving band data to store...\n");
         bandStore->saveFromBandTable(bandTable);
     }
 }

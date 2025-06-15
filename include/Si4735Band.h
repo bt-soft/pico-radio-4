@@ -23,18 +23,11 @@ class Si4735Band : public Si4735Runtime, public Band {
      */
     void useBand();
 
+  public:
     /**
-     * Sávszélesség beállítása
+     * @brief Si4735Band osztály konstruktora
      */
-    void setBandWidth();
-
-  public: /**
-           * @brief Si4735Band osztály konstruktora
-           */
-    Si4735Band() : Si4735Runtime(), Band(), ssbLoaded(false) {
-
-        // currentBand = &getCurrentBand();
-    }
+    Si4735Band() : Si4735Runtime(), Band(), ssbLoaded(false) {}
 
     /**
      * @brief BandStore beállítása (örökölt a Band osztályból)
@@ -52,6 +45,11 @@ class Si4735Band : public Si4735Runtime, public Band {
      * @param useDefaults default adatok betültése?
      */
     void bandSet(bool useDefaults = false);
+
+    /**
+     * HF Sávszélesség beállítása
+     */
+    void setBandWidth();
 
     /**
      * @brief A jelenlegi band típusának lekérdezése

@@ -169,7 +169,9 @@ void RadioScreen::createCommonHorizontalButtons() {
 
     constexpr uint16_t H_BUTTON_DEFAULT_HEIGHT = UIButton::DEFAULT_BUTTON_HEIGHT; // Alapértelmezett gomb magassága a vízszintes gombsorhoz
     constexpr uint16_t H_BUTTON_DEFAULT_WIDTH = 70;                               // Egyedi gomb szélessége
-    constexpr uint16_t H_BUTTON_DEFAULT_GAP = 3; // Gombok közötti távolság    // ===================================================================
+    constexpr uint16_t H_BUTTON_DEFAULT_GAP = 3;                                  // Gombok közötti távolság
+
+    // ===================================================================
     // Gombsor pozicionálás - Bal alsó sarok
     // ===================================================================
     constexpr uint16_t buttonBarHeight = H_BUTTON_DEFAULT_HEIGHT + 10;               // Vízszintes gombsor konténer magassága (alapértelmezett + padding)
@@ -296,6 +298,8 @@ void RadioScreen::processBandButton(bool isHamBand) {
             break;
         }
     }
+
+    
     auto bandDialog = std::make_shared<MultiButtonDialog>(
         this, this->tft,                                                              // Képernyő referencia
         "All Radio Bands", "",                                                        // Dialógus címe és üzenete
