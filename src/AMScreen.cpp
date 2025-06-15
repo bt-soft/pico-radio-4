@@ -398,8 +398,8 @@ void AMScreen::handleAfBWButton(const UIButton::ButtonEvent &event) {
 
     } else if (currMod == AM) {
         title = "AM Filter in kHz";
-        w = 300;
-        h = 180;
+        w = 350;
+        h = 160;
 
         labels = pSi4735Manager->getBandWidthLabels(Band::bandWidthAM, labelsCount);
 
