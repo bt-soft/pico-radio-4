@@ -1,5 +1,6 @@
 #include "DebugDataInspector.h"
 
+#include "BandStore.h" // BandStoreData_t struktúrához
 #include "Config.h"
 #include "utils.h"
 
@@ -94,6 +95,24 @@ void DebugDataInspector::printConfigData(const Config_t &configData) {
     DEBUG("  cwReceiverOffsetHz: %u\n", configData.cwReceiverOffsetHz);
     DEBUG("  rttyMarkFrequencyHz: %.1f\n", configData.rttyMarkFrequencyHz);
     DEBUG("  rttyShiftHz: %.1f\n", configData.rttyShiftHz);
+    DEBUG("====================\n");
+#endif
+}
+
+/**
+ * @brief Kiírja a Band store adatok tartalmát a soros portra.
+ * @param bandData A Band store adatok.
+ */
+void DebugDataInspector::printBandStoreData(const BandStoreData_t &bandData) {
+#ifdef __DEBUG
+    DEBUG("=== DebugDataInspector -> Band Store Data ===\n");
+    for (size_t i = 0; i < BANDTABLE_SIZE; ++i) {
+        const BandTableData_t &band = bandData.bands[i];
+        // Csak akkor írjuk ki, ha van érvényes adat (currFreq != 0)
+        if (band.currFreq != 0) {
+            DEBUG("  BandNdx %d: Freq: %u, Step: %u, Mod: %u, AntCap: %u\n", i, band.currFreq, band.currStep, band.currMod, band.antCap);
+        }
+    }
     DEBUG("====================\n");
 #endif
 }

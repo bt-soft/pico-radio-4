@@ -1,12 +1,14 @@
 #ifndef __BAND_STORE_H
 #define __BAND_STORE_H
 
-#include "EepromLayout.h" // EEPROM_BAND_DATA_ADDR konstanshoz
+#include "DebugDataInspector.h" // Debug kiíráshoz
+#include "EepromLayout.h"       // EEPROM_BAND_DATA_ADDR konstanshoz
 #include "StoreBase.h"
 #include "defines.h"
 
-// Forward deklaráció a Band osztályhoz
+// Forward deklaráció a Band osztályhoz (de a BandTable struktúrát kell include-olni)
 class Band;
+struct BandTable; // A Band.h-ból lesz ismert
 
 // BandTable változó adatainak struktúrája (mentéshez)
 struct BandTableData_t {
@@ -40,11 +42,22 @@ class BandStore : public StoreBase<BandStoreData_t> {
     /**
      * Const referencia az adattagra, CRC számításhoz
      */
-    const BandStoreData_t &getData() const override { return data; };
+    const BandStoreData_t &getData() const override { return data; }; // Felülírjuk a mentést/betöltést a megfelelő EEPROM címmel
+    uint16_t performSave() override {
+        uint16_t result = StoreEepromBase<BandStoreData_t>::save(getData(), EEPROM_BAND_DATA_ADDR, getClassName());
+#ifdef __DEBUG
+        DebugDataInspector::printBandStoreData(getData());
+#endif
+        return result;
+    }
 
-    // Felülírjuk a mentést/betöltést a megfelelő EEPROM címmel
-    uint16_t performSave() override { return StoreEepromBase<BandStoreData_t>::save(getData(), EEPROM_BAND_DATA_ADDR, getClassName()); }
-    uint16_t performLoad() override { return StoreEepromBase<BandStoreData_t>::load(getData(), EEPROM_BAND_DATA_ADDR, getClassName()); }
+    uint16_t performLoad() override {
+        uint16_t result = StoreEepromBase<BandStoreData_t>::load(getData(), EEPROM_BAND_DATA_ADDR, getClassName());
+#ifdef __DEBUG
+        DebugDataInspector::printBandStoreData(getData());
+#endif
+        return result;
+    }
 
     /**
      * Alapértelmezett értékek betöltése - minden adat nullázása
@@ -74,30 +87,13 @@ class BandStore : public StoreBase<BandStoreData_t> {
        * BandTable változó adatainak betöltése a tárolt adatokból
        * @param bandTable A BandTable tömb referenciája
        */
-    void loadToBandTable(BandTable *bandTable) {
-        for (uint8_t i = 0; i < BANDTABLE_SIZE; i++) {
-            if (data.bands[i].currFreq != 0) {
-                bandTable[i].currFreq = data.bands[i].currFreq;
-                bandTable[i].currStep = data.bands[i].currStep;
-                bandTable[i].currMod = data.bands[i].currMod;
-                bandTable[i].antCap = data.bands[i].antCap;
-            }
-        }
-    }
+    void loadToBandTable(BandTable *bandTable);
 
     /**
      * BandTable változó adatainak mentése a store-ba
      * @param bandTable A BandTable tömb referenciája
      */
-    void saveFromBandTable(const BandTable *bandTable) {
-        for (uint8_t i = 0; i < BANDTABLE_SIZE; i++) {
-            data.bands[i].currFreq = bandTable[i].currFreq;
-            data.bands[i].currStep = bandTable[i].currStep;
-            data.bands[i].currMod = bandTable[i].currMod;
-            data.bands[i].antCap = bandTable[i].antCap;
-        }
-        // Az adatok megváltoztak, a checkSave() fogja észlelni
-    }
+    void saveFromBandTable(const BandTable *bandTable);
 };
 
 #endif // __BAND_STORE_H
