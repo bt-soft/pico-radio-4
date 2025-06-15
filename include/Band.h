@@ -30,9 +30,12 @@ struct BandTable {
     bool isHam;           // HAM sáv-e?
 
     // Változó adatok
-    uint16_t currFreq;   // Aktuális frekvencia
-    uint8_t currStep;    // Aktuális lépésköz (növelés/csökkentés)
-    uint8_t currMod;     // Aktuális mód/modulációs típus (FM, AM, LSB, USB, CW)
+    // Mentendő adatok a konfigurációba
+    uint16_t currFreq; // Aktuális frekvencia
+    uint8_t currStep;  // Aktuális lépésköz (növelés/csökkentés)
+    uint8_t currMod;   // Aktuális mód/modulációs típus (FM, AM, LSB, USB, CW)
+
+    //----
     uint16_t antCap;     // Antenna Tuning Capacitor
     int16_t lastBFO;     // Utolsó BFO érték
     int16_t lastmanuBFO; // Utolsó manuális BFO érték X-Tal segítségével

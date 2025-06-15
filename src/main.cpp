@@ -139,7 +139,9 @@ void setup() {
     }
 
     // Beállítjuk a touch scren-t
-    tft.setTouch(config.data.tftCalibrateData); // Állomáslisták betöltése az EEPROM-ból (a config után!) // <-- ÚJ
+    tft.setTouch(config.data.tftCalibrateData);
+
+    // Állomáslisták betöltése az EEPROM-ból (a config után!) // <-- ÚJ
     tft.drawString("Loading stations...", tft.width() / 2, 200);
     fmStationStore.load();
     amStationStore.load();
@@ -147,14 +149,18 @@ void setup() {
     // Splash screen megjelenítése inicializálás közben
     // Most átváltunk a teljes splash screen-re az SI4735 infókkal
     SplashScreen splash(tft);
-    splash.show(true, 6); // Splash screen megjelenítése progress bar-ral    // Lépés 1: I2C inicializálás
+    splash.show(true, 6);
+
+    // Splash screen megjelenítése progress bar-ral    // Lépés 1: I2C inicializálás
     splash.updateProgress(1, 6, "Initializing I2C...");
 
     // Az si473x (Nem a default I2C lábakon [4,5] van!!!)
     Wire.setSDA(PIN_SI4735_I2C_SDA); // I2C for SI4735 SDA
     Wire.setSCL(PIN_SI4735_I2C_SCL); // I2C for SI4735 SCL
     Wire.begin();
-    delay(300); // Si4735Manager inicializálása itt
+    delay(300);
+
+    // Si4735Manager inicializálása itt
     splash.updateProgress(2, 6, "Initializing SI4735 Manager...");
     if (si4735Manager == nullptr) {
         si4735Manager = new Si4735Manager();

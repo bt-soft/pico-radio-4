@@ -16,6 +16,8 @@ Si4735Manager::Si4735Manager() : Si4735Rds() {
  */
 void Si4735Manager::init(bool systemStart) {
 
+    DEBUG("Si4735Manager::init() -> Start\n");
+
     // A Band  visszaállítása a konfigból
     bandInit(desiredBandIdx == -1); // Rendszer induláskor -1 a currentBandIdx változást figyelő flag
 

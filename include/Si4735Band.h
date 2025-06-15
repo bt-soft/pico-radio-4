@@ -16,7 +16,7 @@ class Si4735Band : public Si4735Runtime, public Band {
     void loadSSB();
 
   protected:
-    BandTable *currentBand; // Pointer helyett referencia, hogy újra lehessen állítani
+    // BandTable *currentBand; // Pointer helyett referencia, hogy újra lehessen állítani
 
     /**
      * @brief Band beállítása
@@ -32,7 +32,10 @@ class Si4735Band : public Si4735Runtime, public Band {
     /**
      * @brief Si4735Band osztály konstruktora
      */
-    Si4735Band() : Si4735Runtime(), Band(), currentBand(&getCurrentBand()), ssbLoaded(false) {}
+    Si4735Band() : Si4735Runtime(), Band(), ssbLoaded(false) {
+
+        // currentBand = &getCurrentBand();
+    }
 
     /**
      * @brief band inicializálása
@@ -51,8 +54,10 @@ class Si4735Band : public Si4735Runtime, public Band {
      */
     inline boolean checkBandBounds(uint16_t newFreq) {
 
+        BandTable &currentBand = getCurrentBand();
+
         // Ellenőrizzük, hogy a frekvencia a band határain belül van-e
-        if (newFreq < currentBand->minimumFreq || newFreq > currentBand->maximumFreq) {
+        if (newFreq < currentBand.minimumFreq || newFreq > currentBand.maximumFreq) {
             return false; // A frekvencia kívül esik a band határain
         }
         return true; // A frekvencia a band határain belül van
@@ -64,33 +69,35 @@ class Si4735Band : public Si4735Runtime, public Band {
      */
     inline uint16_t stepFrequency(int16_t rotaryValue) {
 
+        BandTable &currentBand = getCurrentBand();
+
         // Kiszámítjuk a frekvencia lépés nagyságát
-        int16_t step = rotaryValue * currentBand->currStep; // A lépés nagysága
-        uint16_t targetFreq = currentBand->currFreq + step;
+        int16_t step = rotaryValue * currentBand.currStep; // A lépés nagysága
+        uint16_t targetFreq = currentBand.currFreq + step;
 
         // Korlátozás a sáv határaira
-        if (targetFreq < currentBand->minimumFreq) {
-            targetFreq = currentBand->minimumFreq;
-        } else if (targetFreq > currentBand->maximumFreq) {
-            targetFreq = currentBand->maximumFreq;
+        if (targetFreq < currentBand.minimumFreq) {
+            targetFreq = currentBand.minimumFreq;
+        } else if (targetFreq > currentBand.maximumFreq) {
+            targetFreq = currentBand.maximumFreq;
         }
 
         // Csak akkor változtatunk, ha tényleg más a cél frekvencia
-        if (targetFreq != currentBand->currFreq) {
+        if (targetFreq != currentBand.currFreq) {
             // Beállítjuk a frekvenciát
             si4735.setFrequency(targetFreq);
 
             // El is mentjük a band táblába
-            currentBand->currFreq = si4735.getCurrentFrequency();
+            currentBand.currFreq = si4735.getCurrentFrequency();
 
             // Mentjük a frekvenciát a konfigurációba is a perzisztencia érdekében
-            config.data.currentFrequency = currentBand->currFreq;
+            config.data.currentFrequency = currentBand.currFreq;
 
             // Ez biztosítja, hogy az S-meter azonnal frissüljön az új frekvencián
             invalidateSignalCache();
         }
 
-        return currentBand->currFreq;
+        return currentBand.currFreq;
     };
 
     /**
