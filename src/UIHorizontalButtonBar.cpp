@@ -2,42 +2,116 @@
 #include "defines.h"
 
 /**
- * @brief Konstruktor - vízszintes gombsor létrehozása
+ * @brief Konstruktor - vízszintes gombsor létrehozása többsoros támogatással
  */
 UIHorizontalButtonBar::UIHorizontalButtonBar(TFT_eSPI &tft, const Rect &bounds, const std::vector<ButtonConfig> &buttonConfigs, uint16_t buttonWidth, uint16_t buttonHeight,
-                                             uint16_t buttonGap)
-    : UIContainerComponent(tft, bounds), buttonWidth(buttonWidth), buttonHeight(buttonHeight), buttonGap(buttonGap) {
+                                             uint16_t buttonGap, uint16_t rowGap)
+    : UIContainerComponent(tft, bounds), buttonWidth(buttonWidth), buttonHeight(buttonHeight), buttonGap(buttonGap), rowGap(rowGap) {
 
     createButtons(buttonConfigs);
 }
 
 /**
- * @brief Gombok létrehozása és vízszintes elhelyezése
+ * @brief Gombok létrehozása és többsoros elhelyezése
  */
 void UIHorizontalButtonBar::createButtons(const std::vector<ButtonConfig> &buttonConfigs) {
-    uint16_t currentX = bounds.x;
+    if (buttonConfigs.empty()) {
+        return;
+    }
 
-    // Gombok függőleges középre igazítása a konténerben
-    uint16_t buttonY = bounds.y + (bounds.height - buttonHeight) / 2;
+    // Számítsuk ki, hogy hány gomb fér el egy sorban
+    uint16_t buttonsPerRow = calculateButtonsPerRow();
+    if (buttonsPerRow == 0) {
+        return;
+    }
 
-    for (const auto &config : buttonConfigs) {
-        // Ellenőrizzük, hogy a gomb még belefér-e a bounds-ba
-        if (currentX + buttonWidth > bounds.x + bounds.width) {
-            DEBUG("UIHorizontalButtonBar: Button '%s' doesn't fit in bounds, skipping\n", config.label);
+    // Számítsuk ki a szükséges sorok számát
+    uint16_t totalButtons = buttonConfigs.size();
+    uint16_t requiredRows = calculateRequiredRows(totalButtons);
+
+    // Az utolsó sor a képernyő aljához igazítva
+    uint16_t lastRowY = UIComponent::SCREEN_H - buttonHeight;
+
+    uint16_t currentRow = 0;
+    uint16_t buttonInRow = 0;
+
+    for (size_t i = 0; i < buttonConfigs.size(); ++i) {
+        const auto &config = buttonConfigs[i];
+
+        // Ha elértük a sor végét, új sort kezdünk
+        if (buttonInRow >= buttonsPerRow) {
+            currentRow++;
+            buttonInRow = 0;
+        }
+
+        // Számítsuk ki, melyik sor ez az utolsóhoz képest (fordított sorrendben)
+        uint16_t rowFromBottom = (requiredRows - 1) - (currentRow);
+
+        // Aktuális gomb pozíciójának számítása
+        // Az utolsó sortól felfelé számoljuk a sorokat
+        uint16_t buttonX = bounds.x + buttonInRow * (buttonWidth + buttonGap);
+        uint16_t buttonY = lastRowY - rowFromBottom * (buttonHeight + rowGap);
+
+        // Biztonsági ellenőrzés: nem mehetünk túl a képernyő szélein
+        // A felső határ a képernyő teteje legyen, nem a bounds.y
+        if (buttonY < 0) {
             break;
         }
 
-        // Gomb létrehozása - függőlegesen középre igazítva
+        if (buttonX + buttonWidth > UIComponent::SCREEN_W) {
+            break;
+        }
+
+        // Gomb létrehozása
         auto button =
-            std::make_shared<UIButton>(tft, config.id, Rect(currentX, buttonY, buttonWidth, buttonHeight), config.label, config.type, config.initialState, config.callback);
+            std::make_shared<UIButton>(tft, config.id, Rect(buttonX, buttonY, buttonWidth, buttonHeight), config.label, config.type, config.initialState, config.callback);
 
         // Hozzáadás a konténerhez és a belső listához
         addChild(button);
         buttons.push_back(button);
 
-        // Következő gomb pozíciója
-        currentX += buttonWidth + buttonGap;
+        buttonInRow++;
     }
+}
+
+/**
+ * @brief Kiszámítja, hogy hány gomb fér el egy sorban
+ */
+uint16_t UIHorizontalButtonBar::calculateButtonsPerRow() const {
+    // A képernyő szélességéből levonjuk a jobb oldali függőleges gombsor helyét
+    // Függőleges gombsor: 60px széles + 0px margó = 60px
+    const uint16_t VERTICAL_BUTTON_WIDTH = 60;
+    const uint16_t VERTICAL_BUTTON_MARGIN = 0;
+    const uint16_t RESERVED_FOR_VERTICAL_BUTTONS = VERTICAL_BUTTON_WIDTH + VERTICAL_BUTTON_MARGIN;
+
+    uint16_t availableWidth = UIComponent::SCREEN_W - RESERVED_FOR_VERTICAL_BUTTONS;
+
+    if (buttonWidth > availableWidth) {
+        return 0; // Egy gomb sem fér el
+    }
+
+    // Első gomb mindig elfér, utána minden gombhoz hozzáadódik a gap is
+    uint16_t usedWidth = buttonWidth; // Első gomb
+    uint16_t buttonCount = 1;
+
+    while (usedWidth + buttonGap + buttonWidth <= availableWidth) {
+        usedWidth += buttonGap + buttonWidth;
+        buttonCount++;
+    }
+
+    return buttonCount;
+}
+
+/**
+ * @brief Számítja ki a szükséges sorok számát
+ */
+uint16_t UIHorizontalButtonBar::calculateRequiredRows(uint16_t totalButtons) const {
+    uint16_t buttonsPerRow = calculateButtonsPerRow();
+    if (buttonsPerRow == 0) {
+        return 0;
+    }
+
+    return (totalButtons + buttonsPerRow - 1) / buttonsPerRow; // Felfelé kerekítés
 }
 
 /**
@@ -50,7 +124,6 @@ void UIHorizontalButtonBar::setButtonState(uint8_t buttonId, UIButton::ButtonSta
             return;
         }
     }
-    DEBUG("UIHorizontalButtonBar: Button with ID %d not found\n", buttonId);
 }
 
 /**
@@ -62,7 +135,6 @@ UIButton::ButtonState UIHorizontalButtonBar::getButtonState(uint8_t buttonId) co
             return button->getButtonState();
         }
     }
-    DEBUG("UIHorizontalButtonBar: Button with ID %d not found\n", buttonId);
     return UIButton::ButtonState::Disabled;
 }
 

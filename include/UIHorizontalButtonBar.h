@@ -39,9 +39,10 @@ class UIHorizontalButtonBar : public UIContainerComponent {
      * @param buttonWidth Egyetlen gomb szélessége (alapértelmezett: 60px)
      * @param buttonHeight Egyetlen gomb magassága (alapértelmezett: 35px)
      * @param buttonGap Gombok közötti távolság (alapértelmezett: 3px)
+     * @param rowGap Sorok közötti távolság (alapértelmezett: 5px)
      */
     UIHorizontalButtonBar(TFT_eSPI &tft, const Rect &bounds, const std::vector<ButtonConfig> &buttonConfigs, uint16_t buttonWidth = 60, uint16_t buttonHeight = 35,
-                          uint16_t buttonGap = 3);
+                          uint16_t buttonGap = 3, uint16_t rowGap = 5);
 
     virtual ~UIHorizontalButtonBar() = default;
 
@@ -70,12 +71,23 @@ class UIHorizontalButtonBar : public UIContainerComponent {
     uint16_t buttonWidth;
     uint16_t buttonHeight;
     uint16_t buttonGap;
+    uint16_t rowGap; // Távolság sorok között
     std::vector<std::shared_ptr<UIButton>> buttons;
 
     /**
-     * @brief Gombok létrehozása és elhelyezése
+     * @brief Gombok létrehozása és elhelyezése többsoros támogatással
      */
     void createButtons(const std::vector<ButtonConfig> &buttonConfigs);
+
+    /**
+     * @brief Számítja ki, hány gomb fér el egy sorban
+     */
+    uint16_t calculateButtonsPerRow() const;
+
+    /**
+     * @brief Számítja ki a szükséges sorok számát
+     */
+    uint16_t calculateRequiredRows(uint16_t totalButtons) const;
 };
 
 #endif // __UI_HORIZONTAL_BUTTON_BAR_H
