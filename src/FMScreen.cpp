@@ -30,7 +30,9 @@ static constexpr uint8_t SEEK_UP_BUTTON = 61;   ///< Seek felfelé (pushable) - 
  * - Event-driven gombkezelés beállítása
  */
 FMScreen::FMScreen(TFT_eSPI &tft, Si4735Manager &si4735Manager) : RadioScreen(tft, SCREEN_NAME_FM, &si4735Manager) {
-    layoutComponents(); // UI komponensek elhelyezése
+
+    // UI komponensek elhelyezése
+    layoutComponents();
 }
 
 // ===================================================================
@@ -229,10 +231,9 @@ void FMScreen::drawContent() {
  */
 void FMScreen::activate() {
 
-    DEBUG("FMScreen::activate() - Képernyő aktiválása");
+    DEBUG("FMScreen::activate() - Képernyő aktiválása\n");
 
     // Szülő osztály aktiválása (RadioScreen -> UIScreen)
-    // *** Ez automatikusan meghívja a signal cache invalidálást ***
     RadioScreen::activate();
 
     // StatusLine frissítése
@@ -264,10 +265,6 @@ void FMScreen::onDialogClosed(UIDialogBase *closedDialog) {
         }
     }
 }
-
-// ===================================================================
-// Függőleges gombsor - Jobb oldali funkcionális gombok
-// ===================================================================
 
 // ===================================================================
 // Vízszintes gombsor - Alsó navigációs gombok
@@ -393,9 +390,11 @@ void FMScreen::handleMemoButton(const UIButton::ButtonEvent &event) {
     }
 
     auto screenManager = getScreenManager();
+
     // Ellenőrizzük, hogy az aktuális állomás már a memóriában van-e
     bool isInMemory = checkCurrentFrequencyInMemory();              // RDS állomásnév lekérése (ha van)
     String rdsStationName = pSi4735Manager->getCachedStationName(); // Ha új állomás és van RDS név, akkor automatikus hozzáadás
+
     if (!isInMemory && rdsStationName.length() > 0) {
         // ScreenManager biztonságos paraméter beállítása
         screenManager->setMemoryScreenParams(true, rdsStationName.c_str());

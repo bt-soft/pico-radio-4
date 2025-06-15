@@ -162,7 +162,7 @@ class Band {
     inline bool isCurrentDemodLSB() { return getCurrentBand().currMod == LSB; }
     inline bool isCurrentDemodUSB() { return getCurrentBand().currMod == USB; }
     inline bool isCurrentDemodCW() { return getCurrentBand().currMod == CW; }
-    inline bool isCurrentDemodSSB() { return isCurrentDemodLSB() || isCurrentDemodUSB() || isCurrentDemodCW(); }
+    inline bool isCurrentDemodSSBorCW() { return isCurrentDemodLSB() || isCurrentDemodUSB() || isCurrentDemodCW(); }
 
     /**
      * A lehetséges AM demodulációs módok kigyűjtése
@@ -327,18 +327,12 @@ class Band {
 
     // Current band utils metódusok
     inline const char *getCurrentBandName() { return getCurrentBand().bandName; }
-
     inline uint8_t getCurrentBandType() { return getCurrentBand().bandType; }
-
     inline uint16_t getCurrentBandMinimumFreq() { return getCurrentBand().minimumFreq; }
-
     inline uint16_t getCurrentBandMaximumFreq() { return getCurrentBand().maximumFreq; }
-
     inline uint16_t getCurrentBandDefaultFreq() { return getCurrentBand().defFreq; }
-
     inline uint8_t getCurrentBandDefaultStep() { return getCurrentBand().defStep; }
-
-    inline bool getCurrentBandIsHam() { return getCurrentBand().isHam; }
+    inline bool isCurrentHamBand() { return getCurrentBand().isHam; }
 
     /**
      * @brief Band nevek lekérdezése - a hívó fél adja meg a tömböt

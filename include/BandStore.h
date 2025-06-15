@@ -59,18 +59,6 @@ class BandStore : public StoreBase<BandStoreData_t> {
         return result;
     }
 
-    /**
-     * Alapértelmezett értékek betöltése - minden adat nullázása
-     */
-    void loadDefaults() override {
-        for (uint8_t i = 0; i < BANDTABLE_SIZE; i++) {
-            data.bands[i].currFreq = 0;
-            data.bands[i].currStep = 0;
-            data.bands[i].currMod = 0;
-            data.bands[i].antCap = 0;
-        }
-    }
-
   public:
     /**
      * Konstruktor - inicializálja az adatokat nullákkal
@@ -83,10 +71,25 @@ class BandStore : public StoreBase<BandStoreData_t> {
             data.bands[i].currMod = 0;
             data.bands[i].antCap = 0;
         }
-    } /**
-       * BandTable változó adatainak betöltése a tárolt adatokból
-       * @param bandTable A BandTable tömb referenciája
-       */
+    }
+
+    /**
+     * Alapértelmezett értékek betöltése - minden adat nullázása
+     */
+    void loadDefaults() override {
+        for (uint8_t i = 0; i < BANDTABLE_SIZE; i++) {
+            data.bands[i].currFreq = 0;
+            data.bands[i].currStep = 0;
+            data.bands[i].currMod = 0;
+            data.bands[i].antCap = 0;
+        }
+        DEBUG("BandStore defaults loaded.\n");
+    }
+
+    /**
+     * BandTable változó adatainak betöltése a tárolt adatokból
+     * @param bandTable A BandTable tömb referenciája
+     */
     void loadToBandTable(BandTable *bandTable);
 
     /**

@@ -144,13 +144,15 @@ void FreqDisplay::resetToDefaultColors() {
 }
 
 /**
- * @brief Beállítja, hogy megjelenjen-e az aláhúzás
+ * @brief Beállítja, hogy megjelenjen-e a Finomhangolás jel (aláhúzás)
  * @param hide Ha true, az aláhúzás elrejtve
  */
 void FreqDisplay::setHideUnderline(bool hide) {
     if (hideUnderline != hide) {
         hideUnderline = hide;
-        markForRedraw(); // Teljes újrarajzolás szükséges az aláhúzás váltás miatt
+
+        // Teljes újrarajzolás szükséges az aláhúzás váltás miatt
+        markForRedraw();
     }
 }
 

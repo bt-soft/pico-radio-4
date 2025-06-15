@@ -18,8 +18,11 @@ FrequencyInputDialog::FrequencyInputDialog(UIScreen *parentScreen, TFT_eSPI &tft
     : UIDialogBase(parentScreen, tft, bounds, title, cs), _si4735Manager(si4735Manager), _frequencyCallback(callback), _isValid(false), _firstInput(true) {
 
     // Sáv paraméterek inicializálása
-    initializeBandParameters(); // Aktuális frekvencia betöltése
-    uint16_t currentFreq = _si4735Manager->getSi4735().getFrequency();
+    initializeBandParameters();
+
+    // Aktuális frekvencia betöltése
+    // Az SI4735 osztály cache-ból olvassuk az aktuális frekvenciát, nem használunk chip olvasást
+    uint16_t currentFreq = _si4735Manager->getSi4735().getCurrentFrequency();
     setCurrentFrequency(currentFreq);
 
     // Dialógus méret beállítása ha automatikus

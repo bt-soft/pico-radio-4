@@ -114,12 +114,25 @@ void setup() {
 
     // Ha a bekapcsolás alatt nyomva tartjuk a rotary gombját, akkor töröljük a konfigot
     if (digitalRead(PIN_ENCODER_SW) == LOW) {
-        tft.drawString("Reset detected...", tft.width() / 2, 180);
+        DEBUG("Encoder button pressed during startup, restoring defaults...\n");
         Utils::beepTick();
         delay(1500);
         if (digitalRead(PIN_ENCODER_SW) == LOW) { // Ha még mindig nyomják
-            tft.drawString("Loading defaults...", tft.width() / 2, 200);
+
+            DEBUG("Restoring default settings...\n");
+            Utils::beepTick();
             config.loadDefaults();
+            fmStationStore.loadDefaults();
+            amStationStore.loadDefaults();
+            bandStore.loadDefaults();
+
+            DEBUG("Save default settings...\n");
+            Utils::beepTick();
+            config.checkSave();
+            bandStore.checkSave(); // Band adatok mentése
+            fmStationStore.checkSave();
+            amStationStore.checkSave();
+
             Utils::beepTick();
             DEBUG("Default settings resored!\n");
         }

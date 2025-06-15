@@ -100,7 +100,7 @@ void RadioScreen::seekStationUp() {
  */
 void RadioScreen::saveCurrentFrequency() {
     if (pSi4735Manager) {
-        // Aktuális frekvencia lekérése a SI4735-ből
+        // Az SI4735 osztály cache-ból olvassuk az aktuális frekvenciát, nem használunk chip olvasást
         uint32_t currentFreq = pSi4735Manager->getSi4735().getCurrentFrequency();
 
         // Band tábla frissítése
@@ -117,7 +117,7 @@ bool RadioScreen::checkCurrentFrequencyInMemory() const {
         return false;
     }
 
-    // Aktuális frekvencia és band index lekérése
+    // Az SI4735 osztály cache-ból olvassuk az aktuális frekvenciát, nem használunk chip olvasást
     uint32_t currentFreq = pSi4735Manager->getSi4735().getCurrentFrequency();
     uint8_t currentBandIdx = config.data.currentBandIdx;
 
@@ -299,17 +299,17 @@ void RadioScreen::processBandButton(bool isHamBand) {
         }
     }
 
-    
     auto bandDialog = std::make_shared<MultiButtonDialog>(
         this, this->tft,                                                              // Képernyő referencia
         "All Radio Bands", "",                                                        // Dialógus címe és üzenete
         _bandNames.get(), _bandCount,                                                 // Gombok feliratai és számuk
         [this](int buttonIndex, const char *buttonLabel, MultiButtonDialog *dialog) { // Gomb kattintás kezelése
             // Átállítjuk a használni kívánt BAND indexét
-            config.data.currentBandIdx = pSi4735Manager->getBandIdxByBandName(buttonLabel);
-
-            // Átállítjuk a rádiót a kiválasztott sávra
+            config.data.currentBandIdx = pSi4735Manager->getBandIdxByBandName(buttonLabel); // Átállítjuk a rádiót a kiválasztott sávra
             pSi4735Manager->init();
+
+            // Explicit frekvencia frissítés (fontos, ha ugyanaz a screen marad aktív)
+            refreshScreenComponents();
 
             // Átkapcsolunk a megfelelő screenre (Itt lehet FM is a kiválasztott sáv)
             getScreenManager()->switchToScreen(pSi4735Manager->isCurrentBandFM() ? SCREEN_NAME_FM : SCREEN_NAME_AM);
@@ -374,13 +374,27 @@ void RadioScreen::updateSMeter(bool isFMMode) {
  */
 void RadioScreen::activate() {
     // Szülő osztály aktiválása (UIScreen)
-    UIScreen::activate();
-
-    // Signal quality cache invalidálása képernyő aktiváláskor
+    UIScreen::activate(); // Signal quality cache invalidálása képernyő aktiváláskor
     // Ez biztosítja, hogy az S-meter azonnal frissüljön, amikor visszatérünk
     // a memória képernyőről vagy másik képernyőről
     if (pSi4735Manager) {
         pSi4735Manager->invalidateSignalCache();
+    }
+}
+
+/**
+ * @brief A kijelző explicit frissítése
+ * @details Frissíti a kijelzőt komponenseit
+ * Hasznos band váltás után, amikor ugyanaz a screen marad aktív
+ */
+void RadioScreen::refreshScreenComponents() {
+
+    // Frekvenciakijelző frissítése
+    if (freqDisplayComp && pSi4735Manager) {
+        // Az SI4735 osztály cache-ból olvassuk az aktuális frekvenciát, nem használunk chip olvasást
+        uint16_t currentFreq = pSi4735Manager->getSi4735().getCurrentFrequency();
+        freqDisplayComp->setFrequency(currentFreq);
+        DEBUG("RadioScreen::refreshFrequencyDisplay - Updated frequency display to: %d\n", currentFreq);
     }
 }
 

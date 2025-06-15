@@ -71,9 +71,10 @@ bool AMScreen::handleRotary(const RotaryEvent &event) {
     uint16_t newFreq;
 
     BandTable &currentBand = pSi4735Manager->getCurrentBand();
-    uint16_t currentFrequency = pSi4735Manager->getSi4735().getFrequency();
+    // Az SI4735 osztály cache-ból olvassuk az aktuális frekvenciát, nem használunk chip olvasást
+    uint16_t currentFrequency = pSi4735Manager->getSi4735().getCurrentFrequency();
 
-    if (pSi4735Manager->isCurrentDemodSSB()) {
+    if (pSi4735Manager->isCurrentDemodSSBorCW()) {
 
         if (rtv::bfoOn) {
 
@@ -124,7 +125,8 @@ bool AMScreen::handleRotary(const RotaryEvent &event) {
         }
 
         // Lekérdezzük a beállított frekvenciát
-        newFreq = pSi4735Manager->getSi4735().getFrequency();
+        // Az SI4735 osztály cache-ból olvassuk az aktuális frekvenciát, nem használunk chip olvasást
+        newFreq = pSi4735Manager->getSi4735().getCurrentFrequency();
 
         // SSB hangolás esetén a BFO eltolás beállítása
         const int16_t cwBaseOffset = (currentBand.currMod == CW) ? config.data.cwReceiverOffsetHz : 0;
@@ -167,9 +169,6 @@ bool AMScreen::handleRotary(const RotaryEvent &event) {
  * - Univerzális gombkezelés (CommonVerticalButtons)
  */
 void AMScreen::handleOwnLoop() {
-    // ===================================================================
-    // *** OPTIMALIZÁLT ARCHITEKTÚRA - NINCS GOMBÁLLAPOT POLLING! ***
-    // ===================================================================
 
     // ===================================================================
     // S-Meter (jelerősség) időzített frissítése - Közös RadioScreen implementáció
@@ -225,8 +224,9 @@ void AMScreen::drawContent() {
  */
 void AMScreen::activate() {
 
+    DEBUG("AMScreen::activate() - Képernyő aktiválása\n");
+
     // Szülő osztály aktiválása (RadioScreen -> UIScreen)
-    // *** Ez automatikusan meghívja a signal cache invalidálást ***
     RadioScreen::activate();
 
     // ===================================================================
@@ -235,6 +235,12 @@ void AMScreen::activate() {
     updateAllVerticalButtonStates(pSi4735Manager); // Univerzális funkcionális gombok (mixin method)
     updateCommonHorizontalButtonStates();          // Közös gombok szinkronizálása
     updateHorizontalButtonStates();                // AM-specifikus gombok szinkronizálása
+
+    // Frekvencia kijelző frissítése az aktuális frekvenciával
+    if (freqDisplayComp) {
+        // Az SI4735 osztály cache-ból olvassuk az aktuális frekvenciát, nem használunk chip olvasást
+        freqDisplayComp->setFrequency(pSi4735Manager->getSi4735().getCurrentFrequency());
+    }
 }
 
 /**
@@ -281,7 +287,9 @@ void AMScreen::layoutComponents() {
     uint16_t FreqDisplayY = 20;
     Rect freqBounds(30, FreqDisplayY, 200, FreqDisplay::FREQDISPLAY_HEIGHT);
     UIScreen::createFreqDisplay(freqBounds);
-    freqDisplayComp->setHideUnderline(true); // Alulvonás elrejtése a frekvencia kijelzőn
+
+    // Finomhangolás jel (alulvonás) elrejtése a frekvencia kijelzőn, ha nem HAM sávban vagyunk
+    freqDisplayComp->setHideUnderline(!pSi4735Manager->isCurrentHamBand());
 
     // ===================================================================
     // S-Meter komponens létrehozása - RadioScreen közös implementáció
@@ -335,6 +343,7 @@ void AMScreen::addSpecificHorizontalButtons(std::vector<UIHorizontalButtonBar::B
  * - AM specifikus gombok alapértelmezett állapotai
  */
 void AMScreen::updateHorizontalButtonStates() {
+
     if (!horizontalButtonBar) {
         return; // Biztonsági ellenőrzés
     }
@@ -363,21 +372,22 @@ void AMScreen::updateHorizontalButtonStates() {
  * @details SSB/CW módban csak akkor engedélyezett, ha BFO be van kapcsolva
  */
 void AMScreen::updateStepButtonState() {
+
     if (!horizontalButtonBar) {
         return; // Biztonsági ellenőrzés
     }
 
     UIButton::ButtonState stepButtonState = UIButton::ButtonState::Off;
 
-    if (pSi4735Manager->isCurrentDemodSSB()) {
+    if (pSi4735Manager->isCurrentDemodSSBorCW()) {
         // SSB/CW módban: csak akkor engedélyezett, ha BFO be van kapcsolva
         stepButtonState = rtv::bfoOn ? UIButton::ButtonState::Off : UIButton::ButtonState::Disabled;
-        DEBUG("AMScreen::updateStepButtonState - SSB/CW mode detected, BFO: %s, Step button: %s\n", rtv::bfoOn ? "ON" : "OFF",
-              stepButtonState == UIButton::ButtonState::Disabled ? "DISABLED" : "ENABLED");
+        // DEBUG("AMScreen::updateStepButtonState - SSB/CW mode detected, BFO: %s, Step button: %s\n", rtv::bfoOn ? "ON" : "OFF",
+        //       stepButtonState == UIButton::ButtonState::Disabled ? "DISABLED" : "ENABLED");
     } else {
         // AM/egyéb módban: mindig engedélyezett
         stepButtonState = UIButton::ButtonState::Off;
-        DEBUG("AMScreen::updateStepButtonState - Non-SSB mode, Step button: ENABLED\n");
+        // DEBUG("AMScreen::updateStepButtonState - Non-SSB mode, Step button: ENABLED\n");
     }
 
     horizontalButtonBar->setButtonState(AMScreenHorizontalButtonIDs::STEP_BUTTON, stepButtonState);
@@ -394,14 +404,14 @@ void AMScreen::updateBFOButtonState() {
 
     UIButton::ButtonState bfoButtonState;
 
-    if (pSi4735Manager->isCurrentDemodSSB()) {
+    if (pSi4735Manager->isCurrentDemodSSBorCW()) {
         // SSB/CW módban: BFO állapot szerint be/ki kapcsolva
         bfoButtonState = rtv::bfoOn ? UIButton::ButtonState::On : UIButton::ButtonState::Off;
-        DEBUG("AMScreen::updateBFOButtonState - SSB/CW mode, BFO button: %s\n", rtv::bfoOn ? "ON" : "OFF");
+        // DEBUG("AMScreen::updateBFOButtonState - SSB/CW mode, BFO button: %s\n", rtv::bfoOn ? "ON" : "OFF");
     } else {
         // AM/egyéb módban: letiltva
         bfoButtonState = UIButton::ButtonState::Disabled;
-        DEBUG("AMScreen::updateBFOButtonState - Non-SSB mode, BFO button: DISABLED\n");
+        // DEBUG("AMScreen::updateBFOButtonState - Non-SSB mode, BFO button: DISABLED\n");
     }
 
     horizontalButtonBar->setButtonState(AMScreenHorizontalButtonIDs::BFO_BUTTON, bfoButtonState);
@@ -420,7 +430,7 @@ void AMScreen::handleBFOButton(const UIButton::ButtonEvent &event) {
     if (event.state == UIButton::EventButtonState::Clicked) {
 
         // Csak SSB/CW módban működik
-        if (!pSi4735Manager->isCurrentDemodSSB()) {
+        if (!pSi4735Manager->isCurrentDemodSSBorCW()) {
             return;
         }
 
@@ -431,10 +441,7 @@ void AMScreen::handleBFOButton(const UIButton::ButtonEvent &event) {
         updateBFOButtonState();
         updateStepButtonState();
 
-        DEBUG("AMScreen::handleBFOButton - BFO turned %s\n", rtv::bfoOn ? "ON" : "OFF");
-
-        // TODO: További BFO funkcionalitás implementálása
-        Serial.printf("AMScreen::handleBFOButton - BFO %s\n", rtv::bfoOn ? "ON" : "OFF");
+        // DEBUG("AMScreen::handleBFOButton - BFO turned %s\n", rtv::bfoOn ? "ON" : "OFF");
     }
 }
 
@@ -513,7 +520,7 @@ void AMScreen::handleAfBWButton(const UIButton::ButtonEvent &event) {
 void AMScreen::handleAntCapButton(const UIButton::ButtonEvent &event) {
     if (event.state == UIButton::EventButtonState::Clicked) {
         // TODO: AntCap funkcionalitás implementálása
-        Serial.println("AMScreen::handleAntCapButton - AntCap funkció (TODO)");
+        DEBUG("AMScreen::handleAntCapButton - AntCap funkció (TODO)");
     }
 }
 
@@ -525,7 +532,7 @@ void AMScreen::handleAntCapButton(const UIButton::ButtonEvent &event) {
 void AMScreen::handleDemodButton(const UIButton::ButtonEvent &event) {
     if (event.state == UIButton::EventButtonState::Clicked) {
         // TODO: Demod funkcionalitás implementálása
-        Serial.println("AMScreen::handleDemodButton - Demod funkció (TODO)");
+        DEBUG("AMScreen::handleDemodButton - Demod funkció (TODO)");
 
         // A demod mód változása után frissítjük a BFO és Step gombok állapotát
         // (fontos, mert SSB/CW módban mindkét gomb állapota más)
@@ -585,7 +592,7 @@ void AMScreen::handleStepButton(const UIButton::ButtonEvent &event) {
             uint8_t currentBandType = currentband.bandType;
 
             // SSB módban a BFO be van kapcsolva?
-            if (rtv::bfoOn && pSi4735Manager->isCurrentDemodSSB()) {
+            if (rtv::bfoOn && pSi4735Manager->isCurrentDemodSSBorCW()) {
 
                 // BFO step állítás
                 rtv::currentBFOStep = pSi4735Manager->getStepSizeByIndex(Band::stepSizeBFO, buttonIndex);

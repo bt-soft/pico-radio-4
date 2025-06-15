@@ -152,10 +152,12 @@ class RadioScreen : public UIScreen {
     // ===================================================================
 
     /// S-Meter komponens - jelerősség és jel minőség megjelenítése
-    std::shared_ptr<SMeter> smeterComp; /**
-                                         * @brief Létrehozza az S-Meter komponenst
-                                         * @param smeterBounds Az S-Meter komponens határai
-                                         */
+    std::shared_ptr<SMeter> smeterComp;
+
+    /**
+     * @brief Létrehozza az S-Meter komponenst
+     * @param smeterBounds Az S-Meter komponens határai
+     */
     inline void createSMeterComponent(const Rect &smeterBounds) {
         ColorScheme smeterColors = ColorScheme::defaultScheme();
         smeterColors.background = TFT_COLOR_BACKGROUND; // Fekete háttér a designhoz
@@ -253,6 +255,13 @@ class RadioScreen : public UIScreen {
      * - Frissíti a StatusLine::updateStationInMemory státuszt
      */
     bool checkAndUpdateMemoryStatus();
+
+    /**
+     * @brief A kijelző explicit frissítése
+     * @details Frissíti a  kijelző komponenseit (pl.: ha nem váltunk képernyőt, akkor csak ez marad)
+     * Hasznos band váltás után, amikor ugyanaz a screen marad aktív
+     */
+    void refreshScreenComponents();
 };
 
 #endif //__RADIO_SCREEN_H

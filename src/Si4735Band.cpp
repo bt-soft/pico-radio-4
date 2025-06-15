@@ -41,10 +41,6 @@ void Si4735Band::bandInit(bool sysStart) {
                                           // 87.5MHz - 108MHz között
         si4735.setSeekFmLimits(currentBand.minimumFreq, currentBand.maximumFreq);
 
-        // RDS status lekérdezése a setup után
-        delay(100); // Kis várakozás, hogy a chip beálljon
-        si4735.getRdsStatus();
-
     } else {
         si4735.setup(PIN_SI4735_RESET, MW_BAND_TYPE);
         si4735.setAM();
@@ -84,12 +80,13 @@ void Si4735Band::loadSSB() {
     // DSP_AFCDIS - DSP AFC Disable or enable; 0=SYNC MODE, AFC enable; 1=SSB MODE, AFC disable.
     si4735.setSSBConfig(config.data.bwIdxSSB, 1, 0, 1, 0, 1);
     delay(25);
+
     ssbLoaded = true;
 }
 
 /**
  * Band beállítása
- * @param useDefaults prefereált demodulációt betöltsük?
+ * @param useDefaults
  */
 void Si4735Band::bandSet(bool useDefaults) {
 
@@ -101,18 +98,17 @@ void Si4735Band::bandSet(bool useDefaults) {
     // Demoduláció beállítása
     uint8_t currMod = currentBand.currMod;
 
-    // A sávhoz preferált demodulációs módot állítunk be?
-    if (useDefaults) {
-        // Átmásoljuk a preferált modulációs módot
-        currMod = currentBand.currMod = currentBand.prefMod;
-        ssbLoaded = false; // SSB patch betöltése szükséges
-    }
+    // // A sávhoz preferált demodulációs módot állítunk be?
+    // if (useDefaults) {
+    //     // Átmásoljuk a preferált modulációs módot
+    //     currMod = currentBand.currMod = currentBand.prefMod;
+    //     ssbLoaded = false; // SSB patch betöltése szükséges
+    // }
 
     if (currMod == AM or currMod == FM) {
+        ssbLoaded = false;
 
-        ssbLoaded = false; // FIXME: Ez kell? Band váltás után megint be kell tölteni az SSB-t?
-
-    } else if (currMod == LSB or currMod == USB or currMod == CW) {
+    } else if (isCurrentDemodSSBorCW()) { // LSB or USB or CW
         if (ssbLoaded == false) {
             this->loadSSB();
         }
@@ -130,9 +126,18 @@ void Si4735Band::bandSet(bool useDefaults) {
  */
 void Si4735Band::useBand(bool useDefaults) {
 
-    DEBUG("Si4735Band::useBand() -> currentBandIdx: %d, useDefaults: %s\n", config.data.currentBandIdx, useDefaults ? "true" : "false");
+    DEBUG("Si4735Band::useBand(%s) Start\n", useDefaults ? "true" : "false");
 
     BandTable &currentBand = getCurrentBand();
+
+    DEBUG("Si4735Band::useBand() -> BandIdx: %d, Name: %s, CurrFreq: %d, CurrStep: %d, currMod: %d, antCap: %d\n", //
+          config.data.currentBandIdx,                                                                              //
+          currentBand.bandName,                                                                                    //
+          currentBand.currFreq,                                                                                    //
+          currentBand.currStep,                                                                                    //
+          currentBand.currMod,                                                                                     //
+          currentBand.antCap                                                                                       //
+    );
 
     // Index ellenőrzés (biztonsági okokból)
     uint8_t stepIndex;
