@@ -26,6 +26,35 @@ RadioScreen::RadioScreen(TFT_eSPI &tft, const char *name, Si4735Manager *si4735M
 }
 
 // ===================================================================
+// UIScreen interface override
+// ===================================================================
+
+/**
+ * @brief RadioScreen aktiválása - Signal quality cache invalidálás
+ * @details Minden RadioScreen aktiváláskor invalidálja a signal quality cache-t,
+ * hogy az S-meter azonnal frissüljön az új frekvencián.
+ */
+void RadioScreen::activate() {
+    // Szülő osztály aktiválása (UIScreen)
+    UIScreen::activate();
+
+    // Signal quality cache invalidálása képernyő aktiváláskor
+    // Ez biztosítja, hogy az S-meter azonnal frissüljön, amikor visszatérünk
+    // a memória képernyőről vagy másik képernyőről
+    if (pSi4735Manager) {
+        pSi4735Manager->invalidateSignalCache();
+
+        // Frekvencia kijelző inicializálása az aktuális frekvenciával
+        // Ez azért szükséges, mert a FreqDisplay konstruktor 0-ra inicializál
+        if (freqDisplayComp) {
+            uint16_t currentFreq = pSi4735Manager->getSi4735().getCurrentFrequency();
+            DEBUG("RadioScreen::activate - Current frequency: %d\n", currentFreq);
+            freqDisplayComp->setFrequencyWithFullDraw(currentFreq, !pSi4735Manager->isCurrentDemodSSBorCW());
+        }
+    }
+}
+
+// ===================================================================
 // Seek callback infrastruktúra
 // ===================================================================
 
@@ -313,10 +342,8 @@ void RadioScreen::processBandButton(bool isHamBand) {
             pSi4735Manager->init();
             DEBUG("RadioScreen::bandCallback - Si4735Manager init completed\n");
 
-            // A képernyőváltást az onDialogClosed()-ban végezzük el,
-            // hogy elkerüljük a deferred action problémát
-
-            // NE végezzünk képernyőváltást itt a callback-ben!
+            // Jelezzük, hogy ez band dialógus volt - az onDialogClosed fogja kezelni
+            lastDialogWasBandDialog = true;
         },
         true,                           // Automatikusan bezárja-e a dialógust gomb kattintáskor
         _currentBandIndex,              // Az alapértelmezett (jelenlegi) gomb indexe a szűrt sávok tömbjében (-1 = ha nem található a sávok nevei között)
@@ -367,31 +394,25 @@ void RadioScreen::updateSMeter(bool isFMMode) {
     }
 }
 
-// ===================================================================
-// UIScreen interface override
-// ===================================================================
-
 /**
- * @brief RadioScreen aktiválása - Signal quality cache invalidálás
- * @details Minden RadioScreen aktiváláskor invalidálja a signal quality cache-t,
- * hogy az S-meter azonnal frissüljön az új frekvencián.
+ * @brief Band váltás kezelése dialog bezárás után
+ * @param dialog A bezárandó dialógus
+ * @details Egyszerű metódus, ami elvégzi a dialog cleanup-ot és a szükséges képernyőváltást/refresh-t
  */
-void RadioScreen::activate() {
-    // Szülő osztály aktiválása (UIScreen)
-    UIScreen::activate();
+void RadioScreen::handleBandSwitchAfterDialog(UIDialogBase *dialog) {
+    // Dialog cleanup rajzolás nélkül
+    performDialogCleanupWithoutDraw(dialog);
 
-    // Signal quality cache invalidálása képernyő aktiváláskor
-    // Ez biztosítja, hogy az S-meter azonnal frissüljön, amikor visszatérünk
-    // a memória képernyőről vagy másik képernyőről
+    // Ellenőrizzük, hogy szükséges-e képernyőváltás
     if (pSi4735Manager) {
-        pSi4735Manager->invalidateSignalCache();
+        const char *targetScreenName = pSi4735Manager->isCurrentBandFM() ? SCREEN_NAME_FM : SCREEN_NAME_AM;
 
-        // Frekvencia kijelző inicializálása az aktuális frekvenciával
-        // Ez azért szükséges, mert a FreqDisplay konstruktor 0-ra inicializál
-        if (freqDisplayComp) {
-            uint16_t currentFreq = pSi4735Manager->getSi4735().getCurrentFrequency();
-            DEBUG("RadioScreen::activate - Current frequency: %d\n", currentFreq);
-            freqDisplayComp->setFrequencyWithFullDraw(currentFreq, !pSi4735Manager->isCurrentDemodSSBorCW());
+        if (!STREQ(this->getName(), targetScreenName)) {
+            // === KÉPERNYŐVÁLTÁS ===
+            getScreenManager()->switchToScreen(targetScreenName);
+        } else {
+            // === UGYANAZON KÉPERNYŐ - GYORS REFRESH ===
+            refreshScreenComponents();
         }
     }
 }
@@ -419,85 +440,21 @@ void RadioScreen::refreshScreenComponents() {
 // ===================================================================
 
 /**
- * @brief Dialógus bezárásának kezelése - Band váltás utáni képernyőváltás
+ * @brief Dialógus bezárásának kezelése
  * @param closedDialog A bezárt dialógus referencia
- * @details Band dialógus bezárása után végzi el a képernyőváltást.
- * Ez elkerüli a deferred action problémát, mert már nincs processingEvents.
+ * @details Normál UIScreen cleanup, vagy band switch ha szükséges
  */
 void RadioScreen::onDialogClosed(UIDialogBase *closedDialog) {
-    DEBUG("RadioScreen::onDialogClosed - Dialog closed\n");
+    DEBUG("RadioScreen::onDialogClosed - Dialog closed, lastDialogWasBandDialog: %s\n", lastDialogWasBandDialog ? "YES" : "NO");
 
-    // Először elvégezzük a teljes dialog cleanup-ot, hogy minden rendben legyen
-    cleanupDialogAndDetermineAction(closedDialog);
-}
-
-/**
- * @brief Dialog cleanup és a következő akció meghatározása
- * @param closedDialog A bezárt dialógus referencia
- * @details Elvégzi a dialog cleanup-ot, majd meghatározza, hogy képernyőváltás vagy komponens refresh szükséges-e
- */
-void RadioScreen::cleanupDialogAndDetermineAction(UIDialogBase *closedDialog) {
-    // Band váltás után ellenőrizzük, hogy szükséges-e képernyőváltás
-    bool needsScreenSwitch = shouldSwitchScreenAfterBandChange();
-
-    if (needsScreenSwitch) {
-        // === KÉPERNYŐVÁLTÁS ESETÉN ===
-        DEBUG("RadioScreen::cleanupDialogAndDetermineAction - Will switch screens\n");
-        performDialogCleanupWithScreenSwitch(closedDialog);
+    if (lastDialogWasBandDialog) {
+        // === BAND DIALÓGUS VOLT ===
+        // A band konfiguráció már be van állítva a callback-ben, csak a cleanup kell
+        lastDialogWasBandDialog = false; // Reset flag
+        handleBandSwitchAfterDialog(closedDialog);
     } else {
-        // === UGYANAZON KÉPERNYŐN MARADÁS ESETÉN ===
-        DEBUG("RadioScreen::cleanupDialogAndDetermineAction - Will stay on same screen\n");
-        performDialogCleanupWithComponentRefresh(closedDialog);
+        // === NORMÁL DIALÓGUS (X gomb, Cancel, stb.) ===
+        // Normál UIScreen dialog cleanup
+        UIScreen::onDialogClosed(closedDialog);
     }
 }
-
-/**
- * @brief Ellenőrzi, hogy szükséges-e képernyőváltás a band váltás után
- * @return true ha képernyőváltás szükséges, false egyébként
- */
-bool RadioScreen::shouldSwitchScreenAfterBandChange() const {
-    if (!pSi4735Manager) {
-        return false;
-    }
-
-    const char *targetScreenName = pSi4735Manager->isCurrentBandFM() ? SCREEN_NAME_FM : SCREEN_NAME_AM;
-    bool needsSwitch = !STREQ(this->getName(), targetScreenName);
-
-    DEBUG("RadioScreen::shouldSwitchScreenAfterBandChange - Current: %s, Target: %s, Switch needed: %s\n", this->getName(), targetScreenName, needsSwitch ? "YES" : "NO");
-
-    return needsSwitch;
-}
-
-/**
- * @brief Dialog cleanup végrehajtása képernyőváltással
- * @param closedDialog A bezárt dialógus referencia
- */
-void RadioScreen::performDialogCleanupWithScreenSwitch(UIDialogBase *closedDialog) {
-    // Cleanup rajzolás nélkül - a képernyőváltás fog rajzolni
-    performDialogCleanupWithoutDraw(closedDialog);
-
-    // Képernyőváltás végrehajtása - ez fog rajzolni
-    if (pSi4735Manager) {
-        const char *targetScreenName = pSi4735Manager->isCurrentBandFM() ? SCREEN_NAME_FM : SCREEN_NAME_AM;
-        DEBUG("RadioScreen::performDialogCleanupWithScreenSwitch - Switching to: %s\n", targetScreenName);
-        getScreenManager()->switchToScreen(targetScreenName);
-    }
-}
-
-/**
- * @brief Dialog cleanup végrehajtása komponens refresh-sel (ugyanazon a képernyőn)
- * @param closedDialog A bezárt dialógus referencia
- */
-void RadioScreen::performDialogCleanupWithComponentRefresh(UIDialogBase *closedDialog) {
-    // Használjuk az UIScreen protected segédmetódusát a cleanup-hoz rajzolás nélkül
-    performDialogCleanupWithoutDraw(closedDialog);
-
-    // Azonnali komponens frissítés - gyors és hatékony
-    refreshScreenComponents();
-}
-
-// ===================================================================
-// UIScreen interface override - Már nem szükséges draw() override!
-// ===================================================================
-// MEGJEGYZÉS: A korábbi draw() override és suppressDrawDuringScreenSwitch flag
-// már nem szükséges, mert most tisztán elkülönítjük a dialog cleanup-ot és a rajzolást

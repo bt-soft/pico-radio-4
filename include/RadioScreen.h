@@ -113,14 +113,10 @@ class RadioScreen : public UIScreen {
      * @details A leszármazott osztályok felülírhatják ezt a metódust, hogy
      * hozzáadhassanak specifikus gombokat a közös gombokhoz
      */
-    virtual void addSpecificHorizontalButtons(std::vector<UIHorizontalButtonBar::ButtonConfig> &buttonConfigs) {}
-
-    /**
-     * @brief Dialógus bezárásának kezelése - Band váltás utáni képernyőváltás
-     * @param closedDialog A bezárt dialógus referencia
-     * @details Band dialógus bezárása után végzi el a képernyőváltást,
-     * hogy elkerülje a deferred action problémát
-     */
+    virtual void addSpecificHorizontalButtons(std::vector<UIHorizontalButtonBar::ButtonConfig> &buttonConfigs) {} /**
+                                                                                                                   * @brief Dialógus bezárásának kezelése
+                                                                                                                   * @param closedDialog A bezárt dialógus referencia
+                                                                                                                   */
     virtual void onDialogClosed(UIDialogBase *closedDialog) override;
 
     // ===================================================================
@@ -262,39 +258,28 @@ class RadioScreen : public UIScreen {
      * - Meghívja a StationStore keresést
      * - Frissíti a StatusLine::updateStationInMemory státuszt
      */
-    bool checkAndUpdateMemoryStatus(); /**
-                                        * @brief A kijelző explicit frissítése
-                                        * @details Frissíti a kijelző komponenseit (pl.: ha nem váltunk képernyőt, akkor csak ez marad)
-                                        * Hasznos band váltás után, amikor ugyanaz a screen marad aktív
-                                        */
+    bool checkAndUpdateMemoryStatus();
+
+    /**
+     * @brief A kijelző explicit frissítése
+     * @details Frissíti a kijelző komponenseit (pl.: ha nem váltunk képernyőt, akkor csak ez marad)
+     * Hasznos band váltás után, amikor ugyanaz a screen marad aktív
+     */
     void refreshScreenComponents();
 
   private:
     // ===================================================================
     // Dialog cleanup helper methods
     // ===================================================================
-
     /**
-     * @brief Ellenőrzi, hogy szükséges-e képernyőváltás a band váltás után
-     * @return true ha képernyőváltás szükséges, false egyébként
+     *@brief Band váltás kezelése dialog bezárás után
+     *@param dialog A bezárandó dialógus
+     *@details Egyszerű metódus, ami elvégzi a dialog cleanup - ot és a szükséges képernyőváltást / refresh - t
      */
-    bool shouldSwitchScreenAfterBandChange() const;
+    void handleBandSwitchAfterDialog(UIDialogBase *dialog);
 
-    /**
-     * @brief Dialog cleanup és a következő akció meghatározása
-     * @param closedDialog A bezárt dialógus referencia
-     */
-    void cleanupDialogAndDetermineAction(UIDialogBase *closedDialog);
-
-    /**
-     * @brief Dialog cleanup végrehajtása képernyőváltással
-     * @param closedDialog A bezárt dialógus referencia
-     */
-    void performDialogCleanupWithScreenSwitch(UIDialogBase *closedDialog); /**
-                                                                            * @brief Dialog cleanup végrehajtása komponens refresh-sel (ugyanazon a képernyőn)
-                                                                            * @param closedDialog A bezárt dialógus referencia
-                                                                            */
-    void performDialogCleanupWithComponentRefresh(UIDialogBase *closedDialog);
+    /// Flag annak jelzésére, hogy az utolsó dialógus band dialógus volt-e
+    bool lastDialogWasBandDialog = false;
 };
 
 #endif //__RADIO_SCREEN_H
