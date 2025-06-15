@@ -68,14 +68,80 @@ bool AMScreen::handleRotary(const RotaryEvent &event) {
         return UIScreen::handleRotary(event);
     }
 
-    // Frekvencia léptetés és automatikus mentés a band táblába
-    // Beállítjuk a chip-en és le is mentjük a band táblába a frekvenciát
-    uint16_t currFreq = pSi4735Manager->stepFrequency(event.value); // Léptetjük a rádiót
-    pSi4735Manager->getCurrentBand().currFreq = currFreq;           // Beállítjuk a band táblában a frekit
+    uint16_t newFreq;
+
+    BandTable &currentBand = pSi4735Manager->getCurrentBand();
+    uint16_t currentFrequency = pSi4735Manager->getSi4735().getFrequency();
+
+    if (pSi4735Manager->isCurrentDemodSSB()) {
+
+        if (rtv::bfoOn) {
+
+            int16_t step = rtv::currentBFOStep;
+            rtv::currentBFOmanu += (event.direction == RotaryEvent::Direction::Up) ? step : -step;
+            rtv::currentBFOmanu = constrain(rtv::currentBFOmanu, -999, 999);
+
+        } else {
+
+            // Hangolás felfelé
+            if (event.direction == RotaryEvent::Direction::Up) {
+
+                rtv::freqDec = rtv::freqDec - rtv::freqstep;
+                uint32_t freqTot = (uint32_t)(currentFrequency * 1000) + (rtv::freqDec * -1);
+
+                if (freqTot > (uint32_t)(currentBand.maximumFreq * 1000)) {
+                    pSi4735Manager->getSi4735().setFrequency(currentBand.maximumFreq);
+                    rtv::freqDec = 0;
+                }
+
+                if (rtv::freqDec <= -16000) {
+                    rtv::freqDec = rtv::freqDec + 16000;
+                    int16_t freqPlus16 = currentFrequency + 16;
+                    pSi4735Manager->hardwareAudioMuteOn();
+                    pSi4735Manager->getSi4735().setFrequency(freqPlus16);
+                    delay(10);
+                }
+
+            } else { // Hangolás lefelé
+
+                rtv::freqDec = rtv::freqDec + rtv::freqstep;
+                uint32_t freqTot = (uint32_t)(currentFrequency * 1000) - rtv::freqDec;
+                if (freqTot < (uint32_t)(currentBand.minimumFreq * 1000)) {
+                    pSi4735Manager->getSi4735().setFrequency(currentBand.minimumFreq);
+                    rtv::freqDec = 0;
+                }
+
+                if (rtv::freqDec >= 16000) {
+                    rtv::freqDec = rtv::freqDec - 16000;
+                    int16_t freqMin16 = currentFrequency - 16;
+                    pSi4735Manager->hardwareAudioMuteOn();
+                    pSi4735Manager->getSi4735().setFrequency(freqMin16);
+                    delay(10);
+                }
+            }
+            rtv::currentBFO = rtv::freqDec;
+            rtv::lastBFO = rtv::currentBFO;
+        }
+
+        // Lekérdezzük a beállított frekvenciát
+        newFreq = pSi4735Manager->getSi4735().getFrequency();
+
+        // SSB hangolás esetén a BFO eltolás beállítása
+        const int16_t cwBaseOffset = (currentBand.currMod == CW) ? config.data.cwReceiverOffsetHz : 0;
+        int16_t bfoToSet = cwBaseOffset + rtv::currentBFO + rtv::currentBFOmanu;
+        pSi4735Manager->getSi4735().setSSBBfo(bfoToSet);
+
+    } else {
+        // Léptetjük a rádiót, ez el is menti a band táblába
+        newFreq = pSi4735Manager->stepFrequency(event.value);
+    }
+
+    // AGC
+    pSi4735Manager->checkAGC();
 
     // Frekvencia kijelző azonnali frissítése
     if (freqDisplayComp) {
-        freqDisplayComp->setFrequency(currFreq);
+        freqDisplayComp->setFrequency(newFreq);
     }
 
     // Memória státusz ellenőrzése és frissítése
@@ -429,7 +495,7 @@ void AMScreen::handleAfBWButton(const UIButton::ButtonEvent &event) {
             }
 
             // Beállítjuk a rádió chip-en a kiválasztott HF sávszélességet
-            pSi4735Manager->setBandWidth();
+            pSi4735Manager->setAfBandWidth();
         },
         true,              // Automatikusan bezárja-e a dialógust gomb kattintáskor
         currentBw,         // Az alapértelmezett (jelenlegi) gomb felirata

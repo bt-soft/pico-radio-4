@@ -117,19 +117,20 @@ void Si4735Band::bandSet(bool useDefaults) {
             this->loadSSB();
         }
     }
-    useBand();
-    setBandWidth();
 
-    // Antenna Tunning Capacitor beállítása
-    si4735.setTuneFrequencyAntennaCapacitor(currentBand.antCap);
+    // Sáv beállítása
+    useBand(useDefaults);
+
+    // HF Sávszélesség beállítása
+    setAfBandWidth();
 }
 
 /**
  * Band beállítása
  */
-void Si4735Band::useBand() {
+void Si4735Band::useBand(bool useDefaults) {
 
-    DEBUG("Si4735Band::useBand() -> currentBandIdx: %d\n", config.data.currentBandIdx);
+    DEBUG("Si4735Band::useBand() -> currentBandIdx: %d, useDefaults: %s\n", config.data.currentBandIdx, useDefaults ? "true" : "false");
 
     BandTable &currentBand = getCurrentBand();
 
@@ -138,100 +139,115 @@ void Si4735Band::useBand() {
 
     // AM esetén 1...1000Khz között bármi lehet - {"1kHz", "5kHz", "9kHz", "10kHz"};
     uint8_t currentBandType = currentBand.bandType;
+
     if (currentBandType == MW_BAND_TYPE or currentBandType == LW_BAND_TYPE) {
-        // currentBand->currentStep = static_cast<uint8_t>(atoi(Band::stepSizeAM[config.data.ssIdxMW]));
         stepIndex = config.data.ssIdxMW;
+
         // Határellenőrzés
         if (stepIndex >= ARRAY_ITEM_COUNT(stepSizeAM)) {
             DEBUG("Si4735Band Hiba: Érvénytelen ssIdxMW index: %d. Alapértelmezett használata.\n", stepIndex);
             stepIndex = 0;                   // Visszaállás alapértelmezettre (pl. 1kHz)
             config.data.ssIdxMW = stepIndex; // Opcionális: Konfig frissítése
-            currentBand.currStep = stepSizeAM[stepIndex].value;
-
-        } else if (currentBandType == SW_BAND_TYPE) {
-            // currentBand->currentStep = static_cast<uint8_t>(atoi(Band::stepSizeAM[config.data.ssIdxAM]));
-            // AM/SSB/CW Shortwave esetén
-            stepIndex = config.data.ssIdxAM;
-            // Határellenőrzés
-            if (stepIndex >= ARRAY_ITEM_COUNT(stepSizeAM)) {
-                DEBUG("Si4735Band Hiba: Érvénytelen ssIdxAM index: %d. Alapértelmezett használata.\n", stepIndex);
-                stepIndex = 0;                   // Visszaállás alapértelmezettre
-                config.data.ssIdxAM = stepIndex; // Opcionális: Konfig frissítése
-            }
-            currentBand.currStep = stepSizeAM[stepIndex].value;
-
-        } else {
-            // FM esetén csak 3 érték lehet - {"50Khz", "100KHz", "1MHz"};
-            // static_cast<uint8_t>(atoi(Band::stepSizeFM[config.data.ssIdxFM]));
-            stepIndex = config.data.ssIdxFM; // Határellenőrzés
-            if (stepIndex >= ARRAY_ITEM_COUNT(stepSizeFM)) {
-                DEBUG("Si4735Band Hiba: Érvénytelen ssIdxFM index: %d. Alapértelmezett használata.\n", stepIndex);
-                stepIndex = 0;                   // Visszaállás alapértelmezettre
-                config.data.ssIdxFM = stepIndex; // Opcionális: Konfig frissítése
-            }
-            currentBand.currStep = stepSizeFM[stepIndex].value;
         }
 
-        if (currentBandType == FM_BAND_TYPE) {
-            ssbLoaded = false;
+        currentBand.currStep = stepSizeAM[stepIndex].value;
+
+    } else if (currentBandType == SW_BAND_TYPE) {
+
+        // AM/SSB/CW SW esetén
+        stepIndex = config.data.ssIdxAM;
+        // Határellenőrzés
+        if (stepIndex >= ARRAY_ITEM_COUNT(stepSizeAM)) {
+            DEBUG("Si4735Band Hiba: Érvénytelen ssIdxAM index: %d. Alapértelmezett használata.\n", stepIndex);
+            stepIndex = 0; // Visszaállás alapértelmezettre
+            config.data.ssIdxAM = stepIndex;
+        }
+        currentBand.currStep = stepSizeAM[stepIndex].value;
+
+    } else {
+        // FM esetén csak 3 érték lehet - {"50Khz", "100KHz", "1MHz"};
+        stepIndex = config.data.ssIdxFM;
+
+        // Határellenőrzés
+        if (stepIndex >= ARRAY_ITEM_COUNT(stepSizeFM)) {
+            DEBUG("Si4735Band Hiba: Érvénytelen ssIdxFM index: %d. Alapértelmezett használata.\n", stepIndex);
+            stepIndex = 0; // Visszaállás alapértelmezettre
+            config.data.ssIdxFM = stepIndex;
+        }
+        currentBand.currStep = stepSizeFM[stepIndex].value;
+    }
+
+    if (currentBandType == FM_BAND_TYPE) { // FM-ben vagyunk
+        ssbLoaded = false;
+        rtv::bfoOn = false;
+
+        // FM beállítások + Frekvencia beállítása
+        si4735.setFM(currentBand.minimumFreq, currentBand.maximumFreq, currentBand.currFreq, currentBand.currStep);
+        si4735.setFMDeEmphasis(1); // 1 = 50 μs. Usedin Europe, Australia, Japan;  2 = 75 μs. Used in USA (default)
+
+        // RDS inicializálás és konfiguráció
+        constexpr uint8_t RDS_ENABLE = 1;
+        constexpr uint8_t RDS_BLOCK_ERROR_TRESHOLD = 2;
+        si4735.RdsInit();
+        si4735.setRdsConfig(RDS_ENABLE, RDS_BLOCK_ERROR_TRESHOLD, RDS_BLOCK_ERROR_TRESHOLD, RDS_BLOCK_ERROR_TRESHOLD, RDS_BLOCK_ERROR_TRESHOLD);
+
+        // RDS státusz ellenőrzése a konfiguráció után
+        delay(200); // Várakozás hogy a chip feldolgozza
+        si4735.getRdsStatus();
+
+    } else { // AM-ben vagyunk
+
+        if (ssbLoaded) { // SSB vagy CW mód
+
+            bool isCWMode = (currentBand.currMod == CW);
+
+            // SSB/CW esetén a step mindig 1kHz a chipen belül
+            constexpr uint8_t FREQUENCY_STEP = 1;
+
+            // Mód beállítása (LSB-t használunk alapnak CW-hez)
+            uint8_t modeForChip = isCWMode ? LSB : currentBand.currMod;
+            si4735.setSSB(currentBand.minimumFreq, currentBand.maximumFreq, currentBand.currFreq, FREQUENCY_STEP, modeForChip);
+
+            // BFO beállítása
+
+            // CW mód: Fix BFO offset (pl. 700 Hz) + manuális finomhangolás
+            const int16_t cwBaseOffset = isCWMode ? config.data.cwReceiverOffsetHz : 0;
+            // Alap CW eltolás a configból
+            si4735.setSSBBfo(cwBaseOffset + rtv::currentBFO + rtv::currentBFOmanu);
+            rtv::CWShift = isCWMode; // Jelezzük a kijelzőnek
+
+            // SSB/CW esetén a lépésköz a chipen mindig 1kHz, de a finomhangolás BFO-val történik
+            currentBand.currStep = FREQUENCY_STEP;
+            si4735.setFrequencyStep(currentBand.currStep);
+
+        } else { // Sima AM mód
+
+            // AM határok és a frekvencia beállítása
+            si4735.setAM(currentBand.minimumFreq, currentBand.maximumFreq, currentBand.currFreq, currentBand.currStep);
+            // si4735.setAutomaticGainControl(1, 0);
+            // si4735.setAmSoftMuteMaxAttenuation(0); // // Disable Soft Mute for AM
             rtv::bfoOn = false;
-            // Antenna tuning capacitor beállítása (FM esetén antenna tuning capacitor nem kell)
-            currentBand.antCap = getDefaultAntCapValue();
-            si4735.setTuneFrequencyAntennaCapacitor(currentBand.antCap);
-            delay(100);
-            si4735.setFM(currentBand.minimumFreq, currentBand.maximumFreq, currentBand.currFreq, currentBand.currStep);
-            si4735.setFMDeEmphasis(1); // 1 = 50 μs. Usedin Europe, Australia, Japan;  2 = 75 μs. Used in USA (default)
-
-            // RDS inicializálás és konfiguráció
-            si4735.RdsInit();
-#define RDS_ENABLE 1
-#define RDS_BLOCK_ERROR_TRESHOLD 2
-            si4735.setRdsConfig(RDS_ENABLE, RDS_BLOCK_ERROR_TRESHOLD, RDS_BLOCK_ERROR_TRESHOLD, RDS_BLOCK_ERROR_TRESHOLD, RDS_BLOCK_ERROR_TRESHOLD);
-
-            // RDS státusz ellenőrzése a konfiguráció után
-            delay(200); // Várakozás hogy a chip feldolgozza
-            si4735.getRdsStatus();
-        } else {
-            // AM-ben vagyunk
-            currentBand.antCap = getDefaultAntCapValue(); // Sima AM esetén antenna tuning capacitor nem kell
-            si4735.setTuneFrequencyAntennaCapacitor(currentBand.antCap);
-
-            if (ssbLoaded) {
-                // SSB vagy CW mód
-                bool isCWMode = (currentBand.currMod == CW);
-
-                // Mód beállítása (LSB-t használunk alapnak CW-hez)
-                uint8_t modeForChip = isCWMode ? LSB : currentBand.currMod;
-                si4735.setSSB(currentBand.minimumFreq, currentBand.maximumFreq, currentBand.currFreq,
-                              1, // SSB/CW esetén a step mindig 1kHz a chipen belül
-                              modeForChip);
-
-                // BFO beállítása                        // CW mód: Fix BFO offset (pl. 700 Hz) + manuális finomhangolás
-                const int16_t cwBaseOffset = isCWMode ? config.data.cwReceiverOffsetHz : 0; // Alap CW eltolás a configból
-                si4735.setSSBBfo(cwBaseOffset + rtv::currentBFO + rtv::currentBFOmanu);
-                rtv::CWShift = isCWMode; // Jelezzük a kijelzőnek
-
-                // SSB/CW esetén a lépésköz a chipen mindig 1kHz, de a finomhangolás BFO-val történik
-                currentBand.currStep = 1;
-                si4735.setFrequencyStep(currentBand.currStep);
-
-            } else { // Sima AM mód
-                si4735.setAM(currentBand.minimumFreq, currentBand.maximumFreq, currentBand.currFreq, currentBand.currStep);
-                // si4735.setAutomaticGainControl(1, 0);
-                // si4735.setAmSoftMuteMaxAttenuation(0); // // Disable Soft Mute for AM
-                rtv::bfoOn = false;
-                rtv::CWShift = false; // AM módban biztosan nincs CW shift
-            }
+            rtv::CWShift = false; // AM módban biztosan nincs CW shift
         }
     }
+
+    // Alapértelmezett értékek beállítása
+    if (useDefaults) {
+        // Antenna tuning capacitor beállítása
+        currentBand.antCap = getDefaultAntCapValue();
+    }
+
+    // Antenna tuning capacitor beállítása
+    si4735.setTuneFrequencyAntennaCapacitor(currentBand.antCap);
+    delay(100);
 }
 
 /**
  * Sávszélesség beállítása
  */
-void Si4735Band::setBandWidth() {
+void Si4735Band::setAfBandWidth() {
 
-    DEBUG("Si4735Band::setBandWidth() -> currentBandIdx: %d\n", config.data.currentBandIdx);
+    DEBUG("Si4735Band::setAfBandWidth() -> currentBandIdx: %d\n", config.data.currentBandIdx);
 
     BandTable &currentBand = getCurrentBand();
 
@@ -369,4 +385,42 @@ void Si4735Band::tuneMemoryStation(uint8_t bandIndex, uint16_t frequency, uint8_
 
     // 6. Hangerő visszaállítása
     si4735.setVolume(config.data.currVolume);
+}
+
+/**
+ * @brief A frekvencia léptetése a rotary encoder értéke alapján
+ * @param rotaryValue A rotary encoder értéke (növelés/csökkentés)
+ * @return A léptetett frekvencia
+ */
+uint16_t Si4735Band::stepFrequency(int16_t rotaryValue) {
+
+    BandTable &currentBand = getCurrentBand();
+
+    // Kiszámítjuk a frekvencia lépés nagyságát
+    int16_t step = rotaryValue * currentBand.currStep; // A lépés nagysága
+    uint16_t targetFreq = currentBand.currFreq + step;
+
+    // Korlátozás a sáv határaira
+    if (targetFreq < currentBand.minimumFreq) {
+        targetFreq = currentBand.minimumFreq;
+    } else if (targetFreq > currentBand.maximumFreq) {
+        targetFreq = currentBand.maximumFreq;
+    }
+
+    // Csak akkor változtatunk, ha tényleg más a cél frekvencia
+    if (targetFreq != currentBand.currFreq) {
+        // Beállítjuk a frekvenciát
+        si4735.setFrequency(targetFreq);
+
+        // El is mentjük a band táblába
+        currentBand.currFreq = si4735.getCurrentFrequency();
+
+        // Band adatok mentését megjelöljük
+        saveBandData();
+
+        // Ez biztosítja, hogy az S-meter azonnal frissüljön az új frekvencián
+        invalidateSignalCache();
+    }
+
+    return currentBand.currFreq;
 }

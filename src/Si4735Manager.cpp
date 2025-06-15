@@ -19,10 +19,12 @@ void Si4735Manager::init(bool systemStart) {
     DEBUG("Si4735Manager::init(%s) -> Start\n", systemStart ? "true" : "false");
 
     // A Band  visszaállítása a konfigból
-    bandInit(systemStart); // Rendszer induláskor
+    bandInit(systemStart);
 
     // A sávra preferált demodulációs mód betöltése
-    bandSet(systemStart); // Hangerő beállítása
+    bandSet(systemStart);
+
+    // Hangerő beállítása
     si4735.setVolume(config.data.currVolume);
 
     // Rögtön be is állítjuk az AGC-t
