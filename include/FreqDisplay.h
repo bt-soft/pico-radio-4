@@ -1,7 +1,11 @@
 // include/FreqDisplay.h
 /**
  * @file FreqDisplay.h
- * @brief Frekvencia kijelző komponens - 7-szegmenses digitális kijelző különböző rádiómódokhoz
+ * @brief     struct FrequencyDisplayData {
+        String freqStr;       ///< Formázott frekvencia string
+        const char *mask;     ///< 7-szegmenses maszk pattern
+        const char *unit;     ///< Mértékegység (MHz, kHz, Hz)
+    };encia kijelző komponens - 7-szegmenses digitális kijelző különböző rádiómódokhoz
  *
  * Ez a komponens kezeli a frekvencia megjelenítését különböző demodulációs módokban:
  * - FM/AM: hagyományos frekvencia kijelzés MHz/kHz egységekkel
@@ -64,9 +68,9 @@ class FreqDisplay : public UIComponent {
      * összes adatot: a formázott string-et, a maszkot és az egységet.
      */
     struct FrequencyDisplayData {
-        String freqStr;                  ///< Formázott frekvencia string
-        const __FlashStringHelper *mask; ///< 7-szegmenses maszk pattern
-        const __FlashStringHelper *unit; ///< Mértékegység (MHz, kHz, Hz)
+        String freqStr;   ///< Formázott frekvencia string
+        const char *mask; ///< 7-szegmenses maszk pattern
+        const char *unit; ///< Mértékegység (MHz, kHz, Hz)
     };
 
     // === Rajzolás vezérlő metódusok ===
@@ -232,7 +236,7 @@ class FreqDisplay : public UIComponent {
      * @param colors A színkonfiguráció
      * @param unit Az egység (opcionális)
      */
-    void drawFrequencyInternal(const String &freq, const __FlashStringHelper *mask, const FreqSegmentColors &colors, const __FlashStringHelper *unit = nullptr);
+    void drawFrequencyInternal(const String &freq, const char *mask, const FreqSegmentColors &colors, const char *unit = nullptr);
 
     /**
      * @brief Visszaadja az aktuális szín konfigurációt (normál/BFO)
@@ -260,7 +264,7 @@ class FreqDisplay : public UIComponent {
      * @param mask A maszk pattern
      * @param colors A színkonfiguráció
      */
-    void drawFrequencySpriteOnly(const String &freq_str, const __FlashStringHelper *mask, const FreqSegmentColors &colors);
+    void drawFrequencySpriteOnly(const String &freq_str, const char *mask, const FreqSegmentColors &colors);
 
     /**
      * @brief Meghatározza a frekvencia stringet és maszkot optimalizált rajzoláshoz
@@ -269,7 +273,7 @@ class FreqDisplay : public UIComponent {
      * @param outMask [out] A maszk pattern
      * @return true ha sikeresen meghatározva
      */
-    bool determineFreqStrAndMaskForOptimizedDraw(uint16_t frequency, String &outFreqStr, const __FlashStringHelper *&outMask);
+    bool determineFreqStrAndMaskForOptimizedDraw(uint16_t frequency, String &outFreqStr, const char *&outMask);
 
     /**
      * @brief Rajzolja a frekvencia lépés aláhúzását

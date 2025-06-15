@@ -213,7 +213,7 @@ uint32_t FreqDisplay::calcFreqSpriteXPosition() const {
  * @param mask A 7-szegmenses maszk pattern
  * @param colors A használandó színkonfiguráció
  */
-void FreqDisplay::drawFrequencySpriteOnly(const String &freq_str, const __FlashStringHelper *mask, const FreqSegmentColors &colors) {
+void FreqDisplay::drawFrequencySpriteOnly(const String &freq_str, const char *mask, const FreqSegmentColors &colors) {
     using namespace FreqDisplayConstants;
 
     // Font beállítása a maszk szélességének meghatározásához
@@ -259,7 +259,7 @@ void FreqDisplay::drawFrequencySpriteOnly(const String &freq_str, const __FlashS
  * @param colors A színkonfiguráció
  * @param unit Az egység string (opcionális, lehet nullptr)
  */
-void FreqDisplay::drawFrequencyInternal(const String &freq_str, const __FlashStringHelper *mask, const FreqSegmentColors &colors, const __FlashStringHelper *unit) {
+void FreqDisplay::drawFrequencyInternal(const String &freq_str, const char *mask, const FreqSegmentColors &colors, const char *unit) {
     using namespace FreqDisplayConstants;
 
     // Font beállítása és sprite méret számítása
@@ -432,13 +432,11 @@ void FreqDisplay::handleBfoAnimation(const String &formattedFreq) {
  * @param colors A használandó színkonfiguráció
  */
 void FreqDisplay::drawNormalSsbCwMode(const String &formattedFreq, const FreqSegmentColors &colors) {
-    using namespace FreqDisplayConstants;
-
-    // Fő frekvencia kijelzése
-    drawFrequencyInternal(formattedFreq, F("88 888.88"), colors, nullptr);
+    using namespace FreqDisplayConstants; // Fő frekvencia kijelzése
+    drawFrequencyInternal(formattedFreq, "88 888.88", colors, nullptr);
 
     // "kHz" egység kijelzése
-    drawTextAtPosition(F("kHz"), bounds.x + SsbCwUnitXOffset, bounds.y + SsbCwUnitYOffset, 2, BC_DATUM, colors.indicator);
+    drawTextAtPosition("kHz", bounds.x + SsbCwUnitXOffset, bounds.y + SsbCwUnitYOffset, 2, BC_DATUM, colors.indicator);
 }
 
 /**
@@ -453,10 +451,8 @@ void FreqDisplay::drawNormalSsbCwMode(const String &formattedFreq, const FreqSeg
  * @param colors A használandó színkonfiguráció
  */
 void FreqDisplay::drawBfoMode(const String &formattedFreq, const FreqSegmentColors &colors) {
-    using namespace FreqDisplayConstants;
-
-    // BFO érték kijelzése
-    drawFrequencyInternal(String(rtv::currentBFOmanu), F("-888"), colors, nullptr);
+    using namespace FreqDisplayConstants; // BFO érték kijelzése
+    drawFrequencyInternal(String(rtv::currentBFOmanu), "-888", colors, nullptr);
 
     // "Hz" egység
     drawTextAtPosition("Hz", bounds.x + BfoHzLabelXOffset, bounds.y + BfoHzLabelYOffset, 2, BL_DATUM, colors.indicator);
@@ -575,8 +571,8 @@ FreqDisplay::FrequencyDisplayData FreqDisplay::prepareFrequencyDisplayData(uint1
  */
 FreqDisplay::FrequencyDisplayData FreqDisplay::prepareFmDisplayData(uint16_t frequency) {
     FrequencyDisplayData data;
-    data.unit = F("MHz");
-    data.mask = F("188.88");
+    data.unit = "MHz";
+    data.mask = "188.88";
 
     float displayFreqMHz = frequency / 100.0f;
     data.freqStr = String(displayFreqMHz, 2);
@@ -596,16 +592,15 @@ FreqDisplay::FrequencyDisplayData FreqDisplay::prepareFmDisplayData(uint16_t fre
  */
 FreqDisplay::FrequencyDisplayData FreqDisplay::prepareAmDisplayData(uint16_t frequency, uint8_t bandType) {
     FrequencyDisplayData data;
-
     if (bandType == MW_BAND_TYPE || bandType == LW_BAND_TYPE) {
         // MW/LW bands - display in kHz as integer
-        data.unit = F("kHz");
-        data.mask = F("8888");
+        data.unit = "kHz";
+        data.mask = "8888";
         data.freqStr = String(frequency);
     } else {
         // SW AM - display in MHz with 3 decimal places
-        data.unit = F("MHz");
-        data.mask = F("88.888");
+        data.unit = "MHz";
+        data.mask = "88.888";
         data.freqStr = String(frequency / 1000.0f, 3);
     }
 
@@ -623,14 +618,14 @@ FreqDisplay::FrequencyDisplayData FreqDisplay::prepareAmDisplayData(uint16_t fre
  * @param outMask [kimenet] A 7-szegmenses maszk
  * @return true ha sikeresen meghatározta a formátumot, false egyébként
  */
-bool FreqDisplay::determineFreqStrAndMaskForOptimizedDraw(uint16_t frequency, String &outFreqStr, const __FlashStringHelper *&outMask) {
+bool FreqDisplay::determineFreqStrAndMaskForOptimizedDraw(uint16_t frequency, String &outFreqStr, const char *&outMask) {
 
     const uint8_t currDemod = pSi4735Manager->getCurrentBand().currMod;
 
     if (currDemod == LSB || currDemod == USB || currDemod == CW) {
         if (rtv::bfoOn) { // BFO érték kijelzése
             outFreqStr = String(rtv::currentBFOmanu);
-            outMask = F("-888");
+            outMask = "-888";
         } else { // Normál SSB/CW frekvencia
             uint32_t bfoOffset = rtv::lastBFO;
             uint32_t displayFreqHz = (uint32_t)frequency * 1000 - bfoOffset;
@@ -639,18 +634,18 @@ bool FreqDisplay::determineFreqStrAndMaskForOptimizedDraw(uint16_t frequency, St
             int hz_tens_part = abs((int)(displayFreqHz % 1000)) / 10;
             sprintf(s, "%ld.%02d", khz_part, hz_tens_part);
             outFreqStr = String(s);
-            outMask = F("88 888.88");
+            outMask = "88 888.88";
         }
     } else if (currDemod == FM) {
-        outMask = F("188.88");
+        outMask = "188.88";
         outFreqStr = String(frequency / 100.0f, 2);
     } else if (currDemod == AM) {
         uint8_t currentBandType = pSi4735Manager->getCurrentBandType();
         if (currentBandType == MW_BAND_TYPE || currentBandType == LW_BAND_TYPE) {
-            outMask = F("8888");
+            outMask = "8888";
             outFreqStr = String(frequency);
         } else { // SW AM
-            outMask = F("88.888");
+            outMask = "88.888";
             outFreqStr = String(frequency / 1000.0f, 3);
         }
     } else {
@@ -718,7 +713,7 @@ bool FreqDisplay::canUseOptimizedDraw() { return redrawOnlyFrequencyDigits && !r
  */
 void FreqDisplay::performOptimizedDraw() {
     String freqStr;
-    const __FlashStringHelper *mask = nullptr;
+    const char *mask = nullptr;
 
     if (determineFreqStrAndMaskForOptimizedDraw(currentDisplayFrequency, freqStr, mask)) {
         const FreqSegmentColors &colors = getSegmentColors();
