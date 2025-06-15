@@ -236,11 +236,8 @@ void AMScreen::activate() {
     updateCommonHorizontalButtonStates();          // Közös gombok szinkronizálása
     updateHorizontalButtonStates();                // AM-specifikus gombok szinkronizálása
 
-    // Frekvencia kijelző frissítése az aktuális frekvenciával
-    if (freqDisplayComp) {
-        // Az SI4735 osztály cache-ból olvassuk az aktuális frekvenciát, nem használunk chip olvasást
-        freqDisplayComp->setFrequency(pSi4735Manager->getSi4735().getCurrentFrequency());
-    }
+    // MEGJEGYZÉS: A frekvencia kijelző frissítése nem szükséges itt,
+    // mert a FreqDisplay konstruktor már beállította a helyes frekvenciát
 }
 
 /**
@@ -253,8 +250,8 @@ void AMScreen::activate() {
  */
 void AMScreen::onDialogClosed(UIDialogBase *closedDialog) {
 
-    // Először hívjuk az alap implementációt (stack cleanup, navigation logic)
-    UIScreen::onDialogClosed(closedDialog);
+    // Először hívjuk a RadioScreen implementációt (band váltás kezelés)
+    RadioScreen::onDialogClosed(closedDialog);
 
     // Ha ez volt az utolsó dialógus, frissítsük a gombállapotokat
     if (!isDialogActive()) {

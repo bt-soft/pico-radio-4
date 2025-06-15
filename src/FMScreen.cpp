@@ -250,8 +250,8 @@ void FMScreen::activate() {
  */
 void FMScreen::onDialogClosed(UIDialogBase *closedDialog) {
 
-    // Először hívjuk az alap implementációt (stack cleanup, navigation logic)
-    UIScreen::onDialogClosed(closedDialog);
+    // Először hívjuk a RadioScreen implementációt (band váltás kezelés)
+    RadioScreen::onDialogClosed(closedDialog);
 
     // Ha ez volt az utolsó dialógus, frissítsük a gombállapotokat
     if (!isDialogActive()) {

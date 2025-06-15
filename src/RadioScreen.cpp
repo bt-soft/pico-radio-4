@@ -298,27 +298,25 @@ void RadioScreen::processBandButton(bool isHamBand) {
             break;
         }
     }
-
     auto bandDialog = std::make_shared<MultiButtonDialog>(
         this, this->tft,                                                              // Képernyő referencia
         "All Radio Bands", "",                                                        // Dialógus címe és üzenete
         _bandNames.get(), _bandCount,                                                 // Gombok feliratai és számuk
         [this](int buttonIndex, const char *buttonLabel, MultiButtonDialog *dialog) { // Gomb kattintás kezelése
+            DEBUG("RadioScreen::bandCallback - Button clicked: %s, buttonIndex: %d\n", buttonLabel, buttonIndex);
+
             // Átállítjuk a használni kívánt BAND indexét
-            config.data.currentBandIdx = pSi4735Manager->getBandIdxByBandName(buttonLabel); // Átállítjuk a rádiót a kiválasztott sávra
+            config.data.currentBandIdx = pSi4735Manager->getBandIdxByBandName(buttonLabel);
+            DEBUG("RadioScreen::bandCallback - Band index set to: %d\n", config.data.currentBandIdx);
+
+            // Átállítjuk a rádiót a kiválasztott sávra
             pSi4735Manager->init();
+            DEBUG("RadioScreen::bandCallback - Si4735Manager init completed\n");
 
-            // Meghatározzuk a cél képernyő nevét
-            const char *targetScreenName = pSi4735Manager->isCurrentBandFM() ? SCREEN_NAME_FM : SCREEN_NAME_AM;
+            // A képernyőváltást az onDialogClosed()-ban végezzük el,
+            // hogy elkerüljük a deferred action problémát
 
-            // Csak akkor frissítjük a komponenseket, ha ugyanazon a képernyőn maradunk
-            // Ha képernyőt váltunk, az új képernyő activate() metódusa amúgy is frissíti a komponenseket
-            if (STREQ(this->getName(), targetScreenName)) {
-                refreshScreenComponents();
-            }
-
-            // Átkapcsolunk a megfelelő screenre
-            getScreenManager()->switchToScreen(targetScreenName);
+            // NE végezzünk képernyőváltást itt a callback-ben!
         },
         true,                           // Automatikusan bezárja-e a dialógust gomb kattintáskor
         _currentBandIndex,              // Az alapértelmezett (jelenlegi) gomb indexe a szűrt sávok tömbjében (-1 = ha nem található a sávok nevei között)
@@ -380,11 +378,21 @@ void RadioScreen::updateSMeter(bool isFMMode) {
  */
 void RadioScreen::activate() {
     // Szülő osztály aktiválása (UIScreen)
-    UIScreen::activate(); // Signal quality cache invalidálása képernyő aktiváláskor
+    UIScreen::activate();
+
+    // Signal quality cache invalidálása képernyő aktiváláskor
     // Ez biztosítja, hogy az S-meter azonnal frissüljön, amikor visszatérünk
     // a memória képernyőről vagy másik képernyőről
     if (pSi4735Manager) {
         pSi4735Manager->invalidateSignalCache();
+
+        // Frekvencia kijelző inicializálása az aktuális frekvenciával
+        // Ez azért szükséges, mert a FreqDisplay konstruktor 0-ra inicializál
+        if (freqDisplayComp) {
+            uint16_t currentFreq = pSi4735Manager->getSi4735().getCurrentFrequency();
+            DEBUG("RadioScreen::activate - Current frequency: %d\n", currentFreq);
+            freqDisplayComp->setFrequencyWithFullDraw(currentFreq, !pSi4735Manager->isCurrentDemodSSBorCW());
+        }
     }
 }
 
@@ -407,3 +415,87 @@ void RadioScreen::refreshScreenComponents() {
 }
 
 // ===================================================================
+// UIScreen interface override - Dialog handling
+// ===================================================================
+
+/**
+ * @brief Dialógus bezárásának kezelése - Band váltás utáni képernyőváltás
+ * @param closedDialog A bezárt dialógus referencia
+ * @details Band dialógus bezárása után végzi el a képernyőváltást.
+ * Ez elkerüli a deferred action problémát, mert már nincs processingEvents.
+ */
+void RadioScreen::onDialogClosed(UIDialogBase *closedDialog) {
+    DEBUG("RadioScreen::onDialogClosed - Dialog closed\n");
+
+    // Band váltás után ellenőrizzük, hogy szükséges-e képernyőváltás
+    bool willSwitchScreen = false;
+    if (pSi4735Manager) {
+        const char *targetScreenName = pSi4735Manager->isCurrentBandFM() ? SCREEN_NAME_FM : SCREEN_NAME_AM;
+
+        DEBUG("RadioScreen::onDialogClosed - Current screen: %s, Target screen: %s\n", this->getName(), targetScreenName);
+
+        // Ha más képernyőre kell váltanunk
+        if (!STREQ(this->getName(), targetScreenName)) {
+            willSwitchScreen = true;
+            DEBUG("RadioScreen::onDialogClosed - Will switch to different screen: %s\n", targetScreenName);
+        }
+    }
+
+    if (willSwitchScreen) {
+        // === KÉPERNYŐVÁLTÁS ESETÉN ===
+        // Elnyomjuk a draw-t a parent cleanup során
+        DEBUG("RadioScreen::onDialogClosed - Suppressing draw during screen switch\n");
+        suppressDrawDuringScreenSwitch = true;
+
+        // Szülő osztály cleanup-ját meghívjuk - dialog stack kezelés
+        // A draw() override ellenőrzi a suppressDrawDuringScreenSwitch flag-et
+        UIScreen::onDialogClosed(closedDialog);
+
+        // Flag visszaállítása
+        suppressDrawDuringScreenSwitch = false;
+
+        // Képernyőváltás végrehajtása
+        if (pSi4735Manager) {
+            const char *targetScreenName = pSi4735Manager->isCurrentBandFM() ? SCREEN_NAME_FM : SCREEN_NAME_AM;
+            DEBUG("RadioScreen::onDialogClosed - Switching to different screen: %s\n", targetScreenName);
+            getScreenManager()->switchToScreen(targetScreenName);
+        }
+    } else {
+        // === UGYANAZON KÉPERNYŐN MARADÁS ESETÉN ===
+        // Gyors path - dialog cleanup + draw elnyomás + azonnali komponens refresh
+        DEBUG("RadioScreen::onDialogClosed - Staying on same screen, fast refresh\n");
+
+        // Draw elnyomás beállítása a gyors refresh-hez is
+        suppressDrawDuringScreenSwitch = true;
+
+        // Szülő osztály cleanup-ját meghívjuk a teljes dialog bezáráshoz
+        // A draw() override ellenőrzi a suppressDrawDuringScreenSwitch flag-et
+        UIScreen::onDialogClosed(closedDialog);
+
+        // Flag visszaállítása
+        suppressDrawDuringScreenSwitch = false;
+
+        // Azonnali komponens frissítés - gyors és hatékony
+        refreshScreenComponents();
+    }
+}
+
+// ===================================================================
+// UIScreen interface override - Draw
+// ===================================================================
+
+/**
+ * @brief Képernyő rajzolása - dupla rajzolás elkerülése override
+ * @details Override-olja a UIScreen::draw() metódust, hogy elkerülje a dupla rajzolást
+ * képernyőváltás során
+ */
+void RadioScreen::draw() {
+    // Ha épp képernyőváltás van folyamatban, nem rajzolunk
+    if (suppressDrawDuringScreenSwitch) {
+        DEBUG("RadioScreen::draw - Suppressed draw during screen switch\n");
+        return;
+    }
+
+    // Egyébként normál rajzolás
+    UIScreen::draw();
+}

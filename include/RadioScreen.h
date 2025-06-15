@@ -115,6 +115,14 @@ class RadioScreen : public UIScreen {
      */
     virtual void addSpecificHorizontalButtons(std::vector<UIHorizontalButtonBar::ButtonConfig> &buttonConfigs) {}
 
+    /**
+     * @brief Dialógus bezárásának kezelése - Band váltás utáni képernyőváltás
+     * @param closedDialog A bezárt dialógus referencia
+     * @details Band dialógus bezárása után végzi el a képernyőváltást,
+     * hogy elkerülje a deferred action problémát
+     */
+    virtual void onDialogClosed(UIDialogBase *closedDialog) override;
+
     // ===================================================================
     // Közös gomb eseménykezelők
     // ===================================================================
@@ -257,11 +265,21 @@ class RadioScreen : public UIScreen {
     bool checkAndUpdateMemoryStatus();
 
     /**
-     * @brief A kijelző explicit frissítése
-     * @details Frissíti a  kijelző komponenseit (pl.: ha nem váltunk képernyőt, akkor csak ez marad)
+     * @brief A kijelző explicit frissítése     * @details Frissíti a  kijelző komponenseit (pl.: ha nem váltunk képernyőt, akkor csak ez marad)
      * Hasznos band váltás után, amikor ugyanaz a screen marad aktív
      */
     void refreshScreenComponents();
+
+    /**
+     * @brief Képernyő rajzolása - dupla rajzolás elkerülése override
+     * @details Override-olja a UIScreen::draw() metódust, hogy elkerülje a dupla rajzolást
+     * képernyőváltás során
+     */
+    virtual void draw() override;
+
+  private:
+    /// Temporáris flag a dupla rajzolás elkerülésére képernyőváltás során
+    bool suppressDrawDuringScreenSwitch = false;
 };
 
 #endif //__RADIO_SCREEN_H
