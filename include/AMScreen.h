@@ -151,8 +151,9 @@ class AMScreen : public RadioScreen, public CommonVerticalButtons::Mixin<AMScree
      * @param buttonConfigs A már meglévő gomb konfigurációk vektora
      * @details Felülírja az ős metódusát, hogy hozzáadja az AM specifikus gombokat
      */
-    virtual void
-    addSpecificHorizontalButtons(std::vector<UIHorizontalButtonBar::ButtonConfig> &buttonConfigs) override; // ===================================================================
+    virtual void addSpecificHorizontalButtons(std::vector<UIHorizontalButtonBar::ButtonConfig> &buttonConfigs) override;
+
+    // ===================================================================
     // Event-driven gombállapot szinkronizálás
     // ===================================================================
 
@@ -164,6 +165,18 @@ class AMScreen : public RadioScreen, public CommonVerticalButtons::Mixin<AMScree
      * - AM specifikus gombok alapértelmezett állapotai
      */
     void updateHorizontalButtonStates();
+
+    /**
+     * @brief Step gomb állapotának frissítése
+     * @details SSB/CW módban csak akkor engedélyezett, ha BFO be van kapcsolva
+     */
+    void updateStepButtonState();
+
+    /**
+     * @brief BFO gomb állapotának frissítése
+     * @details Csak SSB/CW módban engedélyezett
+     */
+    void updateBFOButtonState();
 
     // ===================================================================
     // AM specifikus gomb eseménykezelők

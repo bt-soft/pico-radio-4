@@ -1,4 +1,5 @@
 #include "AMScreen.h"
+#include "Band.h"
 #include "CommonVerticalButtons.h"
 #include "FreqDisplay.h"
 #include "StatusLine.h"
@@ -182,15 +183,19 @@ void AMScreen::onDialogClosed(UIDialogBase *closedDialog) {
     DEBUG("AMScreen::onDialogClosed - Dialog closed, checking if last dialog\n");
 
     // Először hívjuk az alap implementációt (stack cleanup, navigation logic)
-    UIScreen::onDialogClosed(closedDialog); // Ha ez volt az utolsó dialógus, frissítsük a gombállapotokat    if (!isDialogActive()) {
-    DEBUG("AMScreen::onDialogClosed - Last dialog closed, updating button states\n");
-    updateAllVerticalButtonStates(pSi4735Manager); // Függőleges gombok szinkronizálása
-    updateCommonHorizontalButtonStates();          // Közös gombok szinkronizálása
-    updateHorizontalButtonStates();                // AM specifikus gombok szinkronizálása
+    UIScreen::onDialogClosed(closedDialog);
 
-    // A gombsor konténer teljes újrarajzolása, hogy biztosan megjelenjenek a gombok
-    if (horizontalButtonBar) {
-        horizontalButtonBar->markForCompleteRedraw();
+    // Ha ez volt az utolsó dialógus, frissítsük a gombállapotokat
+    if (!isDialogActive()) {
+        DEBUG("AMScreen::onDialogClosed - Last dialog closed, updating button states\n");
+        updateAllVerticalButtonStates(pSi4735Manager); // Függőleges gombok szinkronizálása
+        updateCommonHorizontalButtonStates();          // Közös gombok szinkronizálása
+        updateHorizontalButtonStates();                // AM specifikus gombok szinkronizálása
+
+        // A gombsor konténer teljes újrarajzolása, hogy biztosan megjelenjenek a gombok
+        if (horizontalButtonBar) {
+            horizontalButtonBar->markForCompleteRedraw();
+        }
     }
 }
 
@@ -274,12 +279,68 @@ void AMScreen::updateHorizontalButtonStates() {
     // AM specifikus gombok állapot szinkronizálása
     // ===================================================================
 
-    // Minden AM specifikus gomb alapértelmezett állapotban (kikapcsolva)
-    horizontalButtonBar->setButtonState(AMScreenHorizontalButtonIDs::BFO_BUTTON, UIButton::ButtonState::Off);
+    // BFO és Step gombok speciális logikája: használjuk a dedikált metódusokat
+    updateBFOButtonState();
+    updateStepButtonState();
+
+    // Többi AM specifikus gomb alapértelmezett állapotban
     horizontalButtonBar->setButtonState(AMScreenHorizontalButtonIDs::AFBW_BUTTON, UIButton::ButtonState::Off);
     horizontalButtonBar->setButtonState(AMScreenHorizontalButtonIDs::ANTCAP_BUTTON, UIButton::ButtonState::Off);
     horizontalButtonBar->setButtonState(AMScreenHorizontalButtonIDs::DEMOD_BUTTON, UIButton::ButtonState::Off);
-    horizontalButtonBar->setButtonState(AMScreenHorizontalButtonIDs::STEP_BUTTON, UIButton::ButtonState::Off);
+
+    // ===================================================================
+    // Step gomb speciális logika: használjuk a dedikált metódust
+    // ===================================================================
+    updateStepButtonState();
+}
+
+/**
+ * @brief Step gomb állapotának frissítése
+ * @details SSB/CW módban csak akkor engedélyezett, ha BFO be van kapcsolva
+ */
+void AMScreen::updateStepButtonState() {
+    if (!horizontalButtonBar) {
+        return; // Biztonsági ellenőrzés
+    }
+
+    UIButton::ButtonState stepButtonState = UIButton::ButtonState::Off;
+
+    if (pSi4735Manager->isCurrentDemodSSB()) {
+        // SSB/CW módban: csak akkor engedélyezett, ha BFO be van kapcsolva
+        stepButtonState = rtv::bfoOn ? UIButton::ButtonState::Off : UIButton::ButtonState::Disabled;
+        DEBUG("AMScreen::updateStepButtonState - SSB/CW mode detected, BFO: %s, Step button: %s\n", rtv::bfoOn ? "ON" : "OFF",
+              stepButtonState == UIButton::ButtonState::Disabled ? "DISABLED" : "ENABLED");
+    } else {
+        // AM/egyéb módban: mindig engedélyezett
+        stepButtonState = UIButton::ButtonState::Off;
+        DEBUG("AMScreen::updateStepButtonState - Non-SSB mode, Step button: ENABLED\n");
+    }
+
+    horizontalButtonBar->setButtonState(AMScreenHorizontalButtonIDs::STEP_BUTTON, stepButtonState);
+}
+
+/**
+ * @brief BFO gomb állapotának frissítése
+ * @details Csak SSB/CW módban engedélyezett
+ */
+void AMScreen::updateBFOButtonState() {
+    if (!horizontalButtonBar) {
+        return; // Biztonsági ellenőrzés
+    }
+
+    UIButton::ButtonState bfoButtonState;
+
+    if (pSi4735Manager->isCurrentDemodSSB()) {
+        // SSB/CW módban: BFO állapot szerint be/ki kapcsolva
+        bfoButtonState = rtv::bfoOn ? UIButton::ButtonState::On : UIButton::ButtonState::Off;
+        DEBUG("AMScreen::updateBFOButtonState - SSB/CW mode, BFO button: %s\n", rtv::bfoOn ? "ON" : "OFF");
+    } else {
+        // AM/egyéb módban: letiltva
+        bfoButtonState = UIButton::ButtonState::Disabled;
+        DEBUG("AMScreen::updateBFOButtonState - Non-SSB mode, BFO button: DISABLED\n");
+    }
+
+    horizontalButtonBar->setButtonState(AMScreenHorizontalButtonIDs::BFO_BUTTON, bfoButtonState);
 }
 
 // =====================================================================
@@ -289,12 +350,27 @@ void AMScreen::updateHorizontalButtonStates() {
 /**
  * @brief BFO gomb eseménykezelő - Beat Frequency Oscillator
  * @param event Gomb esemény (Clicked)
- * @details AM specifikus funkcionalitás - alapértelmezett implementáció
+ * @details AM specifikus funkcionalitás - BFO állapot váltása és Step gomb frissítése
  */
 void AMScreen::handleBFOButton(const UIButton::ButtonEvent &event) {
     if (event.state == UIButton::EventButtonState::Clicked) {
-        // TODO: BFO funkcionalitás implementálása
-        Serial.println("AMScreen::handleBFOButton - BFO funkció (TODO)");
+        // Csak SSB/CW módban működik
+        if (!pSi4735Manager->isCurrentDemodSSB()) {
+            DEBUG("AMScreen::handleBFOButton - BFO button disabled in non-SSB mode\n");
+            return;
+        }
+
+        // BFO állapot váltása
+        rtv::bfoOn = !rtv::bfoOn;
+
+        // BFO és Step gombok állapotának frissítése
+        updateBFOButtonState();
+        updateStepButtonState();
+
+        DEBUG("AMScreen::handleBFOButton - BFO turned %s\n", rtv::bfoOn ? "ON" : "OFF");
+
+        // TODO: További BFO funkcionalitás implementálása
+        Serial.printf("AMScreen::handleBFOButton - BFO %s\n", rtv::bfoOn ? "ON" : "OFF");
     }
 }
 
@@ -331,6 +407,11 @@ void AMScreen::handleDemodButton(const UIButton::ButtonEvent &event) {
     if (event.state == UIButton::EventButtonState::Clicked) {
         // TODO: Demod funkcionalitás implementálása
         Serial.println("AMScreen::handleDemodButton - Demod funkció (TODO)");
+
+        // A demod mód változása után frissítjük a BFO és Step gombok állapotát
+        // (fontos, mert SSB/CW módban mindkét gomb állapota más)
+        updateBFOButtonState();
+        updateStepButtonState();
     }
 }
 
