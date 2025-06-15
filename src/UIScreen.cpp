@@ -378,3 +378,75 @@ void UIScreen::onDialogClosed(UIDialogBase *closedDialog) {
         }
     }
 }
+
+/**
+ * @brief Dialógus cleanup végrehajtása rajzolás nélkül
+ * @param closedDialog A bezárt dialógus pointer
+ * @details Lemásolja az onDialogClosed logikáját, de kihagyja a draw() hívásokat.
+ * Hasznos olyan esetekben, amikor a leszármazott osztály egyedi rajzolási logikát szeretne.
+ */
+void UIScreen::performDialogCleanupWithoutDraw(UIDialogBase *closedDialog) {
+
+    // ===============================
+    // 1. Aktuális dialógus referencia cleanup
+    // ===============================
+    if (currentDialog.get() == closedDialog) {
+        currentDialog.reset();
+    }
+
+    // ===============================
+    // 2. Dialog Stack Cleanup - Weak Pointer Stack
+    // ===============================
+    bool dialogRemoved = false;
+
+    // Optimalizáció: Top dialog ellenőrzése először (leggyakoribb eset)
+    if (!dialogStack.empty()) {
+        auto topDialog = dialogStack.back().lock();
+        if (topDialog && topDialog.get() == closedDialog) {
+            dialogStack.pop_back();
+            dialogRemoved = true;
+        }
+    }
+
+    // Fallback: Keresés a stack középső elemei között (ritkább eset)
+    if (!dialogRemoved) {
+        for (auto it = dialogStack.begin(); it != dialogStack.end(); ++it) {
+            auto dialog = it->lock();
+            if (dialog && dialog.get() == closedDialog) {
+                dialogStack.erase(it);
+                dialogRemoved = true;
+                break;
+            }
+        }
+    }
+
+    // ===============================
+    // 3. Shared Pointer Stack Cleanup - Memory Protection
+    // ===============================
+    for (auto it = dialogSharedStack.begin(); it != dialogSharedStack.end(); ++it) {
+        if (it->get() == closedDialog) {
+            dialogSharedStack.erase(it);
+            break;
+        }
+    }
+
+    // ===============================
+    // 4. Screen cleanup - készítjük elő a rajzoláshoz
+    // ===============================
+
+    // Teljes képernyő törlése - tiszta újrakezdés
+    tft.fillScreen(TFT_BLACK);
+
+    // Saját újrarajzolási flag beállítása
+    markForRedraw();
+
+    // Összes gyerek komponens újrarajzolási flag beállítása
+    for (auto &child : children) {
+        if (child) {
+            auto uiComponent = std::static_pointer_cast<UIComponent>(child);
+            uiComponent->markForRedraw();
+        }
+    }
+
+    // FONTOS: Itt NEM hívjuk a draw()-t, azt a hívó osztály fogja megtenni
+}

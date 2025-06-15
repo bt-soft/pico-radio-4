@@ -427,75 +427,77 @@ void RadioScreen::refreshScreenComponents() {
 void RadioScreen::onDialogClosed(UIDialogBase *closedDialog) {
     DEBUG("RadioScreen::onDialogClosed - Dialog closed\n");
 
-    // Band váltás után ellenőrizzük, hogy szükséges-e képernyőváltás
-    bool willSwitchScreen = false;
-    if (pSi4735Manager) {
-        const char *targetScreenName = pSi4735Manager->isCurrentBandFM() ? SCREEN_NAME_FM : SCREEN_NAME_AM;
-
-        DEBUG("RadioScreen::onDialogClosed - Current screen: %s, Target screen: %s\n", this->getName(), targetScreenName);
-
-        // Ha más képernyőre kell váltanunk
-        if (!STREQ(this->getName(), targetScreenName)) {
-            willSwitchScreen = true;
-            DEBUG("RadioScreen::onDialogClosed - Will switch to different screen: %s\n", targetScreenName);
-        }
-    }
-
-    if (willSwitchScreen) {
-        // === KÉPERNYŐVÁLTÁS ESETÉN ===
-        // Elnyomjuk a draw-t a parent cleanup során
-        DEBUG("RadioScreen::onDialogClosed - Suppressing draw during screen switch\n");
-        suppressDrawDuringScreenSwitch = true;
-
-        // Szülő osztály cleanup-ját meghívjuk - dialog stack kezelés
-        // A draw() override ellenőrzi a suppressDrawDuringScreenSwitch flag-et
-        UIScreen::onDialogClosed(closedDialog);
-
-        // Flag visszaállítása
-        suppressDrawDuringScreenSwitch = false;
-
-        // Képernyőváltás végrehajtása
-        if (pSi4735Manager) {
-            const char *targetScreenName = pSi4735Manager->isCurrentBandFM() ? SCREEN_NAME_FM : SCREEN_NAME_AM;
-            DEBUG("RadioScreen::onDialogClosed - Switching to different screen: %s\n", targetScreenName);
-            getScreenManager()->switchToScreen(targetScreenName);
-        }
-    } else {
-        // === UGYANAZON KÉPERNYŐN MARADÁS ESETÉN ===
-        // Gyors path - dialog cleanup + draw elnyomás + azonnali komponens refresh
-        DEBUG("RadioScreen::onDialogClosed - Staying on same screen, fast refresh\n");
-
-        // Draw elnyomás beállítása a gyors refresh-hez is
-        suppressDrawDuringScreenSwitch = true;
-
-        // Szülő osztály cleanup-ját meghívjuk a teljes dialog bezáráshoz
-        // A draw() override ellenőrzi a suppressDrawDuringScreenSwitch flag-et
-        UIScreen::onDialogClosed(closedDialog);
-
-        // Flag visszaállítása
-        suppressDrawDuringScreenSwitch = false;
-
-        // Azonnali komponens frissítés - gyors és hatékony
-        refreshScreenComponents();
-    }
+    // Először elvégezzük a teljes dialog cleanup-ot, hogy minden rendben legyen
+    cleanupDialogAndDetermineAction(closedDialog);
 }
-
-// ===================================================================
-// UIScreen interface override - Draw
-// ===================================================================
 
 /**
- * @brief Képernyő rajzolása - dupla rajzolás elkerülése override
- * @details Override-olja a UIScreen::draw() metódust, hogy elkerülje a dupla rajzolást
- * képernyőváltás során
+ * @brief Dialog cleanup és a következő akció meghatározása
+ * @param closedDialog A bezárt dialógus referencia
+ * @details Elvégzi a dialog cleanup-ot, majd meghatározza, hogy képernyőváltás vagy komponens refresh szükséges-e
  */
-void RadioScreen::draw() {
-    // Ha épp képernyőváltás van folyamatban, nem rajzolunk
-    if (suppressDrawDuringScreenSwitch) {
-        DEBUG("RadioScreen::draw - Suppressed draw during screen switch\n");
-        return;
+void RadioScreen::cleanupDialogAndDetermineAction(UIDialogBase *closedDialog) {
+    // Band váltás után ellenőrizzük, hogy szükséges-e képernyőváltás
+    bool needsScreenSwitch = shouldSwitchScreenAfterBandChange();
+
+    if (needsScreenSwitch) {
+        // === KÉPERNYŐVÁLTÁS ESETÉN ===
+        DEBUG("RadioScreen::cleanupDialogAndDetermineAction - Will switch screens\n");
+        performDialogCleanupWithScreenSwitch(closedDialog);
+    } else {
+        // === UGYANAZON KÉPERNYŐN MARADÁS ESETÉN ===
+        DEBUG("RadioScreen::cleanupDialogAndDetermineAction - Will stay on same screen\n");
+        performDialogCleanupWithComponentRefresh(closedDialog);
+    }
+}
+
+/**
+ * @brief Ellenőrzi, hogy szükséges-e képernyőváltás a band váltás után
+ * @return true ha képernyőváltás szükséges, false egyébként
+ */
+bool RadioScreen::shouldSwitchScreenAfterBandChange() const {
+    if (!pSi4735Manager) {
+        return false;
     }
 
-    // Egyébként normál rajzolás
-    UIScreen::draw();
+    const char *targetScreenName = pSi4735Manager->isCurrentBandFM() ? SCREEN_NAME_FM : SCREEN_NAME_AM;
+    bool needsSwitch = !STREQ(this->getName(), targetScreenName);
+
+    DEBUG("RadioScreen::shouldSwitchScreenAfterBandChange - Current: %s, Target: %s, Switch needed: %s\n", this->getName(), targetScreenName, needsSwitch ? "YES" : "NO");
+
+    return needsSwitch;
 }
+
+/**
+ * @brief Dialog cleanup végrehajtása képernyőváltással
+ * @param closedDialog A bezárt dialógus referencia
+ */
+void RadioScreen::performDialogCleanupWithScreenSwitch(UIDialogBase *closedDialog) {
+    // Cleanup rajzolás nélkül - a képernyőváltás fog rajzolni
+    performDialogCleanupWithoutDraw(closedDialog);
+
+    // Képernyőváltás végrehajtása - ez fog rajzolni
+    if (pSi4735Manager) {
+        const char *targetScreenName = pSi4735Manager->isCurrentBandFM() ? SCREEN_NAME_FM : SCREEN_NAME_AM;
+        DEBUG("RadioScreen::performDialogCleanupWithScreenSwitch - Switching to: %s\n", targetScreenName);
+        getScreenManager()->switchToScreen(targetScreenName);
+    }
+}
+
+/**
+ * @brief Dialog cleanup végrehajtása komponens refresh-sel (ugyanazon a képernyőn)
+ * @param closedDialog A bezárt dialógus referencia
+ */
+void RadioScreen::performDialogCleanupWithComponentRefresh(UIDialogBase *closedDialog) {
+    // Használjuk az UIScreen protected segédmetódusát a cleanup-hoz rajzolás nélkül
+    performDialogCleanupWithoutDraw(closedDialog);
+
+    // Azonnali komponens frissítés - gyors és hatékony
+    refreshScreenComponents();
+}
+
+// ===================================================================
+// UIScreen interface override - Már nem szükséges draw() override!
+// ===================================================================
+// MEGJEGYZÉS: A korábbi draw() override és suppressDrawDuringScreenSwitch flag
+// már nem szükséges, mert most tisztán elkülönítjük a dialog cleanup-ot és a rajzolást

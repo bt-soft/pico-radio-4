@@ -262,24 +262,39 @@ class RadioScreen : public UIScreen {
      * - Meghívja a StationStore keresést
      * - Frissíti a StatusLine::updateStationInMemory státuszt
      */
-    bool checkAndUpdateMemoryStatus();
-
-    /**
-     * @brief A kijelző explicit frissítése     * @details Frissíti a  kijelző komponenseit (pl.: ha nem váltunk képernyőt, akkor csak ez marad)
-     * Hasznos band váltás után, amikor ugyanaz a screen marad aktív
-     */
+    bool checkAndUpdateMemoryStatus(); /**
+                                        * @brief A kijelző explicit frissítése
+                                        * @details Frissíti a kijelző komponenseit (pl.: ha nem váltunk képernyőt, akkor csak ez marad)
+                                        * Hasznos band váltás után, amikor ugyanaz a screen marad aktív
+                                        */
     void refreshScreenComponents();
 
-    /**
-     * @brief Képernyő rajzolása - dupla rajzolás elkerülése override
-     * @details Override-olja a UIScreen::draw() metódust, hogy elkerülje a dupla rajzolást
-     * képernyőváltás során
-     */
-    virtual void draw() override;
-
   private:
-    /// Temporáris flag a dupla rajzolás elkerülésére képernyőváltás során
-    bool suppressDrawDuringScreenSwitch = false;
+    // ===================================================================
+    // Dialog cleanup helper methods
+    // ===================================================================
+
+    /**
+     * @brief Ellenőrzi, hogy szükséges-e képernyőváltás a band váltás után
+     * @return true ha képernyőváltás szükséges, false egyébként
+     */
+    bool shouldSwitchScreenAfterBandChange() const;
+
+    /**
+     * @brief Dialog cleanup és a következő akció meghatározása
+     * @param closedDialog A bezárt dialógus referencia
+     */
+    void cleanupDialogAndDetermineAction(UIDialogBase *closedDialog);
+
+    /**
+     * @brief Dialog cleanup végrehajtása képernyőváltással
+     * @param closedDialog A bezárt dialógus referencia
+     */
+    void performDialogCleanupWithScreenSwitch(UIDialogBase *closedDialog); /**
+                                                                            * @brief Dialog cleanup végrehajtása komponens refresh-sel (ugyanazon a képernyőn)
+                                                                            * @param closedDialog A bezárt dialógus referencia
+                                                                            */
+    void performDialogCleanupWithComponentRefresh(UIDialogBase *closedDialog);
 };
 
 #endif //__RADIO_SCREEN_H

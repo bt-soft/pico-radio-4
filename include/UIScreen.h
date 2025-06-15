@@ -288,6 +288,19 @@ class UIScreen : public UIContainerComponent {
      * }
      */
     inline bool isDialogActive() const { return !dialogStack.empty(); }
+
+  protected:
+    // ===================================================================
+    // Dialog cleanup helper methods
+    // ===================================================================
+
+    /**
+     * @brief Dialógus cleanup végrehajtása rajzolás nélkül
+     * @param closedDialog A bezárt dialógus pointer
+     * @details Lemásolja az onDialogClosed logikáját, de kihagyja a draw() hívásokat.
+     * Hasznos olyan esetekben, amikor a leszármazott osztály egyedi rajzolási logikát szeretne.
+     */
+    void performDialogCleanupWithoutDraw(UIDialogBase *closedDialog);
 };
 
 #endif //__UI_SCREEN_H
