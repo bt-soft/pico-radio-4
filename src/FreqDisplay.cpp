@@ -89,13 +89,15 @@ const FreqSegmentColors defaultBfoColors = UIColorPalette::createBfoFreqColors()
  */
 FreqDisplay::FreqDisplay(TFT_eSPI &tft_param, const Rect &bounds_param, Si4735Manager *pSi4735Manager)
     : UIComponent(tft_param, bounds_param), pSi4735Manager(pSi4735Manager), spr(&(this->tft)), normalColors(defaultNormalColors), bfoColors(defaultBfoColors),
-      customColors(defaultNormalColors), useCustomColors(false),           // Egyedi színek inicializálása
-      currentDisplayFrequency(0),                                          // Kezdetben 0, hogy az első setFrequency biztosan frissítsen
-      bfoModeActiveLastDraw(rtv::bfoOn), redrawOnlyFrequencyDigits(false), // Alapértelmezetten false, hogy az első rajzolás teljes legyen
-      hideUnderline(false) {                                               // Alapértelmezetten megjelenik az aláhúzás
+      customColors(defaultNormalColors), useCustomColors(false), // Egyedi színek inicializálása
+      currentDisplayFrequency(0),                                // Kezdetben 0, hogy az első setFrequency biztosan frissítsen
+      bfoModeActiveLastDraw(rtv::bfoOn),                         // BFO mód állapota az utolsó rajzoláskor
+      redrawOnlyFrequencyDigits(false),                          // Alapértelmezetten false, hogy az első rajzolás teljes legyen
+      hideUnderline(false) {                                     // Alapértelmezetten megjelenik az aláhúzás
 
     // Alapértelmezett háttérszín beállítása a globális háttérszínre
     this->colors.background = TFT_COLOR_BACKGROUND; // Kezdeti frekvencia beállítása a jelenlegi sáv frekvenciájára
+
     // Mivel a redrawOnlyFrequencyDigits false-ra van inicializálva,
     // az első markForRedraw() egy teljes újrarajzolást fog eredményezni
 
@@ -123,6 +125,18 @@ void FreqDisplay::setFrequency(uint16_t freq) {
         redrawOnlyFrequencyDigits = true;
         markForRedraw();
     }
+}
+
+/**
+ * @brief Beállítja a megjelenítendő frekvenciát, teljes újrarajzolással
+ * @param freq Az új frekvencia érték
+ * @brief Ez a metódus teljes újrarajzolást kér, függetlenül attól, hogy a frekvencia megváltozott-e.
+ */
+void FreqDisplay::setFrequencyWithFullDraw(uint16_t freq) {
+    // Teljes újrarajzolás kérése, függetlenül attól, hogy a frekvencia megváltozott-e
+    currentDisplayFrequency = freq;
+    redrawOnlyFrequencyDigits = false; // Teljes újrarajzolás
+    markForRedraw();                   // Teljes újrarajzolás szükséges
 }
 
 /**

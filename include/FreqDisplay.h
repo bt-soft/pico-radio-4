@@ -20,7 +20,6 @@
 #include "UIComponent.h"
 #include "rtVars.h"
 
-
 /**
  * @brief Színstruktúra a 7-szegmenses kijelző különböző elemeihez
  */
@@ -89,7 +88,7 @@ class FreqDisplay : public UIComponent {
     void performOptimizedDraw();
 
     /**
-     * @brief Végzi a teljes újrarajzolást (teljes komponens)
+     * @brief Teljes újrarajzolást véget (teljes komponens)
      */
     void performFullDraw();
 
@@ -299,10 +298,17 @@ class FreqDisplay : public UIComponent {
     virtual ~FreqDisplay() = default;
 
     /**
-     * @brief Beállítja a megjelenítendő frekvenciát
+     * @brief Beállítja a megjelenítendő frekvenciát, csak a digiteket rajzolja újra
      * @param freq Az új frekvencia érték
      */
     void setFrequency(uint16_t freq);
+
+    /**
+     * @brief Beállítja a megjelenítendő frekvenciát, teljes újrarajzolással
+     * @param freq Az új frekvencia érték
+     * @details Ez a metódus teljesen újrarajzolja a komponenst, beleértve a háttér törlését és az összes elemet.
+     */
+    void setFrequencyWithFullDraw(uint16_t freq);
 
     /**
      * @brief Beállítja az egyedi színkonfigurációt (pl. képernyővédő módhoz)
@@ -332,8 +338,9 @@ class FreqDisplay : public UIComponent {
      * @param event Az érintési esemény
      * @return true ha az esemény kezelve lett
      */
-    virtual bool handleTouch(const TouchEvent &event) override; // Megjegyzés: A handleRotary-t a szülő képernyő (FMScreen) kezeli,
-    // és az hívja meg a setFrequency-t.
+    virtual bool handleTouch(const TouchEvent &event) override;
+
+    // Megjegyzés: A handleRotary-t a szülő képernyő (FMScreen) kezeli és az hívja meg a setFrequency-t.
 };
 
 #endif // __FREQDISPLAY_H

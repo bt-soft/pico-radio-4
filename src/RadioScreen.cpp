@@ -393,7 +393,7 @@ void RadioScreen::refreshScreenComponents() {
     if (freqDisplayComp && pSi4735Manager) {
         // Az SI4735 osztály cache-ból olvassuk az aktuális frekvenciát, nem használunk chip olvasást
         uint16_t currentFreq = pSi4735Manager->getSi4735().getCurrentFrequency();
-        freqDisplayComp->setFrequency(currentFreq);
+        freqDisplayComp->setFrequencyWithFullDraw(currentFreq);
         DEBUG("RadioScreen::refreshFrequencyDisplay - Updated frequency display to: %d\n", currentFreq);
     }
 }
