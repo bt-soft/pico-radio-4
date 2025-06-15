@@ -3,13 +3,13 @@
  * @brief Rádió vezérlő képernyő alaposztály implementáció
  * @details Seek callback infrastruktúra és rádió-specifikus funkcionalitás
  */
+#include <memory>
 
-#include "RadioScreen.h"
 #include "Config.h"
 #include "MultiButtonDialog.h"
+#include "RadioScreen.h"
 #include "SI4735.h"
 #include "StationStore.h"
-#include <memory>
 
 // ===================================================================
 // Konstruktor és inicializálás
@@ -167,9 +167,9 @@ bool RadioScreen::checkAndUpdateMemoryStatus() {
  */
 void RadioScreen::createCommonHorizontalButtons() {
 
-    constexpr uint16_t H_BUTTON_DEFAULT_HEIGHT = 40; // Alapértelmezett gomb magassága a vízszintes gombsorhoz
-    constexpr uint16_t H_BUTTON_DEFAULT_WIDTH = 70;  // Egyedi gomb szélessége
-    constexpr uint16_t H_BUTTON_DEFAULT_GAP = 3;     // Gombok közötti távolság    // ===================================================================
+    constexpr uint16_t H_BUTTON_DEFAULT_HEIGHT = UIButton::DEFAULT_BUTTON_HEIGHT; // Alapértelmezett gomb magassága a vízszintes gombsorhoz
+    constexpr uint16_t H_BUTTON_DEFAULT_WIDTH = 70;                               // Egyedi gomb szélessége
+    constexpr uint16_t H_BUTTON_DEFAULT_GAP = 3; // Gombok közötti távolság    // ===================================================================
     // Gombsor pozicionálás - Bal alsó sarok
     // ===================================================================
     constexpr uint16_t buttonBarHeight = H_BUTTON_DEFAULT_HEIGHT + 10;               // Vízszintes gombsor konténer magassága (alapértelmezett + padding)

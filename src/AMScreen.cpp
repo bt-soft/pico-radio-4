@@ -1,6 +1,7 @@
 #include "AMScreen.h"
 #include "CommonVerticalButtons.h"
 #include "FreqDisplay.h"
+#include "StatusLine.h"
 #include "defines.h"
 #include "rtVars.h"
 #include "utils.h"
@@ -50,7 +51,7 @@ AMScreen::AMScreen(TFT_eSPI &tft, Si4735Manager &si4735Manager) : RadioScreen(tf
  * @param event Rotary encoder esemény (forgatás irány, érték, gombnyomás)
  * @return true ha sikeresen kezelte az eseményt, false egyébként
  *
- * @details AM frekvencia hangolás logika (TODO: implementálás szükséges):
+ * @details AM frekvencia hangolás logika:
  * - Csak akkor reagál, ha nincs aktív dialógus
  * - Rotary klikket figyelmen kívül hagyja (más funkciókhoz)
  * - AM/MW/LW/SW frekvencia léptetés és mentés a band táblába
@@ -58,20 +59,28 @@ AMScreen::AMScreen(TFT_eSPI &tft, Si4735Manager &si4735Manager) : RadioScreen(tf
  * - Hasonló az FMScreen rotary kezeléshez, de AM-specifikus tartományokkal
  */
 bool AMScreen::handleRotary(const RotaryEvent &event) {
-    // Biztonsági ellenőrzés: csak forgatás eseményt dolgozzuk fel
-    if (event.direction == RotaryEvent::Direction::None) {
-        return false;
+
+    // Biztonsági ellenőrzés: csak aktív dialógus nélkül és nem klikk eseménykor
+    if (!isDialogActive() && event.buttonState != RotaryEvent::ButtonState::Clicked) {
+
+        // Frekvencia léptetés és automatikus mentés a band táblába
+        // Beállítjuk a chip-en és le is mentjük a band táblába a frekvenciát
+        uint16_t currFreq = pSi4735Manager->stepFrequency(event.value); // Léptetjük a rádiót
+        pSi4735Manager->getCurrentBand().currFreq = currFreq;           // Beállítjuk a band táblában a frekit
+
+        // Frekvencia kijelző azonnali frissítése
+        if (freqDisplayComp) {
+            freqDisplayComp->setFrequency(currFreq);
+        }
+
+        // Memória státusz ellenőrzése és frissítése
+        checkAndUpdateMemoryStatus();
+
+        return true; // Esemény sikeresen kezelve
     }
 
-    // TODO: AM frekvencia hangolás implementálása
-    // Ez az FMScreen rotary kezeléshez hasonló lesz, de AM tartományokkal
-    // pSi4735Manager->stepFrequency(event.value);  // AM-specifikus léptetés
-    // if (freqDisplayComp) {
-    //     uint16_t currentRadioFreq = pSi4735Manager->getCurrentBand().currFreq;
-    //     freqDisplayComp->setFrequency(currentRadioFreq);
-    // }
-
-    return true;
+    // Ha nem kezeltük az eseményt, továbbítjuk a szülő osztálynak (dialógusokhoz)
+    return UIScreen::handleRotary(event);
 }
 
 /**
@@ -192,10 +201,23 @@ void AMScreen::onDialogClosed(UIDialogBase *closedDialog) {
 /**
  * @brief UI komponensek létrehozása és képernyőn való elhelyezése
  */
-void AMScreen::layoutComponents() { // UI komponensek létrehozása
+void AMScreen::layoutComponents() {
+
+    // Állapotsor komponens létrehozása (felső sáv)
+    UIScreen::createStatusLine();
+
+    // ===================================================================
+    // Frekvencia kijelző pozicionálás (képernyő közép)
+    // ===================================================================
+    uint16_t FreqDisplayY = 20;
+    Rect freqBounds(30, FreqDisplayY, 200, FreqDisplay::FREQDISPLAY_HEIGHT);
+    UIScreen::createFreqDisplay(freqBounds);
+    freqDisplayComp->setHideUnderline(true); // Alulvonás elrejtése a frekvencia kijelzőn
+
+    // ===================================================================
     // S-Meter komponens létrehozása - RadioScreen közös implementáció
+    // ===================================================================
     uint16_t smeterWidth = UIComponent::SCREEN_W - 90; // 90px helyet hagyunk a jobb oldalon
-    uint16_t FreqDisplayY = 40;                        // Feltételezve hogy ugyanaz, mint az FMScreen-ben
     Rect smeterBounds(2, FreqDisplayY + FreqDisplay::FREQDISPLAY_HEIGHT + 20, smeterWidth, 60);
     createSMeterComponent(smeterBounds);
 
