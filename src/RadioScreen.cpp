@@ -308,11 +308,17 @@ void RadioScreen::processBandButton(bool isHamBand) {
             config.data.currentBandIdx = pSi4735Manager->getBandIdxByBandName(buttonLabel); // Átállítjuk a rádiót a kiválasztott sávra
             pSi4735Manager->init();
 
-            // Explicit frekvencia frissítés (fontos, ha ugyanaz a screen marad aktív)
-            refreshScreenComponents();
+            // Meghatározzuk a cél képernyő nevét
+            const char *targetScreenName = pSi4735Manager->isCurrentBandFM() ? SCREEN_NAME_FM : SCREEN_NAME_AM;
 
-            // Átkapcsolunk a megfelelő screenre (Itt lehet FM is a kiválasztott sáv)
-            getScreenManager()->switchToScreen(pSi4735Manager->isCurrentBandFM() ? SCREEN_NAME_FM : SCREEN_NAME_AM);
+            // Csak akkor frissítjük a komponenseket, ha ugyanazon a képernyőn maradunk
+            // Ha képernyőt váltunk, az új képernyő activate() metódusa amúgy is frissíti a komponenseket
+            if (STREQ(this->getName(), targetScreenName)) {
+                refreshScreenComponents();
+            }
+
+            // Átkapcsolunk a megfelelő screenre
+            getScreenManager()->switchToScreen(targetScreenName);
         },
         true,                           // Automatikusan bezárja-e a dialógust gomb kattintáskor
         _currentBandIndex,              // Az alapértelmezett (jelenlegi) gomb indexe a szűrt sávok tömbjében (-1 = ha nem található a sávok nevei között)
