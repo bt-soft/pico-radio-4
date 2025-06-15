@@ -332,15 +332,11 @@ void RadioScreen::processBandButton(bool isHamBand) {
         "All Radio Bands", "",                                                        // Dialógus címe és üzenete
         _bandNames.get(), _bandCount,                                                 // Gombok feliratai és számuk
         [this](int buttonIndex, const char *buttonLabel, MultiButtonDialog *dialog) { // Gomb kattintás kezelése
-            DEBUG("RadioScreen::bandCallback - Button clicked: %s, buttonIndex: %d\n", buttonLabel, buttonIndex);
-
             // Átállítjuk a használni kívánt BAND indexét
             config.data.currentBandIdx = pSi4735Manager->getBandIdxByBandName(buttonLabel);
-            DEBUG("RadioScreen::bandCallback - Band index set to: %d\n", config.data.currentBandIdx);
 
             // Átállítjuk a rádiót a kiválasztott sávra
             pSi4735Manager->init();
-            DEBUG("RadioScreen::bandCallback - Si4735Manager init completed\n");
 
             // Jelezzük, hogy ez band dialógus volt - az onDialogClosed fogja kezelni
             lastDialogWasBandDialog = true;
@@ -431,7 +427,6 @@ void RadioScreen::refreshScreenComponents() {
 
         // Teljes újrarajzolás, finomhangolás csak SSB/CW módban
         freqDisplayComp->setFrequencyWithFullDraw(currentFreq, !pSi4735Manager->isCurrentDemodSSBorCW());
-        DEBUG("RadioScreen::refreshFrequencyDisplay - Updated frequency display to: %d\n", currentFreq);
     }
 }
 
@@ -445,7 +440,6 @@ void RadioScreen::refreshScreenComponents() {
  * @details Normál UIScreen cleanup, vagy band switch ha szükséges
  */
 void RadioScreen::onDialogClosed(UIDialogBase *closedDialog) {
-    DEBUG("RadioScreen::onDialogClosed - Dialog closed, lastDialogWasBandDialog: %s\n", lastDialogWasBandDialog ? "YES" : "NO");
 
     if (lastDialogWasBandDialog) {
         // === BAND DIALÓGUS VOLT ===
