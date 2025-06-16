@@ -306,11 +306,10 @@ void AMScreen::layoutComponents() {
  * @param buttonConfigs A már meglévő gomb konfigurációk vektora
  * @details Felülírja az ős metódusát, hogy hozzáadja az AM specifikus gombokat
  */
-void AMScreen::addSpecificHorizontalButtons(std::vector<UIHorizontalButtonBar::ButtonConfig> &buttonConfigs) {
-    // AM specifikus gombok hozzáadása a közös gombok után
+void AMScreen::addSpecificHorizontalButtons(std::vector<UIHorizontalButtonBar::ButtonConfig> &buttonConfigs) { // AM specifikus gombok hozzáadása a közös gombok után
 
     // 1. BFO - Beat Frequency Oscillator
-    buttonConfigs.push_back({AMScreenHorizontalButtonIDs::BFO_BUTTON, "BFO", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
+    buttonConfigs.push_back({AMScreenHorizontalButtonIDs::BFO_BUTTON, "BFO", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off,
                              [this](const UIButton::ButtonEvent &event) { handleBFOButton(event); }});
 
     // 2. AfBW - Audio Filter Bandwidth
@@ -381,12 +380,9 @@ void AMScreen::updateStepButtonState() {
     if (pSi4735Manager->isCurrentDemodSSBorCW()) {
         // SSB/CW módban: csak akkor engedélyezett, ha BFO be van kapcsolva
         stepButtonState = rtv::bfoOn ? UIButton::ButtonState::Off : UIButton::ButtonState::Disabled;
-        // DEBUG("AMScreen::updateStepButtonState - SSB/CW mode detected, BFO: %s, Step button: %s\n", rtv::bfoOn ? "ON" : "OFF",
-        //       stepButtonState == UIButton::ButtonState::Disabled ? "DISABLED" : "ENABLED");
     } else {
         // AM/egyéb módban: mindig engedélyezett
         stepButtonState = UIButton::ButtonState::Off;
-        // DEBUG("AMScreen::updateStepButtonState - Non-SSB mode, Step button: ENABLED\n");
     }
 
     horizontalButtonBar->setButtonState(AMScreenHorizontalButtonIDs::STEP_BUTTON, stepButtonState);
@@ -426,22 +422,25 @@ void AMScreen::updateBFOButtonState() {
  * @details AM specifikus funkcionalitás - BFO állapot váltása és Step gomb frissítése
  */
 void AMScreen::handleBFOButton(const UIButton::ButtonEvent &event) {
-    if (event.state == UIButton::EventButtonState::Clicked) {
 
-        // Csak SSB/CW módban működik
-        if (!pSi4735Manager->isCurrentDemodSSBorCW()) {
-            return;
-        }
-
-        // BFO állapot váltása
-        rtv::bfoOn = !rtv::bfoOn;
-
-        // BFO és Step gombok állapotának frissítése
-        updateBFOButtonState();
-        updateStepButtonState();
-
-        // DEBUG("AMScreen::handleBFOButton - BFO turned %s\n", rtv::bfoOn ? "ON" : "OFF");
+    // Csak véltoztatásra reagálunk, nem kattintásra
+    if (event.state != UIButton::EventButtonState::On && event.state != UIButton::EventButtonState::Off) {
+        return;
     }
+
+    // Csak SSB/CW módban működik
+    if (!pSi4735Manager->isCurrentDemodSSBorCW()) {
+        return;
+    }
+
+    // BFO állapot váltása
+    rtv::bfoOn = !rtv::bfoOn;
+
+    // A Step gombok állapotának frissítése
+    updateStepButtonState();
+
+    // Frissítjük a frekvencia kijelzőn is
+    freqDisplayComp->markForRedraw();
 }
 
 /**

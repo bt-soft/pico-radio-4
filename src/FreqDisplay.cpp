@@ -96,12 +96,7 @@ FreqDisplay::FreqDisplay(TFT_eSPI &tft_param, const Rect &bounds_param, Si4735Ma
       hideUnderline(false) {                                     // Alapértelmezetten megjelenik az aláhúzás
 
     // Alapértelmezett háttérszín beállítása a globális háttérszínre
-    this->colors.background =
-        TFT_COLOR_BACKGROUND; // Kezdeti frekvencia beállítása a jelenlegi sáv frekvenciájára    // Mivel a redrawOnlyFrequencyDigits false-ra van inicializálva,
-    // az első markForRedraw() egy teljes újrarajzolást fog eredményezni
-
-    // A frekvencia inicializálása 0-ra marad, az activate() során fog beállítódni
-    // Ez elkerüli azt, hogy a konstruktor során régi frekvencia értékkel inicializálódjunk
+    this->colors.background = TFT_COLOR_BACKGROUND;
 
     // Explicit újrarajzolás kérése az első megjelenítéshez
     markForRedraw(); // Biztosítjuk, hogy az első rajzolás megtörténjen
