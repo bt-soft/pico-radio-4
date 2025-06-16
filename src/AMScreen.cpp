@@ -478,8 +478,8 @@ void AMScreen::handleAfBWButton(const UIButton::ButtonEvent &event) {
 
     } else {
         title = "SSB/CW Filter in kHz";
-        w = 300;
-        h = 150;
+        w = 380;
+        h = 130;
 
         labels = pSi4735Manager->getBandWidthLabels(Band::bandWidthSSB, labelsCount);
     }

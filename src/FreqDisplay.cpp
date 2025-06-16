@@ -13,7 +13,6 @@
 #include "DSEG7_Classic_Mini_Regular_34.h" // 7-szegmenses font
 #include "UIColorPalette.h"                // Centralizált színkonstansok
 #include "defines.h"                       // TFT_COLOR_BACKGROUND
-#include "utils.h"                         // Utils::beepError
 
 // === Globális színkonfigurációk ===
 const FreqSegmentColors defaultNormalColors = UIColorPalette::createNormalFreqColors();
@@ -39,9 +38,6 @@ FreqDisplay::FreqDisplay(TFT_eSPI &tft_param, const Rect &bounds_param, Si4735Ma
         ssbCwTouchDigitAreas[i][0] = 0;
         ssbCwTouchDigitAreas[i][1] = 0;
     }
-
-    // Explicit újrarajzolás kérése az első megjelenítéshez
-    markForRedraw();
 
     // Explicit újrarajzolás kérése az első megjelenítéshez
     markForRedraw();
@@ -291,19 +287,15 @@ void FreqDisplay::drawSsbCwStyle(const FrequencyDisplayData &data) {
  * @brief Kiszámítja a sprite szélességét space karakterekkel együtt
  */
 int FreqDisplay::calculateSpriteWidthWithSpaces(const char *mask) {
-    // Temporary sprite létrehozása a pontos méréshez
-    TFT_eSprite tempSpr(&tft);
-    tempSpr.setFreeFont(&DSEG7_Classic_Mini_Regular_34);
-    tempSpr.setTextSize(1);
-
-    const int SPACE_GAP_WIDTH = 8; // Space karakter helyett használt gap
+    // Egyszerűsített számítás konstansokkal
+    const int SPACE_GAP_WIDTH = 8; // Vizuális gap space karakterek helyett
     int totalWidth = 0;
     int maskLen = strlen(mask);
+
     for (int i = 0; i < maskLen; i++) {
         if (mask[i] == ' ') {
-            totalWidth += SPACE_GAP_WIDTH;
+            totalWidth += SPACE_GAP_WIDTH; // Vizuális gap a space helyett
         } else {
-            // Optimalizált karakterszélesség lekérdezés
             totalWidth += getCharacterWidth(mask[i]);
         }
     }
