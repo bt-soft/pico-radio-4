@@ -443,11 +443,12 @@ void FreqDisplay::draw() {
     }
 
     // Háttér törlése
-    tft.fillRect(bounds.x, bounds.y, bounds.width, bounds.height, this->colors.background);
-
-    // Frekvencia adatok meghatározása
-    FrequencyDisplayData data = getFrequencyDisplayData(currentDisplayFrequency); // Frekvencia rajzolása
+    tft.fillRect(bounds.x, bounds.y, bounds.width, bounds.height, this->colors.background); // Frekvencia adatok meghatározása
+    FrequencyDisplayData data = getFrequencyDisplayData(currentDisplayFrequency);           // Frekvencia rajzolása
     drawFrequencyDisplay(data);
+
+    // Debug keret - segít az optimalizálásban
+    tft.drawRect(bounds.x, bounds.y, bounds.width, bounds.height, TFT_RED);
 
     needsRedraw = false;
 }
