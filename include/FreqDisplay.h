@@ -52,10 +52,6 @@ class FreqDisplay : public UIComponent {
     unsigned long lastUpdateTime;     ///< Utolsó frissítés ideje (villogás optimalizáláshoz)
     bool needsFullClear;              ///< Ha true, teljes háttér törlése szükséges
 
-    // === Karakter szélességek gyorsítótára (optimalizálás) ===
-    static int cachedCharWidths[256]; ///< Karakter szélességek gyorsítótára
-    static bool charWidthsCached;     ///< True, ha a szélességek már ki vannak számítva
-
     /**
      * @brief Frekvencia megjelenítési adatok struktúrája
      */
@@ -97,27 +93,26 @@ class FreqDisplay : public UIComponent {
     /**
      * @brief Rajzolja a finomhangolás aláhúzást SSB/CW módban
      */
-    void drawFineTuningUnderline(int freqSpriteX, int freqSpriteWidth); /**
-                                                                         * @brief Kiszámítja az SSB/CW frekvencia érintési területeket
-                                                                         */
+    void drawFineTuningUnderline(int freqSpriteX, int freqSpriteWidth);
+
+    /**
+     * @brief Kiszámítja az SSB/CW frekvencia érintési területeket
+     */
     void calculateSsbCwTouchAreas(int freqSpriteX, int freqSpriteWidth);
 
     /**
-     * @brief Inicializálja a karakter szélességek gyorsítótárát (optimalizálás)
-     */
-    void initializeCharacterWidths();
-
-    /**
-     * @brief Visszaadja egy karakter szélességét a gyorsítótárból
+     * @brief Visszaadja egy karakter szélességét konstansok alapján (optimalizált)
      */
     static int getCharacterWidth(char c);
 
     /**
      * @brief Visszaadja az aktuális színkonfigurációt
      */
-    const FreqSegmentColors &getSegmentColors() const; /**
-                                                        * @brief Segédmetódus szöveg rajzolásához
-                                                        */
+    const FreqSegmentColors &getSegmentColors() const;
+
+    /**
+     * @brief Segédmetódus szöveg rajzolásához
+     */
     void drawText(const String &text, int x, int y, int textSize, uint8_t datum, uint16_t color);
 
     /**
@@ -143,9 +138,11 @@ class FreqDisplay : public UIComponent {
     /**
      * @brief Virtuális destruktor
      */
-    virtual ~FreqDisplay() = default; /**
-                                       * @brief Beállítja a megjelenítendő frekvenciát
-                                       */
+    virtual ~FreqDisplay() = default;
+
+    /**
+     * @brief Beállítja a megjelenítendő frekvenciát
+     */
     void setFrequency(uint16_t freq, bool forceRedraw = false);
 
     /**

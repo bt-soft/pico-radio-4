@@ -19,9 +19,12 @@
 const FreqSegmentColors defaultNormalColors = UIColorPalette::createNormalFreqColors();
 const FreqSegmentColors defaultBfoColors = UIColorPalette::createBfoFreqColors();
 
-// === Statikus változók inicializálása ===
-int FreqDisplay::cachedCharWidths[256] = {0};
-bool FreqDisplay::charWidthsCached = false;
+// === Karakterszélesség konstansok (DSEG7_Classic_Mini_Regular_34 font) ===
+// Valós mért értékek a font-ból
+constexpr static int CHAR_WIDTH_DIGIT = 25; // '0'-'9' karakterek szélessége
+constexpr static int CHAR_WIDTH_DOT = 3;    // '.' karakter szélessége
+constexpr static int CHAR_WIDTH_SPACE = 1;  // ' ' karakter szélessége
+constexpr static int CHAR_WIDTH_DASH = 23;  // '-' karakter szélessége
 
 /**
  * @brief FreqDisplay konstruktor - inicializálja a frekvencia kijelző komponenst
@@ -37,8 +40,8 @@ FreqDisplay::FreqDisplay(TFT_eSPI &tft_param, const Rect &bounds_param, Si4735Ma
         ssbCwTouchDigitAreas[i][1] = 0;
     }
 
-    // Karakter szélességek inicializálása (egyszeri optimalizálás)
-    initializeCharacterWidths();
+    // Explicit újrarajzolás kérése az első megjelenítéshez
+    markForRedraw();
 
     // Explicit újrarajzolás kérése az első megjelenítéshez
     markForRedraw();
@@ -518,53 +521,20 @@ bool FreqDisplay::handleTouch(const TouchEvent &event) {
 }
 
 /**
- * @brief Inicializálja a karakter szélességek gyorsítótárát (optimalizálás)
- */
-void FreqDisplay::initializeCharacterWidths() {
-    if (charWidthsCached) {
-        return; // Már inicializálva van
-    }
-
-    // Temporary sprite létrehozása a méréshez
-    TFT_eSprite tempSpr(&tft);
-    tempSpr.setFreeFont(&DSEG7_Classic_Mini_Regular_34);
-    tempSpr.setTextSize(1);
-
-    // Gyakran használt karakterek inicializálása
-    const char *commonChars = "0123456789. -";
-    for (int i = 0; commonChars[i] != '\0'; i++) {
-        char c = commonChars[i];
-        String charStr = String(c);
-        cachedCharWidths[(unsigned char)c] = tempSpr.textWidth(charStr);
-    }
-
-    charWidthsCached = true;
-}
-
-/**
- * @brief Visszaadja egy karakter szélességét a gyorsítótárból
+ * @brief Visszaadja egy karakter szélességét konstansok alapján
  */
 int FreqDisplay::getCharacterWidth(char c) {
-    if (!charWidthsCached) {
-        // Fallback: azonnali számítás, ha nincs inicializálva
-        TFT_eSprite tempSpr(nullptr);
-        tempSpr.setFreeFont(&DSEG7_Classic_Mini_Regular_34);
-        tempSpr.setTextSize(1);
-        String charStr = String(c);
-        return tempSpr.textWidth(charStr);
+    if (c >= '0' && c <= '9') {
+        return CHAR_WIDTH_DIGIT;
     }
-
-    // Gyorsítótárból visszaadás
-    int width = cachedCharWidths[(unsigned char)c];
-    if (width == 0) {
-        // Ha nincs gyorsítótárazva, számoljuk ki és tároljuk
-        TFT_eSprite tempSpr(nullptr);
-        tempSpr.setFreeFont(&DSEG7_Classic_Mini_Regular_34);
-        tempSpr.setTextSize(1);
-        String charStr = String(c);
-        width = tempSpr.textWidth(charStr);
-        cachedCharWidths[(unsigned char)c] = width;
+    switch (c) {
+        case '.':
+            return CHAR_WIDTH_DOT;
+        case ' ':
+            return CHAR_WIDTH_SPACE;
+        case '-':
+            return CHAR_WIDTH_DASH;
+        default:
+            return CHAR_WIDTH_DIGIT; // Biztonsági alapértelmezett
     }
-
-    return width;
 }
