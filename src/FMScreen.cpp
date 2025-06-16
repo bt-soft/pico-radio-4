@@ -51,13 +51,11 @@ FMScreen::FMScreen(TFT_eSPI &tft, Si4735Manager &si4735Manager) : RadioScreen(tf
 void FMScreen::layoutComponents() {
 
     // Állapotsor komponens létrehozása (felső sáv)
-    UIScreen::createStatusLine();
-
-    // ===================================================================
+    UIScreen::createStatusLine(); // ===================================================================
     // Frekvencia kijelző pozicionálás (képernyő közép)
     // ===================================================================
     uint16_t FreqDisplayY = 20;
-    Rect freqBounds(30, FreqDisplayY, 200, FreqDisplay::FREQDISPLAY_HEIGHT);
+    Rect freqBounds(0, FreqDisplayY, FreqDisplay::FREQDISPLAY_WIDTH, FreqDisplay::FREQDISPLAY_HEIGHT);
     UIScreen::createFreqDisplay(freqBounds);
     freqDisplayComp->setHideUnderline(true); // Alulvonás elrejtése a frekvencia kijelzőn
 

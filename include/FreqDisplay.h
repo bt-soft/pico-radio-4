@@ -1,17 +1,12 @@
 // include/FreqDisplay.h
 /**
  * @file FreqDisplay.h
- * @brief     struct FrequencyDisplayData {
-        String freqStr;       ///< Formázott frekvencia string
-        const char *mask;     ///< 7-szegmenses maszk pattern
-        const char *unit;     ///< Mértékegység (MHz, kHz, Hz)
-    };encia kijelző komponens - 7-szegmenses digitális kijelző különböző rádiómódokhoz
+ * @brief Újratervezett frekvencia kijelző komponens - egyszerűsített és optimalizált
  *
- * Ez a komponens kezeli a frekvencia megjelenítését különböző demodulációs módokban:
- * - FM/AM: hagyományos frekvencia kijelzés MHz/kHz egységekkel
- * - SSB/CW: BFO kompenzált frekvencia kijelzés Hz pontossággal
- * - Optimalizált rajzolási lehetőségek a teljesítmény javításához
- * - Érintéses digit kiválasztás a frekvencia lépés beállításához
+ * Módok:
+ * 1) FM/LW/AM (nem SSB vagy CW): Mértékegység jobbra igazítva, maszk tőle balra
+ * 2) SSB/CW: Maszk jobbra igazítva, finomhangolás jel az utolsó 3 digit alatt, mértékegység a finomhangolás alatt
+ * 3) Képernyővédő: AM/FM esetén maszk + mértékegység, SSB/CW esetén maszk + mértékegység (nincs finomhangolás)
  */
 #ifndef __FREQDISPLAY_H
 #define __FREQDISPLAY_H
@@ -34,22 +29,20 @@ struct FreqSegmentColors {
 };
 
 /**
- * @brief Frekvencia kijelző komponens osztály
- *
- * A FreqDisplay komponens felelős a rádiós frekvencia megjelenítéséért
- * különböző módokban, optimalizált rajzolási algoritmusokkal és
- * érintéses interakciós lehetőségekkel.
+ * @brief Frekvencia kijelző komponens osztály - újratervezett és egyszerűsített
  */
 class FreqDisplay : public UIComponent {
 
   public:
-    constexpr static uint16_t FREQDISPLAY_HEIGHT = 45;
-    constexpr static uint16_t FREQDISPLAY_WIDTH = 240;
+    constexpr static uint16_t FREQDISPLAY_HEIGHT = 60;
+    constexpr static uint16_t FREQDISPLAY_WIDTH = 300;
 
   private:
     // === Referenciák és alapobjektumok ===
-    Si4735Manager *pSi4735Manager;  ///< Hivatkozás a Si4735Manager objektumra
-    TFT_eSprite spr;                ///< Sprite objektum a 7-szegmenses rajzolásához    // === Színkonfigurációk ===
+    Si4735Manager *pSi4735Manager; ///< Hivatkozás a Si4735Manager objektumra
+    TFT_eSprite spr;               ///< Sprite objektum a 7-szegmenses rajzolásához
+
+    // === Színkonfigurációk ===
     FreqSegmentColors normalColors; ///< Színek normál módban
     FreqSegmentColors bfoColors;    ///< Színek BFO módban
     FreqSegmentColors customColors; ///< Egyedi színkonfiguráció (pl. képernyővédő módhoz)
@@ -57,15 +50,10 @@ class FreqDisplay : public UIComponent {
 
     // === Állapotváltozók ===
     uint16_t currentDisplayFrequency; ///< Az aktuálisan kijelzendő frekvencia
-    bool bfoModeActiveLastDraw;       ///< BFO mód állapota az utolsó rajzoláskor (változás detektáláshoz)
-    bool redrawOnlyFrequencyDigits;   ///< Optimalizálási flag: csak számjegyek újrarajzolása
-    bool hideUnderline;               ///< Ha true, az aláhúzás nem jelenik meg
+    bool hideUnderline;               ///< Ha true, az aláhúzás nem jelenik meg (képernyővédő mód)
 
     /**
      * @brief Frekvencia megjelenítési adatok struktúrája
-     *
-     * Ez a struktúra összefogja a frekvencia kijelzéshez szükséges
-     * összes adatot: a formázott string-et, a maszkot és az egységet.
      */
     struct FrequencyDisplayData {
         String freqStr;   ///< Formázott frekvencia string
@@ -73,268 +61,90 @@ class FreqDisplay : public UIComponent {
         const char *unit; ///< Mértékegység (MHz, kHz, Hz)
     };
 
-    // === Rajzolás vezérlő metódusok ===
+    // === Pozicionálási konstansok ===
+    static constexpr int UNIT_TEXT_SIZE = 2;        ///< Mértékegység szöveg mérete
+    static constexpr int FREQ_7SEGMENT_HEIGHT = 38; ///< 7-szegmenses font magassága
+    static constexpr int DIGIT_WIDTH = 22;          ///< Egy digit becsült szélessége érintéshez
+    static constexpr int UNDERLINE_HEIGHT = 4;      ///< Aláhúzás magassága
+    static constexpr int UNDERLINE_Y_OFFSET = 5;    ///< Aláhúzás távolsága a frekvenciától
+    static constexpr int UNIT_Y_OFFSET_SSB_CW = 25; ///< Mértékegység Y eltolása SSB/CW módban (aláhúzás alatt)
+
+    // === Fő rajzolási metódusok ===
     /**
-     * @brief Meghatározza, hogy szükséges-e újrarajzolás
-     * @return true ha újrarajzolás szükséges
+     * @brief Meghatározza a frekvencia formátumot és adatokat a mód alapján
      */
-    bool shouldRedraw();
+    FrequencyDisplayData getFrequencyDisplayData(uint16_t frequency);
 
     /**
-     * @brief Ellenőrzi, hogy használható-e az optimalizált rajzolás
-     * @return true ha optimalizált rajzolás lehetséges
+     * @brief Rajzolja a frekvencia kijelzőt a megadott mód szerint
      */
-    bool canUseOptimizedDraw();
+    void drawFrequencyDisplay(const FrequencyDisplayData &data);
 
     /**
-     * @brief Végzi az optimalizált újrarajzolást (csak számjegyek)
+     * @brief Rajzolja FM/AM/LW stílusú frekvencia kijelzőt (mértékegység jobbra)
      */
-    void performOptimizedDraw();
+    void drawFmAmLwStyle(const FrequencyDisplayData &data);
 
     /**
-     * @brief Teljes újrarajzolást véget (teljes komponens)
+     * @brief Rajzolja SSB/CW stílusú frekvencia kijelzőt (maszk jobbra, finomhangolás, mértékegység alul)
      */
-    void performFullDraw();
+    void drawSsbCwStyle(const FrequencyDisplayData &data);
 
     /**
-     * @brief Törli a komponens háttérterületét
+     * @brief Rajzolja a finomhangolás aláhúzást SSB/CW módban
      */
-    void clearBackground();
+    void drawFineTuningUnderline(int freqSpriteX, int freqSpriteWidth);
 
     /**
-     * @brief Visszaállítja az alapértelmezett szöveg beállításokat
+     * @brief Kiszámítja az SSB/CW frekvencia érintési területeket
      */
-    void restoreDefaultTextSettings();
+    void calculateSsbCwTouchAreas(int freqSpriteX, int freqSpriteWidth);
 
     /**
-     * @brief Befejezi a rajzolási folyamatot (flag-ek törlése)
+     * @brief Visszaadja az aktuális színkonfigurációt
      */
-    void finishDraw();
+    const FreqSegmentColors &getSegmentColors() const; /**
+                                                        * @brief Segédmetódus szöveg rajzolásához
+                                                        */
+    void drawText(const String &text, int x, int y, int textSize, uint8_t datum, uint16_t color);
 
     /**
-     * @brief Ellenőrzi, hogy SSB/CW mód van-e aktív
-     * @param demodMode A demodulációs mód azonosítója
-     * @return true ha SSB/CW mód
+     * @brief Kiszámítja a sprite szélességét space karakterekkel együtt
      */
-    bool isSsbCwMode(uint8_t demodMode);
-
-    // === SSB/CW specifikus metódusok ===
-    /**
-     * @brief Formázza az SSB/CW frekvenciát BFO kompenzációval
-     * @param currentFrequencyValue A nyers frekvencia érték
-     * @return Formázott frekvencia string
-     */
-    String formatSsbCwFrequency(uint16_t currentFrequencyValue);
+    int calculateSpriteWidthWithSpaces(const char *mask);
 
     /**
-     * @brief Kezeli a BFO átváltási animációt
-     * @param formattedFreq A formázott frekvencia string
+     * @brief Rajzolja a frekvencia sprite-ot space karakterekkel
      */
-    void handleBfoAnimation(const String &formattedFreq);
+    void drawFrequencySpriteWithSpaces(const FrequencyDisplayData &data, int x, int y, int width);
 
-    /**
-     * @brief Rajzolja a normál SSB/CW módot (nem BFO)
-     * @param formattedFreq A formázott frekvencia
-     * @param colors A használandó színek
-     */
-    void drawNormalSsbCwMode(const String &formattedFreq, const FreqSegmentColors &colors);
-
-    /**
-     * @brief Rajzolja a BFO módot
-     * @param formattedFreq A formázott frekvencia
-     * @param colors A használandó színek
-     */
-    void drawBfoMode(const String &formattedFreq, const FreqSegmentColors &colors);
-
-    /**
-     * @brief Rajzolja a "BFO" címkét
-     * @param colors A használandó színek
-     */
-    void drawBfoLabel(const FreqSegmentColors &colors);
-
-    /**
-     * @brief Rajzolja a kis méretű frekvencia kijelzést BFO módban
-     * @param formattedFreq A formázott frekvencia
-     * @param colors A használandó színek
-     */
-    void drawMiniFrequency(const String &formattedFreq, const FreqSegmentColors &colors);
-
-    // === FM/AM specifikus metódusok ===
-    /**
-     * @brief Előkészíti a frekvencia megjelenítési adatokat FM/AM módokhoz
-     * @param frequency A frekvencia érték
-     * @return Megjelenítési adatok struktúra
-     */
-    FrequencyDisplayData prepareFrequencyDisplayData(uint16_t frequency);
-
-    /**
-     * @brief Előkészíti az FM megjelenítési adatokat
-     * @param frequency A frekvencia érték
-     * @return FM megjelenítési adatok
-     */
-    FrequencyDisplayData prepareFmDisplayData(uint16_t frequency);
-
-    /**
-     * @brief Előkészíti az AM megjelenítési adatokat
-     * @param frequency A frekvencia érték
-     * @param bandType A sáv típusa (MW, LW, SW)
-     * @return AM megjelenítési adatok
-     */
-    FrequencyDisplayData prepareAmDisplayData(uint16_t frequency, uint8_t bandType);
-
-    // === Segédmetódusok ===
-    /**
-     * @brief Univerzális szöveg rajzoló metódus megadott pozícióra
-     * @param text A rajzolandó szöveg
-     * @param x X koordináta
-     * @param y Y koordináta
-     * @param textSize Szöveg méret
-     * @param datum Szöveg igazítási pont
-     * @param color Szöveg színe
-     */
-    void drawTextAtPosition(const String &text, uint16_t x, uint16_t y, uint8_t textSize, uint8_t datum, uint16_t color); // === Érintés kezelő metódusok ===
-    /**
-     * @brief Ellenőrzi az érintés kezelhetőségét és pozíció érvényességét
-     * @param event Az érintési esemény
-     * @return true ha kezelhető
-     */
-    bool canHandleTouch(const TouchEvent &event);
-
-    /**
-     * @brief Feldolgozza a digit érintést
-     * @param event Az érintési esemény
-     * @return true ha sikeresen kezelve
-     */
-    bool processDigitTouch(const TouchEvent &event);
-
-    /**
-     * @brief Ellenőrzi, hogy az érintés egy adott digit területén van-e
-     * @param event Az érintési esemény
-     * @param digitIndex A digit indexe (0-2)
-     * @return true ha a digit területén van az érintés
-     */
-    bool isTouchOnDigit(const TouchEvent &event, int digitIndex);
-
-    /**
-     * @brief Kezeli a digit kiválasztását
-     * @param digitIndex A kiválasztott digit indexe
-     * @return true ha sikeresen kezelve
-     */
-    bool handleDigitSelection(int digitIndex);
-
-    /**
-     * @brief Frissíti a frekvencia lépés beállítást
-     * @param digitIndex A digit index alapján
-     */
-    void updateFrequencyStep(int digitIndex);
-
-    // === Eredeti segédmetódusok ===
-    /**
-     * @brief Belső frekvencia rajzolási metódus sprite-tal és egységgel
-     * @param freq A frekvencia string
-     * @param mask A 7-szegmenses maszk
-     * @param colors A színkonfiguráció
-     * @param unit Az egység (opcionális)
-     */
-    void drawFrequencyInternal(const String &freq, const char *mask, const FreqSegmentColors &colors, const char *unit = nullptr);
-
-    /**
-     * @brief Visszaadja az aktuális szín konfigurációt (normál/BFO)
-     * @return Aktuális színkonfiguráció referencia
-     */
-    const FreqSegmentColors &getSegmentColors() const;
-
-    /**
-     * @brief Főkoordinátor metódus SSB/CW frekvencia megjelenítéshez
-     * @param currentFrequencyValue A frekvencia érték
-     * @param colors A színkonfiguráció
-     */
-    void displaySsbCwFrequency(uint16_t currentFrequencyValue, const FreqSegmentColors &colors);
-
-    /**
-     * @brief Főkoordinátor metódus FM/AM frekvencia megjelenítéshez
-     * @param currentFrequencyValue A frekvencia érték
-     * @param colors A színkonfiguráció
-     */
-    void displayFmAmFrequency(uint16_t currentFrequencyValue, const FreqSegmentColors &colors);
-
-    /**
-     * @brief Optimalizált rajzoláshoz - csak sprite újrarajzolása
-     * @param freq_str A frekvencia string
-     * @param mask A maszk pattern
-     * @param colors A színkonfiguráció
-     */
-    void drawFrequencySpriteOnly(const String &freq_str, const char *mask, const FreqSegmentColors &colors);
-
-    /**
-     * @brief Karakterenkénti frekvencia rajzolás space gap-ekkel
-     * @param sprite A sprite objektum
-     * @param freq_str A frekvencia string
-     * @param mask A maszk string
-     * @param colors A színkonfiguráció
-     * @param totalWidth A sprite teljes szélessége
-     */
-    void drawFrequencyWithSpaceGaps(TFT_eSprite &sprite, const String &freq_str, const char *mask, const FreqSegmentColors &colors, uint16_t totalWidth);
-
-    /**
-     * @brief Kiszámítja a frekvencia string szélességét space gap-ekkel együtt
-     * @param mask A maszk string
-     * @return A teljes szélesség pixelben
-     */
-    uint16_t calculateWidthWithSpaceGaps(const char *mask);
-
-    /**
-     * @brief Meghatározza a frekvencia stringet és maszkot optimalizált rajzoláshoz
-     * @param frequency A frekvencia érték
-     * @param outFreqStr [out] A frekvencia string
-     * @param outMask [out] A maszk pattern
-     * @return true ha sikeresen meghatározva
-     */
-    bool determineFreqStrAndMaskForOptimizedDraw(uint16_t frequency, String &outFreqStr, const char *&outMask);
-
-    /**
-     * @brief Rajzolja a frekvencia lépés aláhúzását
-     * @param colors A színkonfiguráció
-     */
-    void drawStepUnderline(const FreqSegmentColors &colors);
-
-    /**
-     * @brief Kiszámítja a frekvencia sprite X pozícióját a mód alapján
-     * @return A sprite X pozíciója
-     */
-    uint32_t calcFreqSpriteXPosition() const;
+    // === Érintéskezelés ===
+    bool isInSsbCwMode() const;
+    int ssbCwTouchDigitAreas[3][2]; ///< Érintési területek: [digitIndex][0=x_start, 1=x_end]
 
   public:
     /**
-     * @brief Konstruktor - inicializálja a frekvencia kijelző komponenst
-     * @param tft A TFT kijelző referencia
-     * @param bounds A komponens területe
-     * @param si4735Manager A Si4735 sávkezelő pointer
+     * @brief Konstruktor
      */
     FreqDisplay(TFT_eSPI &tft, const Rect &bounds, Si4735Manager *pSi4735Manager);
 
     /**
      * @brief Virtuális destruktor
      */
-    virtual ~FreqDisplay() = default;
-    /**
-     * @brief Beállítja a megjelenítendő frekvenciát, csak a digiteket rajzolja újra
-     * @param freq Az új frekvencia érték
-     * @param forceRedraw Ha true, akkor újrarajzol, még ha a frekvencia nem változott is
-     */
+    virtual ~FreqDisplay() = default; /**
+                                       * @brief Beállítja a megjelenítendő frekvenciát
+                                       */
     void setFrequency(uint16_t freq, bool forceRedraw = false);
 
     /**
-     * @brief Beállítja a megjelenítendő frekvenciát, teljes újrarajzolással
+     * @brief Beállítja a megjelenítendő frekvenciát teljes újrarajzolással
      * @param freq Az új frekvencia érték
      * @param hideUnderline Ha true, az aláhúzás elrejtve lesz
-     * @details Ez a metódus teljesen újrarajzolja a komponenst, beleértve a háttér törlését és az összes elemet.
      */
     void setFrequencyWithFullDraw(uint16_t freq, bool hideUnderline = false);
 
     /**
      * @brief Beállítja az egyedi színkonfigurációt (pl. képernyővédő módhoz)
-     * @param colors Az új színkonfiguráció
      */
     void setCustomColors(const FreqSegmentColors &colors);
 
@@ -344,25 +154,13 @@ class FreqDisplay : public UIComponent {
     void resetToDefaultColors();
 
     /**
-     * @brief Beállítja, hogy megjelenjen-e az aláhúzás
-     * @param hide Ha true, az aláhúzás elrejtve
+     * @brief Beállítja, hogy megjelenjen-e a finomhangolás aláhúzás (képernyővédő mód)
      */
     void setHideUnderline(bool hide);
 
     // === UIComponent felülírt metódusok ===
-    /**
-     * @brief Rajzolja a komponenst (UIComponent override)
-     */
     virtual void draw() override;
-
-    /**
-     * @brief Kezeli az érintési eseményeket (UIComponent override)
-     * @param event Az érintési esemény
-     * @return true ha az esemény kezelve lett
-     */
     virtual bool handleTouch(const TouchEvent &event) override;
-
-    // Megjegyzés: A handleRotary-t a szülő képernyő (FMScreen) kezeli és az hívja meg a setFrequency-t.
 };
 
 #endif // __FREQDISPLAY_H
