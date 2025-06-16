@@ -28,7 +28,7 @@ bool FreqDisplay::charWidthsCached = false;
  */
 FreqDisplay::FreqDisplay(TFT_eSPI &tft_param, const Rect &bounds_param, Si4735Manager *pSi4735Manager)
     : UIComponent(tft_param, bounds_param), pSi4735Manager(pSi4735Manager), spr(&(this->tft)), normalColors(defaultNormalColors), bfoColors(defaultBfoColors),
-      customColors(defaultNormalColors), useCustomColors(false), currentDisplayFrequency(0), hideUnderline(false) {
+      customColors(defaultNormalColors), useCustomColors(false), currentDisplayFrequency(0), hideUnderline(false), lastUpdateTime(0), needsFullClear(true) {
 
     // Alapértelmezett háttérszín beállítása
     this->colors.background = TFT_COLOR_BACKGROUND; // Érintési területek inicializálása
@@ -49,8 +49,19 @@ FreqDisplay::FreqDisplay(TFT_eSPI &tft_param, const Rect &bounds_param, Si4735Ma
  */
 void FreqDisplay::setFrequency(uint16_t freq, bool forceRedraw) {
     if (forceRedraw || currentDisplayFrequency != freq) {
-        currentDisplayFrequency = freq;
-        markForRedraw();
+        unsigned long currentTime = millis();
+
+        // Villogás csökkentése: csak akkor frissítünk, ha legalább 50ms eltelt az előző frissítés óta
+        // KIVÉVE ha forceRedraw = true vagy jelentős változás van (>10 egység)
+        if (forceRedraw || (currentTime - lastUpdateTime > 50) || abs((int16_t)freq - (int16_t)currentDisplayFrequency) > 10) {
+
+            currentDisplayFrequency = freq;
+            lastUpdateTime = currentTime;
+            markForRedraw();
+        } else {
+            // Csak a frekvencia értéket frissítjük, de nem rajzolunk újra azonnal
+            currentDisplayFrequency = freq;
+        }
     }
 }
 
@@ -60,6 +71,7 @@ void FreqDisplay::setFrequency(uint16_t freq, bool forceRedraw) {
 void FreqDisplay::setFrequencyWithFullDraw(uint16_t freq, bool hideUnderline) {
     currentDisplayFrequency = freq;
     this->hideUnderline = hideUnderline;
+    needsFullClear = true; // Teljes háttér törlés szükséges
     markForRedraw();
 }
 
@@ -69,6 +81,7 @@ void FreqDisplay::setFrequencyWithFullDraw(uint16_t freq, bool hideUnderline) {
 void FreqDisplay::setCustomColors(const FreqSegmentColors &colors) {
     customColors = colors;
     useCustomColors = true;
+    needsFullClear = true; // Színváltásnál teljes háttér törlés szükséges
     markForRedraw();
 }
 
@@ -442,9 +455,16 @@ void FreqDisplay::draw() {
         return;
     }
 
-    // Háttér törlése
-    tft.fillRect(bounds.x, bounds.y, bounds.width, bounds.height, this->colors.background); // Frekvencia adatok meghatározása
-    FrequencyDisplayData data = getFrequencyDisplayData(currentDisplayFrequency);           // Frekvencia rajzolása
+    // Csak akkor töröljük a hátteret, ha szükséges (pl. első rajzolás, mód váltás)
+    if (needsFullClear) {
+        tft.fillRect(bounds.x, bounds.y, bounds.width, bounds.height, this->colors.background);
+        needsFullClear = false; // Reset a flag
+    }
+
+    // Frekvencia adatok meghatározása
+    FrequencyDisplayData data = getFrequencyDisplayData(currentDisplayFrequency);
+
+    // Frekvencia rajzolása
     drawFrequencyDisplay(data);
 
     // Debug keret - segít az optimalizálásban

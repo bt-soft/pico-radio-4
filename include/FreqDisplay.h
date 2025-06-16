@@ -39,16 +39,18 @@ class FreqDisplay : public UIComponent {
 
   private:
     // === Referenciák és alapobjektumok ===
-    Si4735Manager *pSi4735Manager; ///< Hivatkozás a Si4735Manager objektumra
-    TFT_eSprite spr;               ///< Sprite objektum a 7-szegmenses rajzolásához
+    Si4735Manager *pSi4735Manager;  ///< Hivatkozás a Si4735Manager objektumra
+    TFT_eSprite spr;                ///< Sprite objektum a 7-szegmenses rajzolásához    // === Színkonfigurációk ===
+    FreqSegmentColors normalColors; ///< Színek normál módban
+    FreqSegmentColors bfoColors;    ///< Színek BFO módban
+    FreqSegmentColors customColors; ///< Egyedi színkonfiguráció (pl. képernyővédő módhoz)
+    bool useCustomColors;           ///< Ha true, akkor customColors-t használ normalColors helyett
 
-    // === Színkonfigurációk ===
-    FreqSegmentColors normalColors;   ///< Színek normál módban
-    FreqSegmentColors bfoColors;      ///< Színek BFO módban
-    FreqSegmentColors customColors;   ///< Egyedi színkonfiguráció (pl. képernyővédő módhoz)
-    bool useCustomColors;             ///< Ha true, akkor customColors-t használ normalColors helyett    // === Állapotváltozók ===
+    // === Állapotváltozók ===
     uint16_t currentDisplayFrequency; ///< Az aktuálisan kijelzendő frekvencia
     bool hideUnderline;               ///< Ha true, az aláhúzás nem jelenik meg (képernyővédő mód)
+    unsigned long lastUpdateTime;     ///< Utolsó frissítés ideje (villogás optimalizáláshoz)
+    bool needsFullClear;              ///< Ha true, teljes háttér törlése szükséges
 
     // === Karakter szélességek gyorsítótára (optimalizálás) ===
     static int cachedCharWidths[256]; ///< Karakter szélességek gyorsítótára
