@@ -17,6 +17,7 @@
 #include "config.h"
 #include "defines.h"
 #include "pins.h"
+#include "utils.h" // Utils::setTftBacklight függvényhez
 
 /**
  * @brief SetupSystemScreen konstruktor
@@ -102,7 +103,7 @@ void SetupSystemScreen::handleBrightnessDialog(int index) {
             if (std::holds_alternative<int>(liveNewValue)) {
                 int currentDialogVal = std::get<int>(liveNewValue);
                 config.data.tftBackgroundBrightness = static_cast<uint8_t>(currentDialogVal);
-                analogWrite(PIN_TFT_BACKGROUND_LED, config.data.tftBackgroundBrightness);
+                Utils::setTftBacklight(config.data.tftBackgroundBrightness);
                 DEBUG("SetupSystemScreen: Live brightness preview: %u\n", config.data.tftBackgroundBrightness);
             }
         },

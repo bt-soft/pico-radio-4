@@ -32,29 +32,6 @@ void Si4735Manager::init(bool systemStart) {
 }
 
 /**
- * A BFO lépésközöket állítja be, csak SSB módban működik
- * A BFO lépésközök a következő értékek lehetnek: 1, 10, 25 Hz.
- */
-void Si4735Manager::setBFOStep() {
-    BandTable &currentBand = getCurrentBand();
-    uint8_t currMod = currentBand.currMod;
-
-    if (rtv::bfoOn && (currMod == LSB or currMod == USB or currMod == CW)) {
-        if (rtv::currentBFOStep == 1)
-            rtv::currentBFOStep = 10;
-        else if (rtv::currentBFOStep == 10)
-            rtv::currentBFOStep = 25;
-        else
-            rtv::currentBFOStep = 1;
-    }
-
-    if (!rtv::SCANbut) {
-        useBand();
-        checkAGC();
-    }
-}
-
-/**
  * Loop függvény a squelchez és a hardver némításhoz.
  * Ez a függvény folyamatosan figyeli a squelch állapotát és kezeli a hardver némítást.
  */

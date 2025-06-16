@@ -20,12 +20,6 @@ class Si4735Manager : public Si4735Rds {
     void init(bool systemStart = false);
 
     /**
-     * A BFO lépésközöket állítja be, csak SSB módban működik
-     * A BFO lépésközök a következő értékek lehetnek: 1, 10, 25 Hz.
-     */
-    void setBFOStep();
-
-    /**
      * Loop függvény a squelchez és a hardver némításhoz.
      * Ez a függvény folyamatosan figyeli a squelch állapotát és kezeli a hardver némítást.
      */

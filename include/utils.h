@@ -41,6 +41,14 @@ void debugWaitForSerial(TFT_eSPI &tft);
 void tftTouchCalibrate(TFT_eSPI &tft, uint16_t (&calData)[5]);
 void displayException(TFT_eSPI &tft, const char *msg);
 
+/**
+ * @brief TFT háttérvilágítás beállítása DC/PWM módban
+ * 255-ös értéknél ténylegesen DC-t ad ki (digitalWrite HIGH),
+ * más értékeknél PWM-et használ (analogWrite)
+ * @param brightness Fényerő érték (0-255)
+ */
+void setTftBacklight(uint8_t brightness);
+
 //--- Beep ----
 /**
  *  Pitty hangjelzés

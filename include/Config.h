@@ -4,6 +4,7 @@
 #include "ConfigData.h"
 #include "DebugDataInspector.h" // Szükséges a debug kiíratáshoz
 #include "StoreBase.h"
+#include "utils.h" // Utils::setTftBacklight függvényhez
 
 // Alapértelmezett konfigurációs adatok (readonly, const)
 extern const Config_t DEFAULT_CONFIG;
@@ -40,7 +41,6 @@ class Config : public StoreBase<Config_t> {
 #endif
         return savedCrc;
     }
-
     uint16_t performLoad() override {
         uint16_t loadedCrc = StoreEepromBase<Config_t>::load(getData(), 0, getClassName());
 #ifdef __DEBUG
@@ -53,6 +53,10 @@ class Config : public StoreBase<Config_t> {
             // eltérést a lastCRC-hez képest (amit a loadedCrc alapján állít be a
             // StoreBase), és menteni fogja a javított adatot.
         }
+
+        // Háttérvilágítás beállítása a betöltött konfiguráció alapján
+        Utils::setTftBacklight(data.tftBackgroundBrightness);
+
         return loadedCrc;
     }
 
@@ -68,7 +72,7 @@ class Config : public StoreBase<Config_t> {
      */
     void loadDefaults() override {
         memcpy(&data, &DEFAULT_CONFIG, sizeof(Config_t));
-        analogWrite(PIN_TFT_BACKGROUND_LED, data.tftBackgroundBrightness); // Háttérvilágítás beállítása
+        Utils::setTftBacklight(data.tftBackgroundBrightness); // Háttérvilágítás beállítása DC/PWM módban
     }
 };
 

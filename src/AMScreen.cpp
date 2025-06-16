@@ -560,7 +560,7 @@ void AMScreen::handleStepButton(const UIButton::ButtonEvent &event) {
     const char *title;
     size_t labelsCount;
     const char **labels;
-    uint16_t w = 200;
+    uint16_t w = 290;
     uint16_t h = 130;
 
     if (rtv::bfoOn) {
@@ -575,16 +575,15 @@ void AMScreen::handleStepButton(const UIButton::ButtonEvent &event) {
     } else {
         title = "Step tune AM/SSB";
         labels = pSi4735Manager->getStepSizeLabels(Band::stepSizeAM, labelsCount);
-        w = 300;
+        w = 280;
         h = 120;
     }
-
     auto stepDialog = std::make_shared<MultiButtonDialog>(
         this, this->tft,                                                                       // Képernyő referencia
         title, "",                                                                             // Dialógus címe és üzenete
         labels, labelsCount,                                                                   // Gombok feliratai és számuk
         [this, currMod](int buttonIndex, const char *buttonLabel, MultiButtonDialog *dialog) { // Gomb kattintás kezelése
-                                                                                               // Kikeressük az aktuális Band rekordot
+            // Kikeressük az aktuális Band rekordot
             BandTable &currentband = pSi4735Manager->getCurrentBand();
 
             // Kikeressük az aktuális Band típust
@@ -593,15 +592,12 @@ void AMScreen::handleStepButton(const UIButton::ButtonEvent &event) {
             // SSB módban a BFO be van kapcsolva?
             if (rtv::bfoOn && pSi4735Manager->isCurrentDemodSSBorCW()) {
 
-                // BFO step állítás
+                // BFO step állítás - a buttonIndex közvetlenül használható
                 rtv::currentBFOStep = pSi4735Manager->getStepSizeByIndex(Band::stepSizeBFO, buttonIndex);
-
-                // SSB módban beállítjuk a BFO lépésközt
-                pSi4735Manager->setBFOStep();
 
             } else { // Nem SSB + BFO módban vagyunk
 
-                // Beállítjuk a konfigban a stepSize-t
+                // Beállítjuk a konfigban a stepSize-t - a buttonIndex közvetlenül használható
                 if (currMod == FM) {
                     // FM módban
                     config.data.ssIdxFM = buttonIndex;
