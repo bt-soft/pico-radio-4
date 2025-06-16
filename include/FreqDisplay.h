@@ -43,14 +43,16 @@ class FreqDisplay : public UIComponent {
     TFT_eSprite spr;               ///< Sprite objektum a 7-szegmenses rajzolásához
 
     // === Színkonfigurációk ===
-    FreqSegmentColors normalColors; ///< Színek normál módban
-    FreqSegmentColors bfoColors;    ///< Színek BFO módban
-    FreqSegmentColors customColors; ///< Egyedi színkonfiguráció (pl. képernyővédő módhoz)
-    bool useCustomColors;           ///< Ha true, akkor customColors-t használ normalColors helyett
-
-    // === Állapotváltozók ===
+    FreqSegmentColors normalColors;   ///< Színek normál módban
+    FreqSegmentColors bfoColors;      ///< Színek BFO módban
+    FreqSegmentColors customColors;   ///< Egyedi színkonfiguráció (pl. képernyővédő módhoz)
+    bool useCustomColors;             ///< Ha true, akkor customColors-t használ normalColors helyett    // === Állapotváltozók ===
     uint16_t currentDisplayFrequency; ///< Az aktuálisan kijelzendő frekvencia
     bool hideUnderline;               ///< Ha true, az aláhúzás nem jelenik meg (képernyővédő mód)
+
+    // === Karakter szélességek gyorsítótára (optimalizálás) ===
+    static int cachedCharWidths[256]; ///< Karakter szélességek gyorsítótára
+    static bool charWidthsCached;     ///< True, ha a szélességek már ki vannak számítva
 
     /**
      * @brief Frekvencia megjelenítési adatok struktúrája
@@ -93,12 +95,20 @@ class FreqDisplay : public UIComponent {
     /**
      * @brief Rajzolja a finomhangolás aláhúzást SSB/CW módban
      */
-    void drawFineTuningUnderline(int freqSpriteX, int freqSpriteWidth);
+    void drawFineTuningUnderline(int freqSpriteX, int freqSpriteWidth); /**
+                                                                         * @brief Kiszámítja az SSB/CW frekvencia érintési területeket
+                                                                         */
+    void calculateSsbCwTouchAreas(int freqSpriteX, int freqSpriteWidth);
 
     /**
-     * @brief Kiszámítja az SSB/CW frekvencia érintési területeket
+     * @brief Inicializálja a karakter szélességek gyorsítótárát (optimalizálás)
      */
-    void calculateSsbCwTouchAreas(int freqSpriteX, int freqSpriteWidth);
+    void initializeCharacterWidths();
+
+    /**
+     * @brief Visszaadja egy karakter szélességét a gyorsítótárból
+     */
+    static int getCharacterWidth(char c);
 
     /**
      * @brief Visszaadja az aktuális színkonfigurációt

@@ -19,6 +19,10 @@
 const FreqSegmentColors defaultNormalColors = UIColorPalette::createNormalFreqColors();
 const FreqSegmentColors defaultBfoColors = UIColorPalette::createBfoFreqColors();
 
+// === Statikus változók inicializálása ===
+int FreqDisplay::cachedCharWidths[256] = {0};
+bool FreqDisplay::charWidthsCached = false;
+
 /**
  * @brief FreqDisplay konstruktor - inicializálja a frekvencia kijelző komponenst
  */
@@ -27,13 +31,14 @@ FreqDisplay::FreqDisplay(TFT_eSPI &tft_param, const Rect &bounds_param, Si4735Ma
       customColors(defaultNormalColors), useCustomColors(false), currentDisplayFrequency(0), hideUnderline(false) {
 
     // Alapértelmezett háttérszín beállítása
-    this->colors.background = TFT_COLOR_BACKGROUND;
-
-    // Érintési területek inicializálása
+    this->colors.background = TFT_COLOR_BACKGROUND; // Érintési területek inicializálása
     for (int i = 0; i < 3; i++) {
         ssbCwTouchDigitAreas[i][0] = 0;
         ssbCwTouchDigitAreas[i][1] = 0;
     }
+
+    // Karakter szélességek inicializálása (egyszeri optimalizálás)
+    initializeCharacterWidths();
 
     // Explicit újrarajzolás kérése az első megjelenítéshez
     markForRedraw();
@@ -282,9 +287,8 @@ int FreqDisplay::calculateSpriteWidthWithSpaces(const char *mask) {
         if (mask[i] == ' ') {
             totalWidth += SPACE_GAP_WIDTH;
         } else {
-            // Mérjük a tényleges karakter szélességét
-            String charStr = String(mask[i]);
-            totalWidth += tempSpr.textWidth(charStr);
+            // Optimalizált karakterszélesség lekérdezés
+            totalWidth += getCharacterWidth(mask[i]);
         }
     }
 
@@ -305,17 +309,13 @@ void FreqDisplay::drawFrequencySpriteWithSpaces(const FrequencyDisplayData &data
     spr.setFreeFont(&DSEG7_Classic_Mini_Regular_34);
     spr.setTextDatum(BR_DATUM); // Jobb alsó sarokhoz igazítás (mint a korábbi implementációban)
 
-    // DEBUG információ
-    DEBUG("SSB/CW: mask='%s', freqStr='%s'", data.mask, data.freqStr.c_str());
-
-    // Korábbi implementáció logikája:
-    // 1. Először a maszkot rajzoljuk ki (inaktív digitek)
+    // Inaktív számjegyek rajzolása (ha engedélyezve van)
     if (config.data.tftDigitLigth) {
         spr.setTextColor(colors.inactive);
         spr.drawString(data.mask, width, FREQ_7SEGMENT_HEIGHT); // Jobb szélre igazítva
     }
 
-    // 2. Majd a frekvencia stringet rajzoljuk ki ugyanoda (aktív digitek)
+    // Aktív frekvencia számok rajzolása
     spr.setTextColor(colors.active);
     spr.drawString(data.freqStr, width, FREQ_7SEGMENT_HEIGHT); // Jobb szélre igazítva
 
@@ -357,16 +357,8 @@ void FreqDisplay::drawFineTuningUnderline(int freqSpriteX, int freqSpriteWidth) 
         if (mask[i] == ' ') {
             charWidth = SPACE_GAP_WIDTH;
         } else {
-            // Temporary sprite használata a pontos méréshez
-            TFT_eSprite tempSpr(&tft);
-            tempSpr.setFreeFont(&DSEG7_Classic_Mini_Regular_34);
-            tempSpr.setTextSize(1);
-
-            // Mérjük a tényleges karakter szélességét, nem fix '8'-at
-            String charStr = String(mask[i]);
-            charWidth = tempSpr.textWidth(charStr);
-
-            DEBUG("Char '%c' at pos %d: width=%d", mask[i], i, charWidth);
+            // Optimalizált karakterszélesség lekérdezés
+            charWidth = getCharacterWidth(mask[i]);
         } // Ellenőrizzük, hogy ez az utolsó 3 digit egyike-e
         for (int j = 0; j < 3; j++) {
             if (i == lastThreeDigitIndices[j]) {
@@ -379,32 +371,24 @@ void FreqDisplay::drawFineTuningUnderline(int freqSpriteX, int freqSpriteWidth) 
 
         // X pozíció frissítése a következő karakterhez
         currentX += charWidth;
+    } // Aláhúzás rajzolása a kiválasztott digit alatt
+    if (rtv::freqstepnr >= 0 && rtv::freqstepnr < 3) {
+        int digitCenter = digitPositions[rtv::freqstepnr];
+        int digitWidth = digitWidths[rtv::freqstepnr]; // Tényleges digit szélesség
+        int underlineY = bounds.y + FREQ_7SEGMENT_HEIGHT + UNDERLINE_Y_OFFSET;
+
+        // Aláhúzás középre igazítva a digit alatt (tényleges digit szélességgel)
+        int underlineX = digitCenter - (digitWidth / 2);
+
+        // Előbb töröljük az egész aláhúzási területet
+        int totalUnderlineWidth = digitPositions[2] - digitPositions[0] + digitWidths[2];
+        int clearStartX = digitPositions[0] - (digitWidths[0] / 2);
+
+        tft.fillRect(clearStartX, underlineY, totalUnderlineWidth, UNDERLINE_HEIGHT, this->colors.background);
+
+        // Aztán rajzoljuk az aktív aláhúzást (tényleges digit szélességgel)
+        tft.fillRect(underlineX, underlineY, digitWidth, UNDERLINE_HEIGHT, colors.indicator);
     }
-    DEBUG("SSB/CW underline: freqstepnr=%d, positions=[%d,%d,%d], freqSpriteX=%d", rtv::freqstepnr, digitPositions[0], digitPositions[1], digitPositions[2], freqSpriteX);
-
-    // Aláhúzás rajzolása a kiválasztott digit alatt    if (rtv::freqstepnr >= 0 && rtv::freqstepnr < 3) {
-    int digitCenter = digitPositions[rtv::freqstepnr];
-    int digitWidth = digitWidths[rtv::freqstepnr]; // Tényleges digit szélesség
-    int underlineY = bounds.y + FREQ_7SEGMENT_HEIGHT + UNDERLINE_Y_OFFSET;
-
-    // Aláhúzás középre igazítva a digit alatt (tényleges digit szélességgel)
-    int underlineX = digitCenter - (digitWidth / 2);
-
-    DEBUG("SSB/CW underline details:");
-    DEBUG("  Selected digit (freqstepnr=%d): center=%d, width=%d", rtv::freqstepnr, digitCenter, digitWidth);
-    DEBUG("  Underline: X=%d-%d (width=%d), Y=%d", underlineX, underlineX + digitWidth, digitWidth, underlineY);
-    DEBUG("  Original DIGIT_WIDTH=%d vs actual digitWidth=%d", DIGIT_WIDTH, digitWidth);
-
-    // Előbb töröljük az egész aláhúzási területet
-    int totalUnderlineWidth = digitPositions[2] - digitPositions[0] + digitWidths[2];
-    int clearStartX = digitPositions[0] - (digitWidths[0] / 2);
-    DEBUG("  Clear area: X=%d-%d (width=%d)", clearStartX, clearStartX + totalUnderlineWidth, totalUnderlineWidth);
-
-    tft.fillRect(clearStartX, underlineY, totalUnderlineWidth, UNDERLINE_HEIGHT, this->colors.background);
-
-    // Aztán rajzoljuk az aktív aláhúzást (tényleges digit szélességgel)
-    tft.fillRect(underlineX, underlineY, digitWidth, UNDERLINE_HEIGHT, colors.indicator);
-    DEBUG("  Active underline drawn: X=%d-%d", underlineX, underlineX + digitWidth);
 }
 
 /**
@@ -422,14 +406,8 @@ void FreqDisplay::calculateSsbCwTouchAreas(int freqSpriteX, int freqSpriteWidth)
         if (mask[i] == ' ') {
             charWidth = SPACE_GAP_WIDTH;
         } else {
-            // Temporary sprite használata a pontos méréshez
-            TFT_eSprite tempSpr(&tft);
-            tempSpr.setFreeFont(&DSEG7_Classic_Mini_Regular_34);
-            tempSpr.setTextSize(1);
-
-            // Mérjük a tényleges karakter szélességét, nem fix '8'-at
-            String charStr = String(mask[i]);
-            charWidth = tempSpr.textWidth(charStr);
+            // Optimalizált karakterszélesség lekérdezés
+            charWidth = getCharacterWidth(mask[i]);
         } // Ellenőrizzük, hogy ez az utolsó 3 digit egyike-e
         for (int j = 0; j < 3; j++) {
             if (i == lastThreeDigitIndices[j]) {
@@ -438,18 +416,11 @@ void FreqDisplay::calculateSsbCwTouchAreas(int freqSpriteX, int freqSpriteWidth)
                 ssbCwTouchDigitAreas[j][0] = digitCenter - (charWidth / 2); // X start (bal széle)
                 ssbCwTouchDigitAreas[j][1] = digitCenter + (charWidth / 2); // X end (jobb széle)
 
-                DEBUG("SSB/CW touch digit[%d] (mask pos %d): center=%d, area=%d-%d, charWidth=%d", j, lastThreeDigitIndices[j], digitCenter, ssbCwTouchDigitAreas[j][0],
-                      ssbCwTouchDigitAreas[j][1], charWidth);
                 break;
             }
-        }
-
-        // X pozíció frissítése a következő karakterhez
+        } // X pozíció frissítése a következő karakterhez
         currentX += charWidth;
     }
-
-    DEBUG("SSB/CW touch areas: [%d-%d], [%d-%d], [%d-%d]", ssbCwTouchDigitAreas[0][0], ssbCwTouchDigitAreas[0][1], ssbCwTouchDigitAreas[1][0], ssbCwTouchDigitAreas[1][1],
-          ssbCwTouchDigitAreas[2][0], ssbCwTouchDigitAreas[2][1]);
 }
 
 /**
@@ -475,13 +446,8 @@ void FreqDisplay::draw() {
     tft.fillRect(bounds.x, bounds.y, bounds.width, bounds.height, this->colors.background);
 
     // Frekvencia adatok meghatározása
-    FrequencyDisplayData data = getFrequencyDisplayData(currentDisplayFrequency);
-
-    // Frekvencia rajzolása
+    FrequencyDisplayData data = getFrequencyDisplayData(currentDisplayFrequency); // Frekvencia rajzolása
     drawFrequencyDisplay(data);
-
-    // Debug keret (később törölhető)
-    tft.drawRect(bounds.x, bounds.y, bounds.width, bounds.height, TFT_RED);
 
     needsRedraw = false;
 }
@@ -528,4 +494,56 @@ bool FreqDisplay::handleTouch(const TouchEvent &event) {
     }
 
     return false;
+}
+
+/**
+ * @brief Inicializálja a karakter szélességek gyorsítótárát (optimalizálás)
+ */
+void FreqDisplay::initializeCharacterWidths() {
+    if (charWidthsCached) {
+        return; // Már inicializálva van
+    }
+
+    // Temporary sprite létrehozása a méréshez
+    TFT_eSprite tempSpr(&tft);
+    tempSpr.setFreeFont(&DSEG7_Classic_Mini_Regular_34);
+    tempSpr.setTextSize(1);
+
+    // Gyakran használt karakterek inicializálása
+    const char *commonChars = "0123456789. -";
+    for (int i = 0; commonChars[i] != '\0'; i++) {
+        char c = commonChars[i];
+        String charStr = String(c);
+        cachedCharWidths[(unsigned char)c] = tempSpr.textWidth(charStr);
+    }
+
+    charWidthsCached = true;
+}
+
+/**
+ * @brief Visszaadja egy karakter szélességét a gyorsítótárból
+ */
+int FreqDisplay::getCharacterWidth(char c) {
+    if (!charWidthsCached) {
+        // Fallback: azonnali számítás, ha nincs inicializálva
+        TFT_eSprite tempSpr(nullptr);
+        tempSpr.setFreeFont(&DSEG7_Classic_Mini_Regular_34);
+        tempSpr.setTextSize(1);
+        String charStr = String(c);
+        return tempSpr.textWidth(charStr);
+    }
+
+    // Gyorsítótárból visszaadás
+    int width = cachedCharWidths[(unsigned char)c];
+    if (width == 0) {
+        // Ha nincs gyorsítótárazva, számoljuk ki és tároljuk
+        TFT_eSprite tempSpr(nullptr);
+        tempSpr.setFreeFont(&DSEG7_Classic_Mini_Regular_34);
+        tempSpr.setTextSize(1);
+        String charStr = String(c);
+        width = tempSpr.textWidth(charStr);
+        cachedCharWidths[(unsigned char)c] = width;
+    }
+
+    return width;
 }
