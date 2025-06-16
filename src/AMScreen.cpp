@@ -439,7 +439,7 @@ void AMScreen::handleBFOButton(const UIButton::ButtonEvent &event) {
     // A Step gombok állapotának frissítése
     updateStepButtonState();
 
-    // Frissítjük a frekvencia kijelzőn is
+    // Frissítjük a frekvencia kijelzőt is, hogy BFO állapot változás volt
     freqDisplayComp->markForRedraw();
 }
 
