@@ -206,24 +206,24 @@ void FreqDisplay::drawText(const String &text, int x, int y, int textSize, uint8
  * @brief Rajzolja FM/AM/LW stílusú frekvencia kijelzőt (balra igazított frekvencia)
  */
 void FreqDisplay::drawFmAmLwStyle(const FrequencyDisplayData &data) {
-    const FreqSegmentColors &colors = getSegmentColors();
+    const FreqSegmentColors &colors = getSegmentColors(); // 1. Frekvencia sprite pozicionálása: keret bal szélénél
+    // Sprite szélesség: maszk és frekvencia szöveg maximuma + kis margó
+    tft.setFreeFont(&DSEG7_Classic_Mini_Regular_34);
+    int maskWidth = tft.textWidth(data.mask);
+    int freqWidth = tft.textWidth(data.freqStr);
+    int freqSpriteWidth = max(maskWidth, freqWidth) + 10; // 10 pixel extra margó
 
-    // 1. Frekvencia sprite pozicionálása: keret bal szélénél
-    int freqSpriteWidth = calculateFixedSpriteWidth(data.mask);
-
-    int freqSpriteX = bounds.x + 5; // 5 pixel margin a bal szélétől
-    int freqSpriteY = bounds.y;     // Frekvencia sprite létrehozása és rajzolása
+    int freqSpriteX = bounds.x; // nincs margin a bal szélétől
+    int freqSpriteY = bounds.y; // Frekvencia sprite létrehozása és rajzolása
     spr.createSprite(freqSpriteWidth, FREQ_7SEGMENT_HEIGHT);
     spr.fillSprite(this->colors.background);
     spr.setTextSize(1);
     spr.setTextPadding(0);
-    spr.setFreeFont(&DSEG7_Classic_Mini_Regular_34);
-
-    // Inaktív számjegyek rajzolása (ha engedélyezve van) - BALRA igazítva
+    spr.setFreeFont(&DSEG7_Classic_Mini_Regular_34); // Inaktív számjegyek rajzolása (ha engedélyezve van) - JOBBRA igazítva a maszkhoz
     if (config.data.tftDigitLigth) {
         spr.setTextColor(colors.inactive);
-        spr.setTextDatum(BL_DATUM);                         // Bal alsó sarokhoz igazítás
-        spr.drawString(data.mask, 0, FREQ_7SEGMENT_HEIGHT); // Bal szélre igazítva
+        spr.setTextDatum(BR_DATUM);                                       // Jobb alsó sarokhoz igazítás
+        spr.drawString(data.mask, freqSpriteWidth, FREQ_7SEGMENT_HEIGHT); // Jobb szélre igazítva
     }
 
     // Aktív frekvencia számok rajzolása - JOBBRA igazítva a maszkhoz
@@ -331,13 +331,11 @@ void FreqDisplay::drawFrequencySpriteWithSpaces(const FrequencyDisplayData &data
     spr.fillSprite(this->colors.background);
     spr.setTextSize(1);
     spr.setTextPadding(0);
-    spr.setFreeFont(&DSEG7_Classic_Mini_Regular_34);
-
-    // Inaktív számjegyek rajzolása (ha engedélyezve van) - BALRA igazítva
+    spr.setFreeFont(&DSEG7_Classic_Mini_Regular_34); // Inaktív számjegyek rajzolása (ha engedélyezve van) - JOBBRA igazítva a maszkhoz
     if (config.data.tftDigitLigth) {
         spr.setTextColor(colors.inactive);
-        spr.setTextDatum(BL_DATUM);                         // Bal alsó sarokhoz igazítás
-        spr.drawString(data.mask, 0, FREQ_7SEGMENT_HEIGHT); // Bal szélre igazítva
+        spr.setTextDatum(BR_DATUM);                             // Jobb alsó sarokhoz igazítás
+        spr.drawString(data.mask, width, FREQ_7SEGMENT_HEIGHT); // Jobb szélre igazítva
     }
 
     // Aktív frekvencia számok rajzolása - JOBBRA igazítva a maszkhoz
