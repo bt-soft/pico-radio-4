@@ -67,7 +67,7 @@ class FreqDisplay : public UIComponent {
     static constexpr int DIGIT_WIDTH = 22;          ///< Egy digit becsült szélessége érintéshez
     static constexpr int UNDERLINE_HEIGHT = 4;      ///< Aláhúzás magassága
     static constexpr int UNDERLINE_Y_OFFSET = 5;    ///< Aláhúzás távolsága a frekvenciától
-    static constexpr int UNIT_Y_OFFSET_SSB_CW = 0; ///< Mértékegység Y eltolása SSB/CW módban (aláhúzás alatt)
+    static constexpr int UNIT_Y_OFFSET_SSB_CW = 0;  ///< Mértékegység Y eltolása SSB/CW módban (aláhúzás alatt)
 
     // === Fő rajzolási metódusok ===
     /**
@@ -83,9 +83,11 @@ class FreqDisplay : public UIComponent {
     /**
      * @brief Rajzolja FM/AM/LW stílusú frekvencia kijelzőt (mértékegység jobbra)
      */
-    void drawFmAmLwStyle(const FrequencyDisplayData &data); /**
-                                                             * @brief Rajzolja SSB/CW stílusú frekvencia kijelzőt (maszk jobbra, finomhangolás, mértékegység alul)
-                                                             */
+    void drawFmAmLwStyle(const FrequencyDisplayData &data);
+
+    /**
+     * @brief Rajzolja SSB/CW stílusú frekvencia kijelzőt (maszk jobbra, finomhangolás, mértékegység alul)
+     */
     void drawSsbCwStyle(const FrequencyDisplayData &data);
 
     /**

@@ -134,6 +134,7 @@ FreqDisplay::FrequencyDisplayData FreqDisplay::getFrequencyDisplayData(uint16_t 
         data.mask = "188.88";
         float displayFreqMHz = frequency / 100.0f;
         data.freqStr = String(displayFreqMHz, 2);
+
     } else if (demodMode == AM) {
         if (bandType == MW_BAND_TYPE || bandType == LW_BAND_TYPE) {
             // MW/LW: 1440 kHz
@@ -143,9 +144,10 @@ FreqDisplay::FrequencyDisplayData FreqDisplay::getFrequencyDisplayData(uint16_t 
         } else {
             // SW AM: 27.200 MHz (CB) és 30.000 MHz sávok
             data.unit = "MHz";
-            data.mask = "888.888"; // 6 karakteres maszk a hosszabb frekvenciákhoz
+            data.mask = "88.888"; // 5 karakteres maszk - max 30 MHz
             data.freqStr = String(frequency / 1000.0f, 3);
         }
+
     } else if (demodMode == LSB || demodMode == USB || demodMode == CW) {
         // SSB/CW mód: finomhangolással korrigált frekvencia
         if (rtv::bfoOn) {
@@ -153,6 +155,7 @@ FreqDisplay::FrequencyDisplayData FreqDisplay::getFrequencyDisplayData(uint16_t 
             data.unit = "Hz";
             data.mask = "-888";
             data.freqStr = String(rtv::currentBFOmanu);
+
         } else { // Normál SSB/CW: frekvencia formázás
             data.unit = "kHz";
             data.mask = "88 888.88"; // Visszatérés 8-as karakterre, amely biztosan minden szegmenst mutat
@@ -309,9 +312,8 @@ int FreqDisplay::calculateFixedSpriteWidth(const String &mask) { // Konstans ér
     if (mask == "188.88") {
         return 130; // FM: "188.88"
     } else if (mask == "8888") {
-        return 100; // MW/LW: "8888"
-    } else if (mask == "888.888") {
-        return 155; // SW AM: "888.888" (hosszabb CB és 30MHz sávokhoz)
+        return 100; // MW/LW: "8888"    } else if (mask == "88.888") {
+        return 130; // SW AM: "88.888" (CB és 30MHz sávokhoz)
     } else if (mask == "88 888.88") {
         return 208; // SSB/CW normál: "88 888.88"
     } else if (mask == "-888") {
@@ -575,8 +577,9 @@ void FreqDisplay::drawBfoStyle(const FrequencyDisplayData &data) {
     tft.setTextSize(2);
     tft.setTextDatum(MC_DATUM);
     tft.setTextColor(TFT_BLACK, colors.active);
-    tft.drawString("BFO", bounds.x + BfoLabelRectXOffset + BfoLabelRectW / 2,
-                   bounds.y + BfoLabelRectYOffset + BfoLabelRectH / 2); // 4. Fő frekvencia kisebb méretben (jobb oldalon, alja egy vonalban a 7-szegmenses aljával)
+    tft.drawString("BFO", bounds.x + BfoLabelRectXOffset + BfoLabelRectW / 2, bounds.y + BfoLabelRectYOffset + BfoLabelRectH / 2);
+
+    // 4. Fő frekvencia kisebb méretben (jobb oldalon, alja egy vonalban a 7-szegmenses aljával)
     // Először számítsuk ki a fő frekvenciát
     uint32_t bfoOffset = rtv::lastBFO;
     uint32_t displayFreqHz = (uint32_t)currentDisplayFrequency * 1000 - bfoOffset;
