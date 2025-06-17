@@ -67,7 +67,7 @@ class FreqDisplay : public UIComponent {
     static constexpr int DIGIT_WIDTH = 22;          ///< Egy digit becsült szélessége érintéshez
     static constexpr int UNDERLINE_HEIGHT = 4;      ///< Aláhúzás magassága
     static constexpr int UNDERLINE_Y_OFFSET = 5;    ///< Aláhúzás távolsága a frekvenciától
-    static constexpr int UNIT_Y_OFFSET_SSB_CW = 25; ///< Mértékegység Y eltolása SSB/CW módban (aláhúzás alatt)
+    static constexpr int UNIT_Y_OFFSET_SSB_CW = 0; ///< Mértékegység Y eltolása SSB/CW módban (aláhúzás alatt)
 
     // === Fő rajzolási metódusok ===
     /**
@@ -122,6 +122,11 @@ class FreqDisplay : public UIComponent {
      * @brief Segédmetódus szöveg rajzolásához
      */
     void drawText(const String &text, int x, int y, int textSize, uint8_t datum, uint16_t color);
+
+    /**
+     * @brief Megbízható sprite szélesség számítás konstansokkal (textWidth() helyett)
+     */
+    int calculateFixedSpriteWidth(const String &mask);
 
     /**
      * @brief Kiszámítja a sprite szélességét space karakterekkel együtt
