@@ -431,16 +431,15 @@ void AMScreen::handleBFOButton(const UIButton::ButtonEvent &event) {
     // Csak SSB/CW módban működik
     if (!pSi4735Manager->isCurrentDemodSSBorCW()) {
         return;
-    }
-
-    // BFO állapot váltása
+    } // BFO állapot váltása
     rtv::bfoOn = !rtv::bfoOn;
+    rtv::bfoTr = true; // BFO animáció trigger beállítása
 
     // A Step gombok állapotának frissítése
     updateStepButtonState();
 
     // Frissítjük a frekvencia kijelzőt is, hogy BFO állapot változás volt
-    freqDisplayComp->markForRedraw();
+    freqDisplayComp->forceFullRedraw();
 }
 
 /**

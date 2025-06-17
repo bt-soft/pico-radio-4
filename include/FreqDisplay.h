@@ -83,12 +83,20 @@ class FreqDisplay : public UIComponent {
     /**
      * @brief Rajzolja FM/AM/LW stílusú frekvencia kijelzőt (mértékegység jobbra)
      */
-    void drawFmAmLwStyle(const FrequencyDisplayData &data);
+    void drawFmAmLwStyle(const FrequencyDisplayData &data); /**
+                                                             * @brief Rajzolja SSB/CW stílusú frekvencia kijelzőt (maszk jobbra, finomhangolás, mértékegység alul)
+                                                             */
+    void drawSsbCwStyle(const FrequencyDisplayData &data);
 
     /**
-     * @brief Rajzolja SSB/CW stílusú frekvencia kijelzőt (maszk jobbra, finomhangolás, mértékegység alul)
+     * @brief Rajzolja a BFO módot (BFO érték nagyban, fő frekvencia kicsiben)
      */
-    void drawSsbCwStyle(const FrequencyDisplayData &data);
+    void drawBfoStyle(const FrequencyDisplayData &data);
+
+    /**
+     * @brief Kezeli a BFO be/kikapcsolási animációt
+     */
+    void handleBfoAnimation();
 
     /**
      * @brief Rajzolja a finomhangolás aláhúzást SSB/CW módban
@@ -166,6 +174,11 @@ class FreqDisplay : public UIComponent {
      * @brief Beállítja, hogy megjelenjen-e a finomhangolás aláhúzás (képernyővédő mód)
      */
     void setHideUnderline(bool hide);
+
+    /**
+     * @brief Kényszeríti a teljes újrarajzolást (BFO módváltáskor)
+     */
+    void forceFullRedraw();
 
     // === UIComponent felülírt metódusok ===
     virtual void draw() override;

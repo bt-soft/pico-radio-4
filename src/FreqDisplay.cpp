@@ -153,17 +153,18 @@ FreqDisplay::FrequencyDisplayData FreqDisplay::getFrequencyDisplayData(uint16_t 
             data.unit = "Hz";
             data.mask = "-888";
             data.freqStr = String(rtv::currentBFOmanu);
-        } else { // Normál SSB/CW: frekvencia formázás            // Normál SSB/CW: egyszerű formázás, mint a korábbi implementációban
+        } else {
+            // Normál SSB/CW: frekvencia formázás
             data.unit = "kHz";
             data.mask = "88 888.88";
             uint32_t displayFreqHz = (uint32_t)frequency * 1000 - rtv::freqDec;
             long khz_part = displayFreqHz / 1000;
-            int hz_tens_part = abs((int)(displayFreqHz % 1000)) / 10; // Egyszerű formázás: space-szel a maszk formátumának megfelelően
+            int hz_tens_part = abs((int)(displayFreqHz % 1000)) / 10;
+
             // Maszk: "88 888.88" -> Frekvencia: "xx xxx.xx" (space a 2. pozíció után)
             char buffer[16];
 
             // Először a kHz részt és Hz részt külön formázzuk
-            // 7074 -> "7074", majd "7 074" lesz belőle
             char khz_str[8];
             sprintf(khz_str, "%ld", khz_part);
 
@@ -173,7 +174,6 @@ FreqDisplay::FrequencyDisplayData FreqDisplay::getFrequencyDisplayData(uint16_t 
 
             if (len > 2) {
                 // Ha 3 vagy több digit, akkor space-t teszünk a végétől számított 3. pozíció elé
-                // "7074" -> "7 074", "12345" -> "12 345"
                 khz_with_space = khz_with_space.substring(0, len - 3) + " " + khz_with_space.substring(len - 3);
             }
 
@@ -254,6 +254,12 @@ void FreqDisplay::drawFmAmLwStyle(const FrequencyDisplayData &data) {
 void FreqDisplay::drawSsbCwStyle(const FrequencyDisplayData &data) {
     const FreqSegmentColors &colors = getSegmentColors();
 
+    if (rtv::bfoOn) {
+        // BFO mód: külön kezelés
+        drawBfoStyle(data);
+        return;
+    }
+
     // 1. Frekvencia sprite pozicionálása: keret jobb szélénél (maszk bal oldala jobbra igazítva)
     int freqSpriteRightX = bounds.x + bounds.width - 5; // 5 pixel margin a jobb szélétől
 
@@ -275,10 +281,6 @@ void FreqDisplay::drawSsbCwStyle(const FrequencyDisplayData &data) {
 
     // 3. Mértékegység pozicionálása: finomhangolás alatt, jobbra igazítva
     int unitY = bounds.y + FREQ_7SEGMENT_HEIGHT + UNIT_Y_OFFSET_SSB_CW;
-    if (rtv::bfoOn) {
-        // BFO módban nincs aláhúzás, ezért a mértékegység közelebb van
-        unitY = bounds.y + FREQ_7SEGMENT_HEIGHT + 8;
-    }
 
     drawText(data.unit, freqSpriteRightX, unitY, UNIT_TEXT_SIZE, BR_DATUM, colors.indicator);
 }
@@ -450,6 +452,13 @@ void FreqDisplay::draw() {
         return;
     }
 
+    // BFO animáció kezelése külön, mielőtt bármit rajzolnánk
+    if (rtv::bfoTr) {
+        handleBfoAnimation();
+        rtv::bfoTr = false;
+        needsFullClear = true; // Animáció után teljes újrarajzolás szükséges
+    }
+
     // Csak akkor töröljük a hátteret, ha szükséges (pl. első rajzolás, mód váltás)
     if (needsFullClear) {
         tft.fillRect(bounds.x, bounds.y, bounds.width, bounds.height, this->colors.background);
@@ -529,4 +538,125 @@ int FreqDisplay::getCharacterWidth(char c) {
         default:
             return CHAR_WIDTH_DIGIT; // Biztonsági alapértelmezett
     }
+}
+
+/**
+ * @brief Rajzolja a BFO módot (BFO érték nagyban, fő frekvencia kicsiben)
+ */
+void FreqDisplay::drawBfoStyle(const FrequencyDisplayData &data) {
+    const FreqSegmentColors &colors = getSegmentColors();
+
+    // BFO konstansok (átvéve a SevenSegmentFreq-ből)
+    constexpr uint16_t BfoLabelRectXOffset = 156;
+    constexpr uint16_t BfoLabelRectYOffset = 21;
+    constexpr uint16_t BfoLabelRectW = 42;
+    constexpr uint16_t BfoLabelRectH = 20;
+    constexpr uint16_t BfoHzLabelXOffset = 120;
+    constexpr uint16_t BfoHzLabelYOffset = 40;
+    constexpr uint16_t BfoMiniFreqX = 220;
+    constexpr uint16_t BfoMiniFreqY = 62;
+    constexpr uint16_t BfoMiniUnitXOffset = 20;
+
+    // 1. BFO érték kirajzolása a 7 szegmensesre (balra pozicionálva)
+    spr.setFreeFont(&DSEG7_Classic_Mini_Regular_34);
+    int bfoSpriteWidth = spr.textWidth(data.mask);
+
+    // BFO sprite pozíciója: balra igazítás (RefXBfo = 115)
+    int bfoSpriteX = bounds.x + 115 - bfoSpriteWidth;
+    int bfoSpriteY = bounds.y;
+
+    // BFO frekvencia sprite létrehozása
+    spr.createSprite(bfoSpriteWidth, FREQ_7SEGMENT_HEIGHT);
+    spr.fillSprite(this->colors.background);
+    spr.setTextSize(1);
+    spr.setTextPadding(0);
+    spr.setFreeFont(&DSEG7_Classic_Mini_Regular_34);
+    spr.setTextDatum(BR_DATUM);
+
+    // Inaktív számjegyek rajzolása (ha engedélyezve van)
+    if (config.data.tftDigitLigth) {
+        spr.setTextColor(colors.inactive);
+        spr.drawString(data.mask, bfoSpriteWidth, FREQ_7SEGMENT_HEIGHT);
+    }
+
+    // Aktív BFO érték rajzolása
+    spr.setTextColor(colors.active);
+    spr.drawString(data.freqStr, bfoSpriteWidth, FREQ_7SEGMENT_HEIGHT);
+
+    // Sprite kirajzolása és törlése
+    spr.pushSprite(bfoSpriteX, bfoSpriteY);
+    spr.deleteSprite();
+
+    // 2. BFO "Hz" felirat rajzolása
+    drawText("Hz", bounds.x + BfoHzLabelXOffset, bounds.y + BfoHzLabelYOffset, UNIT_TEXT_SIZE, BL_DATUM, colors.indicator);
+
+    // 3. BFO felirat háttérrel
+    tft.fillRect(bounds.x + BfoLabelRectXOffset, bounds.y + BfoLabelRectYOffset, BfoLabelRectW, BfoLabelRectH, colors.active);
+
+    tft.setFreeFont();
+    tft.setTextSize(2);
+    tft.setTextDatum(MC_DATUM);
+    tft.setTextColor(TFT_BLACK, colors.active);
+    tft.drawString("BFO", bounds.x + BfoLabelRectXOffset + BfoLabelRectW / 2, bounds.y + BfoLabelRectYOffset + BfoLabelRectH / 2);
+
+    // 4. Fő frekvencia kisebb méretben (jobb felső sarokban)
+    // Először számítsuk ki a fő frekvenciát
+    uint32_t bfoOffset = rtv::lastBFO;
+    uint32_t displayFreqHz = (uint32_t)currentDisplayFrequency * 1000 - bfoOffset;
+    long khz_part = displayFreqHz / 1000;
+    int hz_tens_part = abs((int)(displayFreqHz % 1000)) / 10;
+
+    char freqBuffer[16];
+    sprintf(freqBuffer, "%ld.%02d", khz_part, hz_tens_part);
+
+    drawText(String(freqBuffer), bounds.x + BfoMiniFreqX, bounds.y + BfoMiniFreqY, UNIT_TEXT_SIZE, BR_DATUM, colors.indicator);
+
+    // 5. Fő frekvencia "kHz" felirata még kisebb méretben
+    drawText("kHz", bounds.x + BfoMiniFreqX + BfoMiniUnitXOffset, bounds.y + BfoMiniFreqY, 1, BR_DATUM, colors.indicator);
+}
+
+/**
+ * @brief Kezeli a BFO be/kikapcsolási animációt
+ */
+void FreqDisplay::handleBfoAnimation() {
+    const FreqSegmentColors &colors = getSegmentColors();
+
+    // Fő frekvencia kiszámítása az animációhoz
+    uint32_t bfoOffset = rtv::lastBFO;
+    uint32_t displayFreqHz = (uint32_t)currentDisplayFrequency * 1000 - bfoOffset;
+    long khz_part = displayFreqHz / 1000;
+    int hz_tens_part = abs((int)(displayFreqHz % 1000)) / 10;
+
+    char freqBuffer[16];
+    sprintf(freqBuffer, "%ld.%02d", khz_part, hz_tens_part);
+
+    // Animáció: 4 lépésben változtatjuk a szövegméretet
+    for (uint8_t i = 4; i > 1; i--) {
+        // Teljes képernyő törlése minden lépésben
+        tft.fillRect(bounds.x, bounds.y, bounds.width, bounds.height, this->colors.background);
+
+        // Szövegméret kiszámítása - BFO bekapcsoláskor kicsinyül, kikapcsoláskor nagyobb lesz
+        int textSize = rtv::bfoOn ? i : (6 - i);
+
+        // Szöveg pozíció (mini frekvencia pozíciója)
+        int animX = bounds.x + 220;
+        int animY = bounds.y + 62;
+
+        // Animált szöveg rajzolása
+        tft.setFreeFont();
+        tft.setTextSize(textSize);
+        tft.setTextDatum(BR_DATUM);
+        tft.setTextColor(colors.indicator, this->colors.background);
+        tft.drawString(String(freqBuffer), animX, animY);
+
+        delay(100); // 100ms késleltetés lépésenként
+    }
+}
+
+/**
+ * @brief Kényszeríti a teljes újrarajzolást (BFO módváltáskor)
+ */
+void FreqDisplay::forceFullRedraw() {
+    needsFullClear = true;
+    markForRedraw();
 }
