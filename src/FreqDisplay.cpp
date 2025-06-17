@@ -153,33 +153,35 @@ FreqDisplay::FrequencyDisplayData FreqDisplay::getFrequencyDisplayData(uint16_t 
             data.unit = "Hz";
             data.mask = "-888";
             data.freqStr = String(rtv::currentBFOmanu);
-        } else {
-            // Normál SSB/CW: frekvencia formázás
+        } else { // Normál SSB/CW: frekvencia formázás
             data.unit = "kHz";
-            data.mask = "88 888.88";
+            data.mask = "88 888.88"; // Visszatérés 8-as karakterre, amely biztosan minden szegmenst mutat
             uint32_t displayFreqHz = (uint32_t)frequency * 1000 - rtv::freqDec;
             long khz_part = displayFreqHz / 1000;
             int hz_tens_part = abs((int)(displayFreqHz % 1000)) / 10;
 
-            // Maszk: "88 888.88" -> Frekvencia: "xx xxx.xx" (space a 2. pozíció után)
+            // Space beszúrása a formázásba, hogy egyezzen a maszkkal "88 888.88"
             char buffer[16];
-
-            // Először a kHz részt és Hz részt külön formázzuk
-            char khz_str[8];
-            sprintf(khz_str, "%ld", khz_part);
-
-            // Space beszúrása a megfelelő helyre
-            String khz_with_space = String(khz_str);
-            int len = khz_with_space.length();
-
-            if (len > 2) {
-                // Ha 3 vagy több digit, akkor space-t teszünk a végétől számított 3. pozíció elé
-                khz_with_space = khz_with_space.substring(0, len - 3) + " " + khz_with_space.substring(len - 3);
+            if (khz_part >= 10000) {
+                // 5 digit: "21074" -> "21 074"
+                sprintf(buffer, "%ld.%02d", khz_part, hz_tens_part);
+                String temp = String(buffer);
+                int len = temp.indexOf('.');
+                if (len > 2) {
+                    temp = temp.substring(0, len - 3) + " " + temp.substring(len - 3);
+                }
+                data.freqStr = temp;
+            } else { // 4 digit vagy kevesebb: "7074" -> "7 074"
+                sprintf(buffer, "%ld.%02d", khz_part, hz_tens_part);
+                String temp = String(buffer);
+                int len = temp.indexOf('.');
+                if (len > 1) {
+                    temp = " " + temp.substring(0, len - 3) + " " + temp.substring(len - 3);
+                } else {
+                    temp = "  " + temp; // Padding bal oldalon
+                }
+                data.freqStr = temp;
             }
-
-            // Összerakjuk a teljes frekvencia stringet
-            sprintf(buffer, "%s.%02d", khz_with_space.c_str(), hz_tens_part);
-            data.freqStr = String(buffer);
         }
     }
 
@@ -258,15 +260,27 @@ void FreqDisplay::drawSsbCwStyle(const FrequencyDisplayData &data) {
         // BFO mód: külön kezelés
         drawBfoStyle(data);
         return;
-    }
-
-    // 1. Frekvencia sprite pozicionálása: keret jobb szélénél (maszk bal oldala jobbra igazítva)
+    } // 1. Frekvencia sprite pozicionálása: keret jobb szélénél (maszk bal oldala jobbra igazítva)
     int freqSpriteRightX = bounds.x + bounds.width - 5; // 5 pixel margin a jobb szélétől
 
-    // Sprite szélesség számítása space-ekkel együtt
-    int freqSpriteWidth = calculateSpriteWidthWithSpaces(data.mask);
+    // Sprite szélesség számítása - PONTOSAN a textWidth() függvénnyel
+    tft.setFreeFont(&DSEG7_Classic_Mini_Regular_34);
+    int freqSpriteWidth = tft.textWidth(data.mask); // Pontos szélesség lekérése
     int freqSpriteX = freqSpriteRightX - freqSpriteWidth;
     int freqSpriteY = bounds.y;
+
+    // DEBUG: Sprite pozíció és méret
+    Serial.println("=== SPRITE POSITION DEBUG ===");
+    Serial.print("Bounds: x=");
+    Serial.print(bounds.x);
+    Serial.print(", width=");
+    Serial.println(bounds.width);
+    Serial.print("freqSpriteRightX: ");
+    Serial.println(freqSpriteRightX);
+    Serial.print("freqSpriteWidth: ");
+    Serial.println(freqSpriteWidth);
+    Serial.print("freqSpriteX: ");
+    Serial.println(freqSpriteX);
 
     // Frekvencia sprite rajzolása space-ekkel
     drawFrequencySpriteWithSpaces(data, freqSpriteX, freqSpriteY, freqSpriteWidth);
@@ -289,19 +303,38 @@ void FreqDisplay::drawSsbCwStyle(const FrequencyDisplayData &data) {
  * @brief Kiszámítja a sprite szélességét space karakterekkel együtt
  */
 int FreqDisplay::calculateSpriteWidthWithSpaces(const char *mask) {
+    // DEBUG: Szélességszámítás részletei
+    Serial.print("Calculating width for mask: '");
+    Serial.print(mask);
+    Serial.println("'");
+
     // Egyszerűsített számítás konstansokkal
     const int SPACE_GAP_WIDTH = 8; // Vizuális gap space karakterek helyett
     int totalWidth = 0;
     int maskLen = strlen(mask);
 
     for (int i = 0; i < maskLen; i++) {
+        int charWidth = 0;
         if (mask[i] == ' ') {
-            totalWidth += SPACE_GAP_WIDTH; // Vizuális gap a space helyett
+            charWidth = SPACE_GAP_WIDTH; // Vizuális gap a space helyett
+            Serial.print("  [");
+            Serial.print(i);
+            Serial.print("] SPACE -> ");
+            Serial.println(charWidth);
         } else {
-            totalWidth += getCharacterWidth(mask[i]);
+            charWidth = getCharacterWidth(mask[i]);
+            Serial.print("  [");
+            Serial.print(i);
+            Serial.print("] '");
+            Serial.print(mask[i]);
+            Serial.print("' -> ");
+            Serial.println(charWidth);
         }
+        totalWidth += charWidth;
     }
 
+    Serial.print("Total calculated width: ");
+    Serial.println(totalWidth);
     return totalWidth;
 }
 
@@ -310,6 +343,17 @@ int FreqDisplay::calculateSpriteWidthWithSpaces(const char *mask) {
  */
 void FreqDisplay::drawFrequencySpriteWithSpaces(const FrequencyDisplayData &data, int x, int y, int width) {
     const FreqSegmentColors &colors = getSegmentColors();
+
+    // DEBUG: Szélességszámítás ellenőrzése
+    Serial.println("=== FREQ SPRITE DEBUG ===");
+    Serial.print("Mask: '");
+    Serial.print(data.mask);
+    Serial.println("'");
+    Serial.print("FreqStr: '");
+    Serial.print(data.freqStr);
+    Serial.println("'");
+    Serial.print("Sprite width: ");
+    Serial.println(width);
 
     // Sprite létrehozása
     spr.createSprite(width, FREQ_7SEGMENT_HEIGHT);
@@ -338,23 +382,16 @@ void FreqDisplay::drawFrequencySpriteWithSpaces(const FrequencyDisplayData &data
  * @brief Rajzolja a finomhangolás aláhúzást SSB/CW módban
  */
 void FreqDisplay::drawFineTuningUnderline(int freqSpriteX, int freqSpriteWidth) {
-    const FreqSegmentColors &colors = getSegmentColors(); // Az utolsó 3 digit pozíciójának meghatározása
-    // A maszk: "88 888.88"
-    // Pozíciók:  01234567 8
-    //            0: '8' (10kHz), 1: '8' (1kHz), 2: ' ' (space)
-    //            3: '8' (100Hz), 4: '8' (10Hz), 5: '8' (1Hz), 6: '.' (pont)
-    //            7: '8' (0.1Hz), 8: '8' (0.01Hz) - ezek nem kellenek finomhangoláshoz    // A finomhangolás digitjei a maszkban (jobbról balra):
-    // "88 888.88" - pozíciók: 0:ezres, 1:ezres, 2:space, 3:százas, 4:tízes, 5:egyes, 6:pont, 7:tized, 8:század
-    // Finomhangolás digitek jobbról balra: pozíció 8 (10Hz), 7 (100Hz), 5 (1kHz)
-    // JAVÍTÁS: Próbáljuk vissza pozíció 5-öt az 1kHz-hez
+    const FreqSegmentColors &colors = getSegmentColors(); // Az eredeti maszk: "88 888.88" (8-as karakterrel, amely minden szegmenst mutat, visszatérés)
+    // Pozíciók:           01 23456 78
+    //                     88 888.88
+    // Finomhangolás digitek: 5=1kHz, 7=100Hz, 8=10Hz (az utolsó 3 digit)
 
     const char *mask = "88 888.88";
     int maskLen = strlen(mask);
-    const int SPACE_GAP_WIDTH = 8; // A finomhangolási digit indexei a maszkban (0-alapú)
-    // Helyes elemzés:
-    // Maszk: "88 888.88" → pozíciók: 0,1,2(' '),3,4,5,6('.'),7,8
-    // Frekvencia: "7 074.00" → pozíciók: 0(' '),1('7'),2(' '),3('0'),4('7'),5('4'),6('.'),7('0'),8('0')
-    // Finomhangolás digitek: 5=1kHz('4'), 7=100Hz('0'), 8=10Hz('0')
+    const int SPACE_GAP_WIDTH = 8;
+
+    // Finomhangolási digit indexek az eredeti maszkban
     int lastThreeDigitIndices[3] = {5, 7, 8}; // 5=1kHz, 7=100Hz, 8=10Hz
     int digitPositions[3];                    // [0] = 1kHz digit, [1] = 100Hz digit, [2] = 10Hz digit
     int digitWidths[3];                       // A digitek tényleges szélességei
@@ -404,11 +441,14 @@ void FreqDisplay::drawFineTuningUnderline(int freqSpriteX, int freqSpriteWidth) 
 /**
  * @brief Kiszámítja az SSB/CW frekvencia érintési területeket
  */
-void FreqDisplay::calculateSsbCwTouchAreas(int freqSpriteX, int freqSpriteWidth) {
-    // Ugyanaz a logika, mint a finomhangolás aláhúzásnál
+void FreqDisplay::calculateSsbCwTouchAreas(int freqSpriteX, int freqSpriteWidth) { // Ugyanaz a logika, mint a finomhangolás aláhúzásnál
     const char *mask = "88 888.88";
-    const int SPACE_GAP_WIDTH = 8;            // Az utolsó 3 digit indexei a maszkban (0-alapú) - a finomhangoláshoz
-    int lastThreeDigitIndices[3] = {5, 7, 8}; // 5=1kHz, 7=100Hz, 8=10Hz// Pozíciók kiszámítása
+    const int SPACE_GAP_WIDTH = 8;
+
+    // Az utolsó 3 digit indexei a maszkban (0-alapú) - a finomhangoláshoz
+    int lastThreeDigitIndices[3] = {5, 7, 8}; // 5=1kHz, 7=100Hz, 8=10Hz
+
+    // Pozíciók kiszámítása
     int currentX = 0;
     for (int i = 0; i < strlen(mask); i++) {
         // X pozíció frissítése ELŐTT - számoljuk ki a karakterszélességet
@@ -418,7 +458,9 @@ void FreqDisplay::calculateSsbCwTouchAreas(int freqSpriteX, int freqSpriteWidth)
         } else {
             // Optimalizált karakterszélesség lekérdezés
             charWidth = getCharacterWidth(mask[i]);
-        } // Ellenőrizzük, hogy ez az utolsó 3 digit egyike-e
+        }
+
+        // Ellenőrizzük, hogy ez az utolsó 3 digit egyike-e
         for (int j = 0; j < 3; j++) {
             if (i == lastThreeDigitIndices[j]) {
                 // Touch terület: digit közepe körül (ugyanúgy, mint az aláhúzásnál)
@@ -428,7 +470,9 @@ void FreqDisplay::calculateSsbCwTouchAreas(int freqSpriteX, int freqSpriteWidth)
 
                 break;
             }
-        } // X pozíció frissítése a következő karakterhez
+        }
+
+        // X pozíció frissítése a következő karakterhez
         currentX += charWidth;
     }
 }
@@ -549,8 +593,8 @@ void FreqDisplay::drawBfoStyle(const FrequencyDisplayData &data) {
 
     // Hz és BFO feliratok a 7-szegmenses sprite jobb oldalán
 
-    constexpr uint16_t BfoHzLabelXOffset = BfoSpriteRightMargin + 10;   // Hz felirat a sprite után 10 pixel
-    constexpr uint16_t BfoHzLabelYOffset = 20;                          // Hz felirat a 7-szegmenses felső részénél
+    constexpr uint16_t BfoHzLabelXOffset = BfoSpriteRightMargin + 10; // Hz felirat a sprite után 10 pixel
+    constexpr uint16_t BfoHzLabelYOffset = 20;                        // Hz felirat a 7-szegmenses felső részénél
 
     constexpr uint16_t BfoLabelRectXOffset = BfoSpriteRightMargin + 40; // BFO felirat a Hz után
     constexpr uint16_t BfoLabelRectYOffset = 0;                         // BFO felirat a 7-szegmenses felső részénél
@@ -559,7 +603,7 @@ void FreqDisplay::drawBfoStyle(const FrequencyDisplayData &data) {
 
     // Mini frekvencia és kHz a 7-szegmenses alsó részével egy vonalban
     constexpr uint16_t BfoMiniFreqX = BfoSpriteRightMargin + 105; // Mini frekvencia a sprite után
-    constexpr uint16_t BfoMiniUnitXOffset = 20;                  // kHz a mini frekvencia után
+    constexpr uint16_t BfoMiniUnitXOffset = 20;                   // kHz a mini frekvencia után
 
     // Mini frekvencia Y pozíciója - alja egy vonalban a 7-szegmenses aljával
     uint16_t BfoMiniFreqY = bounds.y + FREQ_7SEGMENT_HEIGHT; // 1. BFO érték kirajzolása a 7 szegmensesre (balra pozicionálva)
