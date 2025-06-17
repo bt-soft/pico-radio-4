@@ -294,7 +294,7 @@ void AMScreen::layoutComponents() {
     // S-Meter komponens létrehozása - RadioScreen közös implementáció
     // ===================================================================
     uint16_t smeterWidth = UIComponent::SCREEN_W - 90; // 90px helyet hagyunk a jobb oldalon
-    Rect smeterBounds(2, FreqDisplayY + FreqDisplay::FREQDISPLAY_HEIGHT + 20, smeterWidth, 60);
+    Rect smeterBounds(2, FreqDisplayY + FreqDisplay::FREQDISPLAY_HEIGHT + 0, smeterWidth, 60);
     createSMeterComponent(smeterBounds);
 
     createCommonVerticalButtons(pSi4735Manager); // ButtonsGroupManager használata
