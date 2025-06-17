@@ -269,19 +269,6 @@ void FreqDisplay::drawSsbCwStyle(const FrequencyDisplayData &data) {
     int freqSpriteX = freqSpriteRightX - freqSpriteWidth;
     int freqSpriteY = bounds.y;
 
-    // DEBUG: Sprite pozíció és méret
-    Serial.println("=== SPRITE POSITION DEBUG ===");
-    Serial.print("Bounds: x=");
-    Serial.print(bounds.x);
-    Serial.print(", width=");
-    Serial.println(bounds.width);
-    Serial.print("freqSpriteRightX: ");
-    Serial.println(freqSpriteRightX);
-    Serial.print("freqSpriteWidth: ");
-    Serial.println(freqSpriteWidth);
-    Serial.print("freqSpriteX: ");
-    Serial.println(freqSpriteX);
-
     // Frekvencia sprite rajzolása space-ekkel
     drawFrequencySpriteWithSpaces(data, freqSpriteX, freqSpriteY, freqSpriteWidth);
 
@@ -303,11 +290,6 @@ void FreqDisplay::drawSsbCwStyle(const FrequencyDisplayData &data) {
  * @brief Kiszámítja a sprite szélességét space karakterekkel együtt
  */
 int FreqDisplay::calculateSpriteWidthWithSpaces(const char *mask) {
-    // DEBUG: Szélességszámítás részletei
-    Serial.print("Calculating width for mask: '");
-    Serial.print(mask);
-    Serial.println("'");
-
     // Egyszerűsített számítás konstansokkal
     const int SPACE_GAP_WIDTH = 8; // Vizuális gap space karakterek helyett
     int totalWidth = 0;
@@ -317,24 +299,12 @@ int FreqDisplay::calculateSpriteWidthWithSpaces(const char *mask) {
         int charWidth = 0;
         if (mask[i] == ' ') {
             charWidth = SPACE_GAP_WIDTH; // Vizuális gap a space helyett
-            Serial.print("  [");
-            Serial.print(i);
-            Serial.print("] SPACE -> ");
-            Serial.println(charWidth);
         } else {
             charWidth = getCharacterWidth(mask[i]);
-            Serial.print("  [");
-            Serial.print(i);
-            Serial.print("] '");
-            Serial.print(mask[i]);
-            Serial.print("' -> ");
-            Serial.println(charWidth);
         }
         totalWidth += charWidth;
     }
 
-    Serial.print("Total calculated width: ");
-    Serial.println(totalWidth);
     return totalWidth;
 }
 
@@ -343,17 +313,6 @@ int FreqDisplay::calculateSpriteWidthWithSpaces(const char *mask) {
  */
 void FreqDisplay::drawFrequencySpriteWithSpaces(const FrequencyDisplayData &data, int x, int y, int width) {
     const FreqSegmentColors &colors = getSegmentColors();
-
-    // DEBUG: Szélességszámítás ellenőrzése
-    Serial.println("=== FREQ SPRITE DEBUG ===");
-    Serial.print("Mask: '");
-    Serial.print(data.mask);
-    Serial.println("'");
-    Serial.print("FreqStr: '");
-    Serial.print(data.freqStr);
-    Serial.println("'");
-    Serial.print("Sprite width: ");
-    Serial.println(width);
 
     // Sprite létrehozása
     spr.createSprite(width, FREQ_7SEGMENT_HEIGHT);
@@ -382,9 +341,9 @@ void FreqDisplay::drawFrequencySpriteWithSpaces(const FrequencyDisplayData &data
  * @brief Rajzolja a finomhangolás aláhúzást SSB/CW módban
  */
 void FreqDisplay::drawFineTuningUnderline(int freqSpriteX, int freqSpriteWidth) {
-    const FreqSegmentColors &colors = getSegmentColors(); // EGYSZERŰSÍTETT MEGOLDÁS: Hard-coded relatív pozíciók
-    // A maszk "88 888.88" alapján az utolsó 3 digit relatív pozíciói:
-    // sprite_width = 208 pixel esetén, jobb szélre igazított szöveg    // Az aláhúzás digit pozíciói relatívan a sprite jobb szélétől (finomhangolva):
+    const FreqSegmentColors &colors = getSegmentColors();
+
+    // Az aláhúzás digit pozíciói relatívan a sprite jobb szélétől (finomhangolva):
     int digit1kHz_offset = -72;  // 1kHz digit (5. pozíció a maszkban) - 3px jobbra
     int digit100Hz_offset = -40; // 100Hz digit (7. pozíció a maszkban) - jó így
     int digit10Hz_offset = -14;  // 10Hz digit (8. pozíció a maszkban) - 3px jobbra
@@ -393,16 +352,7 @@ void FreqDisplay::drawFineTuningUnderline(int freqSpriteX, int freqSpriteWidth) 
 
     int digitWidth = 25; // Ismert DSEG7 digit szélesség
 
-    // DEBUG: Finomhangolás pozíciók
-    Serial.println("=== FINE TUNING DEBUG ===");
-    Serial.print("1kHz digit center: ");
-    Serial.println(digitPositions[0]);
-    Serial.print("100Hz digit center: ");
-    Serial.println(digitPositions[1]);
-    Serial.print("10Hz digit center: ");
-    Serial.println(digitPositions[2]);
-    Serial.print("Current step (rtv::freqstepnr): ");
-    Serial.println(rtv::freqstepnr); // Aláhúzás rajzolása a kiválasztott digit alatt
+    // Aláhúzás rajzolása a kiválasztott digit alatt
     if (rtv::freqstepnr >= 0 && rtv::freqstepnr < 3) {
         int digitCenter = digitPositions[rtv::freqstepnr];
         int underlineY = bounds.y + FREQ_7SEGMENT_HEIGHT + UNDERLINE_Y_OFFSET;
@@ -433,9 +383,7 @@ void FreqDisplay::calculateSsbCwTouchAreas(int freqSpriteX, int freqSpriteWidth)
 
     int digitPositions[3] = {freqSpriteX + freqSpriteWidth + digit1kHz_offset, freqSpriteX + freqSpriteWidth + digit100Hz_offset, freqSpriteX + freqSpriteWidth + digit10Hz_offset};
 
-    int digitWidth = 25; // Ismert DSEG7 digit szélesség
-
-    // Touch területek beállítása
+    int digitWidth = 25;                                             // Ismert DSEG7 digit szélesség    // Touch területek beállítása
     ssbCwTouchDigitAreas[0][0] = digitPositions[0] - digitWidth / 2; // 1kHz digit bal széle
     ssbCwTouchDigitAreas[0][1] = digitPositions[0] + digitWidth / 2; // 1kHz digit jobb széle
 
@@ -444,21 +392,6 @@ void FreqDisplay::calculateSsbCwTouchAreas(int freqSpriteX, int freqSpriteWidth)
 
     ssbCwTouchDigitAreas[2][0] = digitPositions[2] - digitWidth / 2; // 10Hz digit bal széle
     ssbCwTouchDigitAreas[2][1] = digitPositions[2] + digitWidth / 2; // 10Hz digit jobb széle
-
-    // DEBUG: Touch területek
-    Serial.println("=== TOUCH AREAS DEBUG ===");
-    Serial.print("1kHz touch: ");
-    Serial.print(ssbCwTouchDigitAreas[0][0]);
-    Serial.print(" - ");
-    Serial.println(ssbCwTouchDigitAreas[0][1]);
-    Serial.print("100Hz touch: ");
-    Serial.print(ssbCwTouchDigitAreas[1][0]);
-    Serial.print(" - ");
-    Serial.println(ssbCwTouchDigitAreas[1][1]);
-    Serial.print("10Hz touch: ");
-    Serial.print(ssbCwTouchDigitAreas[2][0]);
-    Serial.print(" - ");
-    Serial.println(ssbCwTouchDigitAreas[2][1]);
 }
 
 /**
@@ -499,7 +432,7 @@ void FreqDisplay::draw() {
     // Frekvencia rajzolása
     drawFrequencyDisplay(data);
 
-    // Debug keret - segít az optimalizálásban
+    // Debug keret - segít az optimalizálásban és pozíciók ellenőrzésében
     tft.drawRect(bounds.x, bounds.y, bounds.width, bounds.height, TFT_RED);
 
     needsRedraw = false;
