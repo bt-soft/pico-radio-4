@@ -200,54 +200,47 @@ void FreqDisplay::drawText(const String &text, int x, int y, int textSize, uint8
 }
 
 /**
- * @brief Rajzolja FM/AM/LW stílusú frekvencia kijelzőt (mértékegység jobbra)
+ * @brief Rajzolja FM/AM/LW stílusú frekvencia kijelzőt (balra igazított frekvencia)
  */
 void FreqDisplay::drawFmAmLwStyle(const FrequencyDisplayData &data) {
-    const FreqSegmentColors &colors = getSegmentColors(); // 1. Mértékegység pozicionálása: keret jobb szélénél, digitek alsó vonalával egy magasságban
-    int unitX = bounds.x + bounds.width - 5;              // 5 pixel margin a jobb szélétől
-    int unitY = bounds.y + FREQ_7SEGMENT_HEIGHT;          // Digitek alsó vonalával egy magasságban
+    const FreqSegmentColors &colors = getSegmentColors();
 
-    // Mértékegység szöveg szélességének mérése
-    tft.setFreeFont();
-    tft.setTextSize(UNIT_TEXT_SIZE);
-    int unitWidth = tft.textWidth(data.unit);
-
-    // Finális mértékegység pozíció (jobbra igazítva)
-    int finalUnitX = unitX - unitWidth;
-
-    // Mértékegység rajzolása
-    drawText(data.unit, finalUnitX, unitY, UNIT_TEXT_SIZE, BL_DATUM, colors.indicator);
-
-    // 2. Frekvencia sprite pozicionálása: mértékegység bal szélétől balra
+    // 1. Frekvencia sprite pozicionálása: keret bal szélénél
     spr.setFreeFont(&DSEG7_Classic_Mini_Regular_34);
     int freqSpriteWidth = spr.textWidth(data.mask);
 
-    // Frekvencia sprite jobb széle legyen a mértékegység bal szélétől balra (kis gap)
-    int freqSpriteRightX = finalUnitX - 8; // 8 pixel gap
-    int freqSpriteX = freqSpriteRightX - freqSpriteWidth;
-    int freqSpriteY = bounds.y;
-
-    // Frekvencia sprite létrehozása és rajzolása
+    int freqSpriteX = bounds.x + 5; // 5 pixel margin a bal szélétől
+    int freqSpriteY = bounds.y;     // Frekvencia sprite létrehozása és rajzolása
     spr.createSprite(freqSpriteWidth, FREQ_7SEGMENT_HEIGHT);
     spr.fillSprite(this->colors.background);
     spr.setTextSize(1);
     spr.setTextPadding(0);
     spr.setFreeFont(&DSEG7_Classic_Mini_Regular_34);
-    spr.setTextDatum(BR_DATUM); // Jobb alsó sarokhoz igazítás
 
-    // Inaktív számjegyek rajzolása (ha engedélyezve van)
+    // Inaktív számjegyek rajzolása (ha engedélyezve van) - BALRA igazítva
     if (config.data.tftDigitLigth) {
         spr.setTextColor(colors.inactive);
-        spr.drawString(data.mask, freqSpriteWidth, FREQ_7SEGMENT_HEIGHT);
+        spr.setTextDatum(BL_DATUM);                         // Bal alsó sarokhoz igazítás
+        spr.drawString(data.mask, 0, FREQ_7SEGMENT_HEIGHT); // Bal szélre igazítva
     }
 
-    // Aktív frekvencia számok rajzolása
+    // Aktív frekvencia számok rajzolása - JOBBRA igazítva a maszkhoz
     spr.setTextColor(colors.active);
-    spr.drawString(data.freqStr, freqSpriteWidth, FREQ_7SEGMENT_HEIGHT);
+    spr.setTextDatum(BR_DATUM);                                          // Jobb alsó sarokhoz igazítás
+    spr.drawString(data.freqStr, freqSpriteWidth, FREQ_7SEGMENT_HEIGHT); // Jobb szélre igazítva
 
     // Sprite kirajzolása és memória felszabadítása
     spr.pushSprite(freqSpriteX, freqSpriteY);
     spr.deleteSprite();
+
+    // 2. Mértékegység pozicionálása: frekvencia sprite után jobbra
+    int unitX = freqSpriteX + freqSpriteWidth + 8; // 8 pixel gap a frekvencia után
+    int unitY = bounds.y + FREQ_7SEGMENT_HEIGHT;   // Digitek alsó vonalával egy magasságban
+
+    // Mértékegység rajzolása
+    tft.setFreeFont();
+    tft.setTextSize(UNIT_TEXT_SIZE);
+    drawText(data.unit, unitX, unitY, UNIT_TEXT_SIZE, BL_DATUM, colors.indicator);
 }
 
 /**
