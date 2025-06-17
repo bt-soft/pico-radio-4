@@ -573,8 +573,8 @@ void AMScreen::handleStepButton(const UIButton::ButtonEvent &event) {
     } else {
         title = "Step tune AM/SSB";
         labels = pSi4735Manager->getStepSizeLabels(Band::stepSizeAM, labelsCount);
-        w = 280;
-        h = 120;
+        w = 290;
+        h = 130;
     }
     auto stepDialog = std::make_shared<MultiButtonDialog>(
         this, this->tft,                                                                       // Képernyő referencia
