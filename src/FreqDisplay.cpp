@@ -610,20 +610,48 @@ void FreqDisplay::handleBfoAnimation() {
     char freqBuffer[16];
     sprintf(freqBuffer, "%ld.%02d", khz_part, hz_tens_part);
 
-    // Animáció: 4 lépésben változtatjuk a szövegméretet
-    for (uint8_t i = 4; i > 1; i--) {
+    // Pozíciók meghatározása
+    constexpr uint16_t BfoSpriteRightMargin = 115;
+    constexpr uint16_t BfoMiniFreqX = BfoSpriteRightMargin + 105;
+
+    int startX, endX, startSize, endSize;
+
+    if (rtv::bfoOn) {
+        // BFO bekapcsolás: nagy frekvencia → mini frekvencia
+        startX = bounds.x + 5;          // SSB/CW normál pozíció (bal oldal)
+        endX = bounds.x + BfoMiniFreqX; // Mini frekvencia pozíció
+        startSize = 4;                  // Nagy méret
+        endSize = 1;                    // Kis méret
+    } else {
+        // BFO kikapcsolás: mini frekvencia → nagy frekvencia
+        startX = bounds.x + BfoMiniFreqX; // Mini frekvencia pozíció
+        endX = bounds.x + 5;              // SSB/CW normál pozíció (bal oldal)
+        startSize = 1;                    // Kis méret
+        endSize = 4;                      // Nagy méret
+    }
+
+    // Animáció: 4 lépésben interpolálunk pozíció és méret között
+    for (uint8_t i = 0; i < 4; i++) {
         // Teljes képernyő törlése minden lépésben
         tft.fillRect(bounds.x, bounds.y, bounds.width, bounds.height, this->colors.background);
 
-        // Szövegméret kiszámítása - BFO bekapcsoláskor kicsinyül, kikapcsoláskor nagyobb lesz
-        int textSize = rtv::bfoOn ? i : (6 - i); // Szöveg pozíció (mini frekvencia pozíciója - új elrendezés)
-        int animX = bounds.x + 115 + 10;         // BfoSpriteRightMargin + 10
+        // Interpoláció számítása (0.0 - 1.0 között)
+        float progress = (float)i / 3.0f;
+
+        // Pozíció interpoláció
+        int animX = startX + (int)((endX - startX) * progress);
+
+        // Méret interpoláció
+        int textSize = startSize + (int)((endSize - startSize) * progress);
+        if (textSize < 1)
+            textSize = 1;
+
         int animY = bounds.y + FREQ_7SEGMENT_HEIGHT;
 
         // Animált szöveg rajzolása
         tft.setFreeFont();
         tft.setTextSize(textSize);
-        tft.setTextDatum(BR_DATUM);
+        tft.setTextDatum(BL_DATUM); // Bal alsó sarokhoz igazítás
         tft.setTextColor(colors.indicator, this->colors.background);
         tft.drawString(String(freqBuffer), animX, animY);
 
