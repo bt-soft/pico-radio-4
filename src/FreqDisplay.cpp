@@ -141,9 +141,9 @@ FreqDisplay::FrequencyDisplayData FreqDisplay::getFrequencyDisplayData(uint16_t 
             data.mask = "8888";
             data.freqStr = String(frequency);
         } else {
-            // SW AM: 15.230 MHz
+            // SW AM: 27.200 MHz (CB) és 30.000 MHz sávok
             data.unit = "MHz";
-            data.mask = "88.888";
+            data.mask = "888.888"; // 6 karakteres maszk a hosszabb frekvenciákhoz
             data.freqStr = String(frequency / 1000.0f, 3);
         }
     } else if (demodMode == LSB || demodMode == USB || demodMode == CW) {
@@ -305,14 +305,13 @@ int FreqDisplay::calculateSpriteWidthWithSpaces(const char *mask) {
 /**
  * @brief Megbízható sprite szélesség számítás konstansokkal (textWidth() helyett)
  */
-int FreqDisplay::calculateFixedSpriteWidth(const String &mask) {
-    // Konstans értékek a különböző maszkokhoz - ezek nem változnak futás közben
+int FreqDisplay::calculateFixedSpriteWidth(const String &mask) { // Konstans értékek a különböző maszkokhoz - ezek nem változnak futás közben
     if (mask == "188.88") {
         return 130; // FM: "188.88"
     } else if (mask == "8888") {
         return 100; // MW/LW: "8888"
-    } else if (mask == "88.888") {
-        return 130; // SW AM: "88.888"
+    } else if (mask == "888.888") {
+        return 155; // SW AM: "888.888" (hosszabb CB és 30MHz sávokhoz)
     } else if (mask == "88 888.88") {
         return 208; // SSB/CW normál: "88 888.88"
     } else if (mask == "-888") {
