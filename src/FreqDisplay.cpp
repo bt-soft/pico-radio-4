@@ -312,12 +312,13 @@ int FreqDisplay::calculateFixedSpriteWidth(const String &mask) { // Konstans ér
     if (mask == "188.88") {
         return 130; // FM: "188.88"
     } else if (mask == "8888") {
-        return 100; // MW/LW: "8888"    } else if (mask == "88.888") {
+        return 100; // MW/LW: "8888"
+    } else if (mask == "88.888") {
         return 130; // SW AM: "88.888" (CB és 30MHz sávokhoz)
     } else if (mask == "88 888.88") {
         return 208; // SSB/CW normál: "88 888.88"
     } else if (mask == "-888") {
-        return 92; // BFO: "-888"
+        return 100; // BFO: "-888" (-999...+999 tartomány)
     }
 
     // Fallback: számítás konstansokkal
