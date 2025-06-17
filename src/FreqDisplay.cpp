@@ -382,28 +382,16 @@ void FreqDisplay::drawFrequencySpriteWithSpaces(const FrequencyDisplayData &data
  * @brief Rajzolja a finomhangolás aláhúzást SSB/CW módban
  */
 void FreqDisplay::drawFineTuningUnderline(int freqSpriteX, int freqSpriteWidth) {
-    const FreqSegmentColors &colors = getSegmentColors();
+    const FreqSegmentColors &colors = getSegmentColors(); // EGYSZERŰSÍTETT MEGOLDÁS: Hard-coded relatív pozíciók
+    // A maszk "88 888.88" alapján az utolsó 3 digit relatív pozíciói:
+    // sprite_width = 208 pixel esetén, jobb szélre igazított szöveg    // Az aláhúzás digit pozíciói relatívan a sprite jobb szélétől (finomhangolva):
+    int digit1kHz_offset = -72;  // 1kHz digit (5. pozíció a maszkban) - 3px jobbra
+    int digit100Hz_offset = -40; // 100Hz digit (7. pozíció a maszkban) - jó így
+    int digit10Hz_offset = -14;  // 10Hz digit (8. pozíció a maszkban) - 3px jobbra
 
-    // Most már pontos pozíciószámítás a TFT könyvtárral
-    // A maszk: "88 888.88" és az utolsó 3 digit: pozíciók 5, 7, 8
-    // Ezek megfelelnek az 1kHz, 100Hz, 10Hz digitek pozíciójának
+    int digitPositions[3] = {freqSpriteX + freqSpriteWidth + digit1kHz_offset, freqSpriteX + freqSpriteWidth + digit100Hz_offset, freqSpriteX + freqSpriteWidth + digit10Hz_offset};
 
-    tft.setFreeFont(&DSEG7_Classic_Mini_Regular_34);
-
-    // Kiszámítjuk az egyes karakterek pontos pozícióit a maszkban
-    const char *mask = "88 888.88";
-    String maskPrefix1 = "88 88";    // Pozíció 5 előtt (1kHz digit)
-    String maskPrefix2 = "88 888.";  // Pozíció 7 előtt (100Hz digit)
-    String maskPrefix3 = "88 888.8"; // Pozíció 8 előtt (10Hz digit)
-
-    int pos1kHz = freqSpriteX + freqSpriteWidth - tft.textWidth(mask) + tft.textWidth(maskPrefix1);
-    int pos100Hz = freqSpriteX + freqSpriteWidth - tft.textWidth(mask) + tft.textWidth(maskPrefix2);
-    int pos10Hz = freqSpriteX + freqSpriteWidth - tft.textWidth(mask) + tft.textWidth(maskPrefix3);
-
-    // Digit szélességek
-    int digitWidth = tft.textWidth("8");
-    int digitPositions[3] = {pos1kHz + digitWidth / 2, pos100Hz + digitWidth / 2, pos10Hz + digitWidth / 2};
-    int digitWidths[3] = {digitWidth, digitWidth, digitWidth};
+    int digitWidth = 25; // Ismert DSEG7 digit szélesség
 
     // DEBUG: Finomhangolás pozíciók
     Serial.println("=== FINE TUNING DEBUG ===");
@@ -414,24 +402,21 @@ void FreqDisplay::drawFineTuningUnderline(int freqSpriteX, int freqSpriteWidth) 
     Serial.print("10Hz digit center: ");
     Serial.println(digitPositions[2]);
     Serial.print("Current step (rtv::freqstepnr): ");
-    Serial.println(rtv::freqstepnr);
-
-    // Aláhúzás rajzolása a kiválasztott digit alatt
+    Serial.println(rtv::freqstepnr); // Aláhúzás rajzolása a kiválasztott digit alatt
     if (rtv::freqstepnr >= 0 && rtv::freqstepnr < 3) {
         int digitCenter = digitPositions[rtv::freqstepnr];
-        int digitWidth = digitWidths[rtv::freqstepnr]; // Tényleges digit szélesség
         int underlineY = bounds.y + FREQ_7SEGMENT_HEIGHT + UNDERLINE_Y_OFFSET;
 
-        // Aláhúzás középre igazítva a digit alatt (tényleges digit szélességgel)
+        // Aláhúzás középre igazítva a digit alatt
         int underlineX = digitCenter - (digitWidth / 2);
 
-        // Előbb töröljük az egész aláhúzási területet
-        int totalUnderlineWidth = digitPositions[2] - digitPositions[0] + digitWidths[2];
-        int clearStartX = digitPositions[0] - (digitWidths[0] / 2);
+        // Előbb töröljük az egész aláhúzási területet (mind a 3 digit területe)
+        int totalUnderlineWidth = digitPositions[2] - digitPositions[0] + digitWidth;
+        int clearStartX = digitPositions[0] - (digitWidth / 2);
 
         tft.fillRect(clearStartX, underlineY, totalUnderlineWidth, UNDERLINE_HEIGHT, this->colors.background);
 
-        // Aztán rajzoljuk az aktív aláhúzást (tényleges digit szélességgel)
+        // Aztán rajzoljuk az aktív aláhúzást
         tft.fillRect(underlineX, underlineY, digitWidth, UNDERLINE_HEIGHT, colors.indicator);
     }
 }
@@ -440,28 +425,25 @@ void FreqDisplay::drawFineTuningUnderline(int freqSpriteX, int freqSpriteWidth) 
  * @brief Kiszámítja az SSB/CW frekvencia érintési területeket
  */
 void FreqDisplay::calculateSsbCwTouchAreas(int freqSpriteX, int freqSpriteWidth) {
-    // Ugyanaz a pontos pozíciószámítás, mint a finomhangolás aláhúzásnál
-    tft.setFreeFont(&DSEG7_Classic_Mini_Regular_34);
+    // EGYSZERŰSÍTETT MEGOLDÁS: Ugyanazok a hard-coded relatív pozíciók, mint a finomhangolásban
 
-    const char *mask = "88 888.88";
-    String maskPrefix1 = "88 88";    // Pozíció 5 előtt (1kHz digit)
-    String maskPrefix2 = "88 888.";  // Pozíció 7 előtt (100Hz digit)
-    String maskPrefix3 = "88 888.8"; // Pozíció 8 előtt (10Hz digit)
+    int digit1kHz_offset = -72;  // 1kHz digit (5. pozíció a maszkban) - 3px jobbra
+    int digit100Hz_offset = -40; // 100Hz digit (7. pozíció a maszkban) - jó így
+    int digit10Hz_offset = -14;  // 10Hz digit (8. pozíció a maszkban) - 3px jobbra
 
-    int pos1kHz = freqSpriteX + freqSpriteWidth - tft.textWidth(mask) + tft.textWidth(maskPrefix1);
-    int pos100Hz = freqSpriteX + freqSpriteWidth - tft.textWidth(mask) + tft.textWidth(maskPrefix2);
-    int pos10Hz = freqSpriteX + freqSpriteWidth - tft.textWidth(mask) + tft.textWidth(maskPrefix3);
+    int digitPositions[3] = {freqSpriteX + freqSpriteWidth + digit1kHz_offset, freqSpriteX + freqSpriteWidth + digit100Hz_offset, freqSpriteX + freqSpriteWidth + digit10Hz_offset};
 
-    int digitWidth = tft.textWidth("8");
+    int digitWidth = 25; // Ismert DSEG7 digit szélesség
 
     // Touch területek beállítása
-    ssbCwTouchDigitAreas[0][0] = pos1kHz;               // 1kHz digit bal széle
-    ssbCwTouchDigitAreas[0][1] = pos1kHz + digitWidth;  // 1kHz digit jobb széle
-    ssbCwTouchDigitAreas[1][0] = pos100Hz;              // 100Hz digit bal széle
-    ssbCwTouchDigitAreas[1][1] = pos100Hz + digitWidth; // 100Hz digit jobb széle
+    ssbCwTouchDigitAreas[0][0] = digitPositions[0] - digitWidth / 2; // 1kHz digit bal széle
+    ssbCwTouchDigitAreas[0][1] = digitPositions[0] + digitWidth / 2; // 1kHz digit jobb széle
 
-    ssbCwTouchDigitAreas[2][0] = pos10Hz;              // 10Hz digit bal széle
-    ssbCwTouchDigitAreas[2][1] = pos10Hz + digitWidth; // 10Hz digit jobb széle
+    ssbCwTouchDigitAreas[1][0] = digitPositions[1] - digitWidth / 2; // 100Hz digit bal széle
+    ssbCwTouchDigitAreas[1][1] = digitPositions[1] + digitWidth / 2; // 100Hz digit jobb széle
+
+    ssbCwTouchDigitAreas[2][0] = digitPositions[2] - digitWidth / 2; // 10Hz digit bal széle
+    ssbCwTouchDigitAreas[2][1] = digitPositions[2] + digitWidth / 2; // 10Hz digit jobb széle
 
     // DEBUG: Touch területek
     Serial.println("=== TOUCH AREAS DEBUG ===");
