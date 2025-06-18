@@ -613,28 +613,24 @@ void FreqDisplay::handleBfoAnimation() {
     uint32_t displayFreqHz = (uint32_t)currentDisplayFrequency * 1000 - bfoOffset;
     long khz_part = displayFreqHz / 1000;
     int hz_tens_part = abs((int)(displayFreqHz % 1000)) / 10;
-
     char freqBuffer[16];
-    sprintf(freqBuffer, "%ld.%02d", khz_part, hz_tens_part);
-
-    // Pozíciók meghatározása
+    sprintf(freqBuffer, "%ld.%02d", khz_part, hz_tens_part); // Pozíciók meghatározása
     constexpr uint16_t BfoSpriteRightMargin = 115;
     constexpr uint16_t BfoMiniFreqX = BfoSpriteRightMargin + 105;
 
     int startX, endX, startSize, endSize;
-
     if (rtv::bfoOn) {
         // BFO bekapcsolás: nagy frekvencia → mini frekvencia
-        startX = bounds.x + 5;          // SSB/CW normál pozíció (bal oldal)
-        endX = bounds.x + BfoMiniFreqX; // Mini frekvencia pozíció
-        startSize = 4;                  // Nagy méret
-        endSize = 1;                    // Kis méret
+        startX = bounds.x + 5;                            // SSB/CW normál pozíció (bal oldal)
+        endX = bounds.x + 5 + (BfoMiniFreqX - 5) * 3 / 4; // 3/4-ig odafelé
+        startSize = 4;                                    // Nagy méret
+        endSize = 1;                                      // Kis méret
     } else {
         // BFO kikapcsolás: mini frekvencia → nagy frekvencia
-        startX = bounds.x + BfoMiniFreqX; // Mini frekvencia pozíció
-        endX = bounds.x + 5;              // SSB/CW normál pozíció (bal oldal)
-        startSize = 1;                    // Kis méret
-        endSize = 4;                      // Nagy méret
+        startX = bounds.x + 5 + (BfoMiniFreqX - 5) * 3 / 4; // 3/4-ig odafelé
+        endX = bounds.x + 5;                                // SSB/CW normál pozíció (bal oldal)
+        startSize = 1;                                      // Kis méret
+        endSize = 4;                                        // Nagy méret
     }
 
     // Animáció: 4 lépésben interpolálunk pozíció és méret között
@@ -661,9 +657,11 @@ void FreqDisplay::handleBfoAnimation() {
         tft.setTextDatum(BL_DATUM); // Bal alsó sarokhoz igazítás
         tft.setTextColor(colors.indicator, this->colors.background);
         tft.drawString(String(freqBuffer), animX, animY);
-
         delay(100); // 100ms késleltetés lépésenként
     }
+
+    // Animáció után teljes terület törlése a maradványok eltávolítására
+    tft.fillRect(bounds.x, bounds.y, bounds.width, bounds.height, this->colors.background);
 }
 
 /**
