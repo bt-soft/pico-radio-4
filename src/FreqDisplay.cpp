@@ -10,9 +10,9 @@
  */
 
 #include "FreqDisplay.h"
-#include "DSEG7_Classic_Mini_Regular_34.h" // 7-szegmenses font
-#include "UIColorPalette.h"                // Centralizált színkonstansok
-#include "defines.h"                       // TFT_COLOR_BACKGROUND
+#include "DSEG7_Classic_Mini_Regular_34.h"
+#include "UIColorPalette.h"
+#include "defines.h"
 
 // === Globális színkonfigurációk ===
 const FreqSegmentColors defaultNormalColors = UIColorPalette::createNormalFreqColors();
