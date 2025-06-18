@@ -45,9 +45,11 @@ class Si4735Runtime : public Si4735Base {
     Si4735Runtime() : Si4735Base(), hardwareAudioMuteState(false), hardwareAudioMuteElapsed(millis()) {};
 
     void hardwareAudioMuteOn();
-    void checkAGC(); /**
-                      * @brief Frissíti a signal quality cache-t, ha szükséges
-                      */
+    void checkAGC();
+
+    /**
+     * @brief Frissíti a signal quality cache-t, ha szükséges
+     */
     void updateSignalCacheIfNeeded();
 
     /**

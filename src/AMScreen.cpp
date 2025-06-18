@@ -512,13 +512,32 @@ void AMScreen::handleAfBWButton(const UIButton::ButtonEvent &event) {
 /**
  * @brief AntCap gomb eseménykezelő - Antenna Capacitor
  * @param event Gomb esemény (Clicked)
- * @details AM specifikus funkcionalitás - alapértelmezett implementáció
  */
 void AMScreen::handleAntCapButton(const UIButton::ButtonEvent &event) {
-    if (event.state == UIButton::EventButtonState::Clicked) {
-        // TODO: AntCap funkcionalitás implementálása
-        DEBUG("AMScreen::handleAntCapButton - AntCap funkció (TODO)");
+    if (event.state != UIButton::EventButtonState::Clicked) {
+        return;
     }
+    BandTable &currband = pSi4735Manager->getCurrentBand(); // Kikeressük az aktuális Band rekordot
+
+    // Store antCap value in a local int variable for the dialog to work with
+    static int antCapTempValue; // Static to ensure it persists during dialog lifetime
+    antCapTempValue = static_cast<int>(currband.antCap);
+
+    auto antCapDialog = std::make_shared<ValueChangeDialog>(
+        this, this->tft,                                                                                                //
+        "Antenna Tuning capacitor", "Capacitor value [pF]:",                                                            //
+        &antCapTempValue,                                                                                               //
+        1, currband.currMod == FM ? Si4735Constants::SI4735_MAX_ANT_CAP_FM : Si4735Constants::SI4735_MAX_ANT_CAP_AM, 1, //
+        [this](const std::variant<int, float, bool> &liveNewValue) {
+            if (std::holds_alternative<int>(liveNewValue)) {
+                int currentDialogVal = std::get<int>(liveNewValue);
+                pSi4735Manager->getCurrentBand().antCap = static_cast<uint16_t>(currentDialogVal);
+                pSi4735Manager->getSi4735().setTuneFrequencyAntennaCapacitor(currentDialogVal);
+            }
+        },
+        nullptr, // Callback a változásra
+        Rect(-1, -1, 280, 0));
+    this->showDialog(antCapDialog);
 }
 
 /**
