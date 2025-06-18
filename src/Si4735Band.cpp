@@ -121,6 +121,16 @@ void Si4735Band::bandSet(bool useDefaults) {
         }
     }
 
+    // CW módra váltás esetén ellenőrizzük és inicializáljuk a sávszélességet
+    if (currMod == CW) {
+        // Ha még nincs megfelelő sávszélesség beállítva CW módhoz,
+        // akkor állítsuk be az optimális 1.0 kHz-et (index 5)
+        // De csak akkor, ha a jelenlegi érték nem CW-optimalizált (4 vagy 5)
+        if (config.data.bwIdxSSB != 4 && config.data.bwIdxSSB != 5) {
+            config.data.bwIdxSSB = 5; // 1.0 kHz - optimális CW sávszélesség
+        }
+    }
+
     // Sáv beállítása
     useBand(useDefaults);
 
@@ -206,7 +216,6 @@ void Si4735Band::useBand(bool useDefaults) {
         // RDS státusz ellenőrzése a konfiguráció után
         delay(200); // Várakozás hogy a chip feldolgozza
         si4735.getRdsStatus();
-
     } else { // AM-ben vagyunk
 
         if (ssbLoaded) { // SSB vagy CW mód
@@ -216,8 +225,9 @@ void Si4735Band::useBand(bool useDefaults) {
             // SSB/CW esetén a step mindig 1kHz a chipen belül
             constexpr uint8_t FREQUENCY_STEP = 1;
 
-            // Mód beállítása (LSB-t használunk alapnak CW-hez)
-            uint8_t modeForChip = isCWMode ? LSB : currentBand.currMod;
+            // CW mód esetén mindig USB-t használunk, mivel a CW jelek az USB oldalsávban
+            // jönnek át jobban (pozitív frekvencia offset)
+            uint8_t modeForChip = isCWMode ? USB : currentBand.currMod;
             si4735.setSSB(currentBand.minimumFreq, currentBand.maximumFreq, currentBand.currFreq, FREQUENCY_STEP, modeForChip);
 
             // BFO beállítása
@@ -262,7 +272,6 @@ void Si4735Band::setAfBandWidth() {
     DEBUG("Si4735Band::setAfBandWidth() -> currentBandIdx: %d\n", config.data.currentBandIdx);
 
     BandTable &currentBand = getCurrentBand();
-
     uint8_t currMod = currentBand.currMod;
     if (currMod == LSB or currMod == USB or currMod == CW) {
         /**
@@ -289,10 +298,13 @@ void Si4735Band::setAfBandWidth() {
          *
          * @param AUDIOBW the valid values are 0, 1, 2, 3, 4 or 5; see description above
          */
-        si4735.setSSBAudioBandwidth(config.data.bwIdxSSB);
+        // CW módban is a felhasználó által beállított sávszélességet használjuk
+        // Alapértelmezetten 1.0 kHz (index 5) optimális CW vételhez
+        uint8_t bandwidthIndex = config.data.bwIdxSSB;
+        si4735.setSSBAudioBandwidth(bandwidthIndex);
 
         // If audio bandwidth selected is about 2 kHz or below, it is recommended to set Sideband Cutoff Filter to 0.
-        if (config.data.bwIdxSSB == 0 or config.data.bwIdxSSB == 4 or config.data.bwIdxSSB == 5) {
+        if (bandwidthIndex == 0 or bandwidthIndex == 4 or bandwidthIndex == 5) {
             // Band pass filter to cutoff both the unwanted side band and high frequency components > 2.0 kHz of the wanted side band. (default)
             si4735.setSSBSidebandCutoffFilter(0);
         } else {
