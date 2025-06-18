@@ -546,15 +546,40 @@ void AMScreen::handleAntCapButton(const UIButton::ButtonEvent &event) {
  * @details AM specifikus funkcionalitás - alapértelmezett implementáció
  */
 void AMScreen::handleDemodButton(const UIButton::ButtonEvent &event) {
-    if (event.state == UIButton::EventButtonState::Clicked) {
-        // TODO: Demod funkcionalitás implementálása
-        DEBUG("AMScreen::handleDemodButton - Demod funkció (TODO)");
-
-        // A demod mód változása után frissítjük a BFO és Step gombok állapotát
-        // (fontos, mert SSB/CW módban mindkét gomb állapota más)
-        updateBFOButtonState();
-        updateStepButtonState();
+    if (event.state != UIButton::EventButtonState::Clicked) {
+        return;
     }
+
+    uint8_t labelsCount;
+    const char **labels = pSi4735Manager->getAmDemodulationModes(labelsCount);
+
+    auto demodDialog = std::make_shared<MultiButtonDialog>(
+        this, this->tft,                                                              // Képernyő referencia
+        "Demodulation Mode", "",                                                      // Dialógus címe és üzenete
+        labels, labelsCount,                                                          // Gombok feliratai és számuk
+        [this](int buttonIndex, const char *buttonLabel, MultiButtonDialog *dialog) { // Gomb kattintás kezelése
+            // Kikeressük az aktuális Band rekordot
+            BandTable &currentband = pSi4735Manager->getCurrentBand();
+
+            // Demodulációs mód bellítása
+            currentband.currMod = buttonIndex + 1; // Az FM  mód indexe 0, azt kihagyjuk
+
+            // Újra beállítjuk a sávot az új móddal (false -> ne a preferáltat töltse)
+            pSi4735Manager->bandSet(false);
+
+            // A demod mód változása után frissítjük a BFO és Step gombok állapotát
+            // (fontos, mert SSB/CW módban mindkét gomb állapota más)
+            updateBFOButtonState();
+            updateStepButtonState();
+
+        },
+        true,                                     // Automatikusan bezárja-e a dialógust gomb kattintáskor
+        pSi4735Manager->getCurrentBandModeDesc(), // Az alapértelmezett (jelenlegi) gomb felirata
+        true,                                     // Ha true, az alapértelmezett gomb le van tiltva; ha false, csak vizuálisan kiemelve
+        Rect(-1, -1, 320, 130)                    // Dialógus mérete (ha -1, akkor automatikusan a képernyő közepére igazítja)
+    );
+
+    this->showDialog(demodDialog);
 }
 
 /**
@@ -595,6 +620,7 @@ void AMScreen::handleStepButton(const UIButton::ButtonEvent &event) {
         w = 290;
         h = 130;
     }
+
     auto stepDialog = std::make_shared<MultiButtonDialog>(
         this, this->tft,                                                                       // Képernyő referencia
         title, "",                                                                             // Dialógus címe és üzenete

@@ -90,10 +90,17 @@ void Si4735Band::loadSSB() {
  */
 void Si4735Band::bandSet(bool useDefaults) {
 
-    DEBUG("Si4735Band::bandSet() -> useDefaults: %s\n", useDefaults ? "true" : "false");
-
     // Beállítjuk az aktuális Band rekordot - FONTOS: pointer frissítése!
     BandTable &currentBand = getCurrentBand();
+    DEBUG("Si4735Band::bandSet(%s) -> BandIdx: %d, Name: %s, CurrFreq: %d, CurrStep: %d, currMod: %d, antCap: %d\n", //
+          useDefaults ? "true" : "false",
+          config.data.currentBandIdx, //
+          currentBand.bandName,       //
+          currentBand.currFreq,       //
+          currentBand.currStep,       //
+          currentBand.currMod,        //
+          currentBand.antCap          //
+    );
 
     // Demoduláció beállítása
     uint8_t currMod = currentBand.currMod;
