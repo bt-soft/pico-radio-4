@@ -164,7 +164,8 @@ FreqDisplay::FrequencyDisplayData FreqDisplay::getFrequencyDisplayData(uint16_t 
             data.mask = "-888";
             data.freqStr = String(rtv::currentBFOmanu);
 
-        } else { // Normál SSB/CW: frekvencia formázás
+        } else {
+            // Normál SSB/CW: frekvencia formázás
             data.unit = "kHz";
             data.mask = "88 888.88"; // Visszatérés 8-as karakterre, amely biztosan minden szegmenst mutat
             uint32_t displayFreqHz = (uint32_t)frequency * 1000 - rtv::freqDec;
@@ -230,7 +231,9 @@ void FreqDisplay::drawFmAmLwStyle(const FrequencyDisplayData &data) {
     spr.fillSprite(this->colors.background);
     spr.setTextSize(1);
     spr.setTextPadding(0);
-    spr.setFreeFont(&DSEG7_Classic_Mini_Regular_34); // Inaktív számjegyek rajzolása (ha engedélyezve van) - JOBBRA igazítva a maszkhoz
+    spr.setFreeFont(&DSEG7_Classic_Mini_Regular_34);
+
+    // Inaktív számjegyek rajzolása (ha engedélyezve van) - JOBBRA igazítva a maszkhoz
     if (config.data.tftDigitLigth) {
         spr.setTextColor(colors.inactive);
         spr.setTextDatum(BR_DATUM);                                       // Jobb alsó sarokhoz igazítás
@@ -269,7 +272,7 @@ void FreqDisplay::drawSsbCwStyle(const FrequencyDisplayData &data) {
     }
 
     // 1. Frekvencia sprite pozicionálása: keret bal szélénél
-    int freqSpriteX = bounds.x + 5; // 5 pixel margin a bal szélétől    // Sprite szélesség számítása - MEGBÍZHATÓ módszerrel
+    int freqSpriteX = bounds.x + 5; // 5 pixel margin a bal szélétől
     int freqSpriteWidth = calculateFixedSpriteWidth(data.mask);
     int freqSpriteY = bounds.y;
 
@@ -282,7 +285,9 @@ void FreqDisplay::drawSsbCwStyle(const FrequencyDisplayData &data) {
 
         // Érintési területek kiszámítása az aláhúzáshoz
         calculateSsbCwTouchAreas(freqSpriteX, freqSpriteWidth);
-    } // 3. Mértékegység pozicionálása: az utolsó digit alatt, aláhúzás jel alatt
+    }
+
+    // 3. Mértékegység pozicionálása: az utolsó digit alatt, aláhúzás jel alatt
     // Az utolsó digit (10Hz) pozíciója: digit10Hz_offset a sprite bal szélétől
     int digit10Hz_offset = 196; // 10Hz digit (8. pozíció a maszkban) - ugyanaz mint a drawFineTuningUnderline-ban
     int digitWidth = 25;        // Ismert DSEG7 digit szélesség
@@ -348,7 +353,9 @@ void FreqDisplay::drawFrequencySpriteWithSpaces(const FrequencyDisplayData &data
     spr.fillSprite(this->colors.background);
     spr.setTextSize(1);
     spr.setTextPadding(0);
-    spr.setFreeFont(&DSEG7_Classic_Mini_Regular_34); // Inaktív számjegyek rajzolása (ha engedélyezve van) - JOBBRA igazítva a maszkhoz
+    spr.setFreeFont(&DSEG7_Classic_Mini_Regular_34);
+
+    // Inaktív számjegyek rajzolása (ha engedélyezve van) - JOBBRA igazítva a maszkhoz
     if (config.data.tftDigitLigth) {
         spr.setTextColor(colors.inactive);
         spr.setTextDatum(BR_DATUM);                             // Jobb alsó sarokhoz igazítás
