@@ -118,12 +118,15 @@ class FreqDisplay : public UIComponent {
     /**
      * @brief Visszaadja az aktuális színkonfigurációt
      */
-    const FreqSegmentColors &getSegmentColors() const;
+    const FreqSegmentColors &getSegmentColors() const; /**
+                                                        * @brief Segédmetódus szöveg rajzolásához
+                                                        */
+    void drawText(const String &text, int x, int y, int textSize, uint8_t datum, uint16_t color);
 
     /**
-     * @brief Segédmetódus szöveg rajzolásához
+     * @brief Optimalizált segédmetódus a BFO frekvencia számításához
      */
-    void drawText(const String &text, int x, int y, int textSize, uint8_t datum, uint16_t color);
+    void calculateBfoFrequency(char *buffer, size_t bufferSize);
 
     /**
      * @brief Megbízható sprite szélesség számítás konstansokkal (textWidth() helyett)

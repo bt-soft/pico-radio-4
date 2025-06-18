@@ -127,13 +127,16 @@ FreqDisplay::FrequencyDisplayData FreqDisplay::getFrequencyDisplayData(uint16_t 
     FrequencyDisplayData data;
     uint8_t demodMode = pSi4735Manager->getCurrentBand().currMod;
     uint8_t bandType = pSi4735Manager->getCurrentBandType();
-
     if (demodMode == FM) {
-        // FM mód: 100.50 MHz
+        // FM mód: 100.50 MHz - optimalizált integer számítás
         data.unit = "MHz";
         data.mask = "188.88";
-        float displayFreqMHz = frequency / 100.0f;
-        data.freqStr = String(displayFreqMHz, 2);
+        // float helyett integer számítás: frequency = 10050 -> "100.50"
+        int wholePart = frequency / 100;
+        int fracPart = frequency % 100;
+        char buffer[16];
+        sprintf(buffer, "%d.%02d", wholePart, fracPart);
+        data.freqStr = String(buffer);
 
     } else if (demodMode == AM) {
         if (bandType == MW_BAND_TYPE || bandType == LW_BAND_TYPE) {
@@ -142,10 +145,15 @@ FreqDisplay::FrequencyDisplayData FreqDisplay::getFrequencyDisplayData(uint16_t 
             data.mask = "8888";
             data.freqStr = String(frequency);
         } else {
-            // SW AM: 27.200 MHz (CB) és 30.000 MHz sávok
+            // SW AM: 27.200 MHz (CB) és 30.000 MHz sávok - optimalizált integer számítás
             data.unit = "MHz";
             data.mask = "88.888"; // 5 karakteres maszk - max 30 MHz
-            data.freqStr = String(frequency / 1000.0f, 3);
+            // float helyett integer számítás: frequency = 27200 -> "27.200"
+            int wholePart = frequency / 1000;
+            int fracPart = frequency % 1000;
+            char buffer[16];
+            sprintf(buffer, "%d.%03d", wholePart, fracPart);
+            data.freqStr = String(buffer);
         }
 
     } else if (demodMode == LSB || demodMode == USB || demodMode == CW) {
@@ -584,17 +592,11 @@ void FreqDisplay::drawBfoStyle(const FrequencyDisplayData &data) {
     tft.setTextSize(2);
     tft.setTextDatum(MC_DATUM);
     tft.setTextColor(TFT_BLACK, colors.active);
-    tft.drawString("BFO", bounds.x + BfoLabelRectXOffset + BfoLabelRectW / 2, bounds.y + BfoLabelRectYOffset + BfoLabelRectH / 2);
-
-    // 4. Fő frekvencia kisebb méretben (jobb oldalon, alja egy vonalban a 7-szegmenses aljával)
-    // Először számítsuk ki a fő frekvenciát
-    uint32_t bfoOffset = rtv::lastBFO;
-    uint32_t displayFreqHz = (uint32_t)currentDisplayFrequency * 1000 - bfoOffset;
-    long khz_part = displayFreqHz / 1000;
-    int hz_tens_part = abs((int)(displayFreqHz % 1000)) / 10;
-
+    tft.drawString("BFO", bounds.x + BfoLabelRectXOffset + BfoLabelRectW / 2,
+                   bounds.y + BfoLabelRectYOffset + BfoLabelRectH / 2); // 4. Fő frekvencia kisebb méretben (jobb oldalon, alja egy vonalban a 7-szegmenses aljával)
+    // Optimalizált frekvencia számítás
     char freqBuffer[16];
-    sprintf(freqBuffer, "%ld.%02d", khz_part, hz_tens_part);
+    calculateBfoFrequency(freqBuffer, sizeof(freqBuffer));
 
     drawText(String(freqBuffer), bounds.x + BfoMiniFreqX, BfoMiniFreqY, UNIT_TEXT_SIZE, BR_DATUM, colors.indicator);
 
@@ -606,31 +608,28 @@ void FreqDisplay::drawBfoStyle(const FrequencyDisplayData &data) {
  * @brief Kezeli a BFO be/kikapcsolási animációt
  */
 void FreqDisplay::handleBfoAnimation() {
-    const FreqSegmentColors &colors = getSegmentColors();
-
-    // Fő frekvencia kiszámítása az animációhoz
-    uint32_t bfoOffset = rtv::lastBFO;
-    uint32_t displayFreqHz = (uint32_t)currentDisplayFrequency * 1000 - bfoOffset;
-    long khz_part = displayFreqHz / 1000;
-    int hz_tens_part = abs((int)(displayFreqHz % 1000)) / 10;
+    const FreqSegmentColors &colors = getSegmentColors(); // Optimalizált frekvencia számítás
     char freqBuffer[16];
-    sprintf(freqBuffer, "%ld.%02d", khz_part, hz_tens_part); // Pozíciók meghatározása
+    calculateBfoFrequency(freqBuffer, sizeof(freqBuffer)); // Pozíció számítás optimalizálása - eredeti logika helyreállítása
     constexpr uint16_t BfoSpriteRightMargin = 115;
     constexpr uint16_t BfoMiniFreqX = BfoSpriteRightMargin + 105;
+
+    const int baseStartX = bounds.x + 5;
+    const int baseEndX = bounds.x + 5 + (BfoMiniFreqX - 5) * 3 / 4; // Eredeti 3/4-es számítás
 
     int startX, endX, startSize, endSize;
     if (rtv::bfoOn) {
         // BFO bekapcsolás: nagy frekvencia → mini frekvencia
-        startX = bounds.x + 5;                            // SSB/CW normál pozíció (bal oldal)
-        endX = bounds.x + 5 + (BfoMiniFreqX - 5) * 3 / 4; // 3/4-ig odafelé
-        startSize = 4;                                    // Nagy méret
-        endSize = 1;                                      // Kis méret
+        startX = baseStartX;
+        endX = baseEndX;
+        startSize = 4; // Nagy méret
+        endSize = 1;   // Kis méret
     } else {
         // BFO kikapcsolás: mini frekvencia → nagy frekvencia
-        startX = bounds.x + 5 + (BfoMiniFreqX - 5) * 3 / 4; // 3/4-ig odafelé
-        endX = bounds.x + 5;                                // SSB/CW normál pozíció (bal oldal)
-        startSize = 1;                                      // Kis méret
-        endSize = 4;                                        // Nagy méret
+        startX = baseEndX;
+        endX = baseStartX;
+        startSize = 1; // Kis méret
+        endSize = 4;   // Nagy méret
     }
 
     // Animáció: 4 lépésben interpolálunk pozíció és méret között
@@ -670,4 +669,16 @@ void FreqDisplay::handleBfoAnimation() {
 void FreqDisplay::forceFullRedraw() {
     needsFullClear = true;
     markForRedraw();
+}
+
+/**
+ * @brief Optimalizált segédmetódus a BFO frekvencia számításához
+ */
+void FreqDisplay::calculateBfoFrequency(char *buffer, size_t bufferSize) {
+    uint32_t bfoOffset = rtv::lastBFO;
+    uint32_t displayFreqHz = (uint32_t)currentDisplayFrequency * 1000 - bfoOffset;
+    long khz_part = displayFreqHz / 1000;
+    int hz_tens_part = abs((int)(displayFreqHz % 1000)) / 10;
+
+    snprintf(buffer, bufferSize, "%ld.%02d", khz_part, hz_tens_part);
 }
