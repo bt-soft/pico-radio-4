@@ -225,11 +225,16 @@ void AMScreen::drawContent() {
  * - ATTENUATOR gomb ↔ Si4735 attenuator állapot (TODO)
  */
 void AMScreen::activate() {
-
     DEBUG("AMScreen::activate() - Képernyő aktiválása\n");
 
     // Szülő osztály aktiválása (RadioScreen -> UIScreen)
     RadioScreen::activate();
+    // AM módban: RDS komponens eltávolítása (ha létezik)
+    if (rdsComponent) {
+        removeChild(rdsComponent);
+        rdsComponent.reset(); // Shared_ptr nullázása
+        DEBUG("AMScreen::activate() - RDS komponens eltávolítva\n");
+    }
 
     // ===================================================================
     // *** EGYETLEN GOMBÁLLAPOT SZINKRONIZÁLÁSI PONT - Event-driven ***
