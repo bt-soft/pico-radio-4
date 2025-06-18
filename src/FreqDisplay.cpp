@@ -130,8 +130,9 @@ FreqDisplay::FrequencyDisplayData FreqDisplay::getFrequencyDisplayData(uint16_t 
     if (demodMode == FM) {
         // FM mód: 100.50 MHz - optimalizált integer számítás
         data.unit = "MHz";
+
+        // FM módban mindig tizedesjeggyel jelenjük meg (normál és képernyővédő módban is)
         data.mask = "188.88";
-        // float helyett integer számítás: frequency = 10050 -> "100.50"
         int wholePart = frequency / 100;
         int fracPart = frequency % 100;
         char buffer[16];
@@ -147,13 +148,21 @@ FreqDisplay::FrequencyDisplayData FreqDisplay::getFrequencyDisplayData(uint16_t 
         } else {
             // SW AM: 27.200 MHz (CB) és 30.000 MHz sávok - optimalizált integer számítás
             data.unit = "MHz";
-            data.mask = "88.888"; // 5 karakteres maszk - max 30 MHz
-            // float helyett integer számítás: frequency = 27200 -> "27.200"
-            int wholePart = frequency / 1000;
-            int fracPart = frequency % 1000;
-            char buffer[16];
-            sprintf(buffer, "%d.%03d", wholePart, fracPart);
-            data.freqStr = String(buffer);
+
+            if (useCustomColors) {
+                // Képernyővédő mód: csak egész számok "27" MHz
+                data.mask = "88";
+                int wholePart = frequency / 1000;
+                data.freqStr = String(wholePart);
+            } else {
+                // Normál mód: tizedesjeggyel "27.200" MHz
+                data.mask = "88.888"; // 5 karakteres maszk - max 30 MHz
+                int wholePart = frequency / 1000;
+                int fracPart = frequency % 1000;
+                char buffer[16];
+                sprintf(buffer, "%d.%03d", wholePart, fracPart);
+                data.freqStr = String(buffer);
+            }
         }
 
     } else if (demodMode == LSB || demodMode == USB || demodMode == CW) {
@@ -163,35 +172,62 @@ FreqDisplay::FrequencyDisplayData FreqDisplay::getFrequencyDisplayData(uint16_t 
             data.unit = "Hz";
             data.mask = "-888";
             data.freqStr = String(rtv::currentBFOmanu);
-
         } else {
             // Normál SSB/CW: frekvencia formázás
             data.unit = "kHz";
-            data.mask = "88 888.88"; // Visszatérés 8-as karakterre, amely biztosan minden szegmenst mutat
             uint32_t displayFreqHz = (uint32_t)frequency * 1000 - rtv::freqDec;
             long khz_part = displayFreqHz / 1000;
-            int hz_tens_part = abs((int)(displayFreqHz % 1000)) / 10; // EGYSZERŰSÍTETT és BIZTONSÁGOS formázás - kerüljük a bonyolult string műveleteket
-            char buffer[32];                                          // Nagyobb buffer a biztonság kedvéért
-            memset(buffer, 0, sizeof(buffer));                        // Nullázzuk ki a buffert
 
-            if (khz_part >= 10000) {
-                // 5+ digit: "21074" -> "21 074.50"
-                long thousands = khz_part / 1000;
-                long remainder = khz_part % 1000;
-                sprintf(buffer, "%ld %03ld.%02d", thousands, remainder, hz_tens_part);
-            } else {
-                // 1-4 digit: "475" -> "  475.00", "3630" -> "3 630.00"
-                if (khz_part >= 1000) {
-                    // 4 digit: "3630" -> " 3 630.00"
+            if (useCustomColors) {
+                // Képernyővédő mód: csak egész kHz értékek
+                data.mask = "88 888";
+                char buffer[16];
+                memset(buffer, 0, sizeof(buffer));
+
+                if (khz_part >= 10000) {
+                    // 5+ digit: "21074" -> "21 074"
                     long thousands = khz_part / 1000;
                     long remainder = khz_part % 1000;
-                    sprintf(buffer, " %ld %03ld.%02d", thousands, remainder, hz_tens_part);
+                    sprintf(buffer, "%ld %03ld", thousands, remainder);
                 } else {
-                    // 1-3 digit: "475" -> "   475.00"
-                    sprintf(buffer, "   %ld.%02d", khz_part, hz_tens_part);
+                    // 1-4 digit: "475" -> "  475", "3630" -> "3 630"
+                    if (khz_part >= 1000) {
+                        // 4 digit: "3630" -> " 3 630"
+                        long thousands = khz_part / 1000;
+                        long remainder = khz_part % 1000;
+                        sprintf(buffer, " %ld %03ld", thousands, remainder);
+                    } else {
+                        // 1-3 digit: "475" -> "   475"
+                        sprintf(buffer, "   %ld", khz_part);
+                    }
                 }
+                data.freqStr = String(buffer);
+            } else {
+                // Normál mód: tizedesjegyekkel
+                data.mask = "88 888.88";
+                int hz_tens_part = abs((int)(displayFreqHz % 1000)) / 10;
+                char buffer[32];
+                memset(buffer, 0, sizeof(buffer));
+
+                if (khz_part >= 10000) {
+                    // 5+ digit: "21074" -> "21 074.50"
+                    long thousands = khz_part / 1000;
+                    long remainder = khz_part % 1000;
+                    sprintf(buffer, "%ld %03ld.%02d", thousands, remainder, hz_tens_part);
+                } else {
+                    // 1-4 digit: "475" -> "  475.00", "3630" -> "3 630.00"
+                    if (khz_part >= 1000) {
+                        // 4 digit: "3630" -> " 3 630.00"
+                        long thousands = khz_part / 1000;
+                        long remainder = khz_part % 1000;
+                        sprintf(buffer, " %ld %03ld.%02d", thousands, remainder, hz_tens_part);
+                    } else {
+                        // 1-3 digit: "475" -> "   475.00"
+                        sprintf(buffer, "   %ld.%02d", khz_part, hz_tens_part);
+                    }
+                }
+                data.freqStr = String(buffer);
             }
-            data.freqStr = String(buffer);
 
             // Extra védelem: ellenőrizzük, hogy a string nem korrupt
             if (data.freqStr.length() == 0 || data.freqStr.length() > 15) {
