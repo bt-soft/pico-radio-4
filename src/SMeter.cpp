@@ -251,10 +251,17 @@ void SMeter::showRSSI(uint8_t rssi, uint8_t snr, bool isFMMode) {
         tft.setCursor(textLayout.rssi_value_x_pos, textLayout.text_y_pos);
         tft.print(rssi_str_buff);
     }
-
     if (snr_changed) {
-        char snr_str_buff[10]; // "XXX dB" + null
-        snprintf(snr_str_buff, sizeof(snr_str_buff), "%3d dB", snr);
+        char snr_str_buff[10]; // "XXX dB" vagy "  ---" + null
+
+        // AM/SSB/CW módban gyakran nincs értelmes SNR érték (chip korlát)
+        // Csak FM módban vagy ha van jelentős SNR érték, jelenítjük meg
+        if (isFMMode || snr > 5) {
+            snprintf(snr_str_buff, sizeof(snr_str_buff), "%3d dB", snr);
+        } else {
+            snprintf(snr_str_buff, sizeof(snr_str_buff), "  ---");
+        }
+
         // Régi érték területének törlése
         tft.fillRect(textLayout.snr_value_x_pos, textLayout.text_y_pos, textLayout.snr_value_max_w, textLayout.text_h, colors.background);
         // Új érték kirajzolása - setCursor + print használata
