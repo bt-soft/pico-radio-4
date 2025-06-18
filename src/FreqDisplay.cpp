@@ -274,13 +274,19 @@ void FreqDisplay::drawSsbCwStyle(const FrequencyDisplayData &data) {
 
         // Érintési területek kiszámítása az aláhúzáshoz
         calculateSsbCwTouchAreas(freqSpriteX, freqSpriteWidth);
-    }
+    } // 3. Mértékegység pozicionálása: az utolsó digit alatt, aláhúzás jel alatt
+    // Az utolsó digit (10Hz) pozíciója: digit10Hz_offset a sprite bal szélétől
+    int digit10Hz_offset = 196; // 10Hz digit (8. pozíció a maszkban) - ugyanaz mint a drawFineTuningUnderline-ban
+    int digitWidth = 25;        // Ismert DSEG7 digit szélesség
+    int lastDigitRightEdge = freqSpriteX + digit10Hz_offset + (digitWidth / 2);
 
-    // 3. Mértékegység pozicionálása: frekvencia sprite után jobbra
-    int unitX = freqSpriteX + freqSpriteWidth + 8; // 8 pixel gap a frekvencia után
-    int unitY = bounds.y + FREQ_7SEGMENT_HEIGHT + UNIT_Y_OFFSET_SSB_CW;
+    // Mértékegység jobb oldala megegyezik az utolsó digit jobb oldalával
+    int unitX = lastDigitRightEdge;
+    int unitY = bounds.y + FREQ_7SEGMENT_HEIGHT         //
+                + UNDERLINE_Y_OFFSET + UNDERLINE_HEIGHT //
+                + 20;                                   // Aláhúzás alatt 20 pixelrel lejjebb
 
-    drawText(data.unit, unitX, unitY, UNIT_TEXT_SIZE, BL_DATUM, colors.indicator);
+    drawText(data.unit, unitX, unitY, UNIT_TEXT_SIZE, BR_DATUM, colors.indicator); // BR_DATUM: jobb alsó sarokhoz igazítás
 }
 
 /**
