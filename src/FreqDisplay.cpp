@@ -148,21 +148,13 @@ FreqDisplay::FrequencyDisplayData FreqDisplay::getFrequencyDisplayData(uint16_t 
         } else {
             // SW AM: 27.200 MHz (CB) és 30.000 MHz sávok - optimalizált integer számítás
             data.unit = "MHz";
-
-            if (useCustomColors) {
-                // Képernyővédő mód: csak egész számok "27" MHz
-                data.mask = "88";
-                int wholePart = frequency / 1000;
-                data.freqStr = String(wholePart);
-            } else {
-                // Normál mód: tizedesjeggyel "27.200" MHz
-                data.mask = "88.888"; // 5 karakteres maszk - max 30 MHz
-                int wholePart = frequency / 1000;
-                int fracPart = frequency % 1000;
-                char buffer[16];
-                sprintf(buffer, "%d.%03d", wholePart, fracPart);
-                data.freqStr = String(buffer);
-            }
+            // Normál mód: tizedesjeggyel "27.200" MHz
+            data.mask = "88.888"; // 5 karakteres maszk - max 30 MHz
+            int wholePart = frequency / 1000;
+            int fracPart = frequency % 1000;
+            char buffer[16];
+            sprintf(buffer, "%d.%03d", wholePart, fracPart);
+            data.freqStr = String(buffer);
         }
 
     } else if (demodMode == LSB || demodMode == USB || demodMode == CW) {

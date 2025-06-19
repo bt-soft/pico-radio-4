@@ -25,7 +25,7 @@ constexpr int SAVER_ANIMATION_STEP_JUMP = 3;       // Animációs lépés ugrás
 // Animált keret mérete és UI elemek relatív pozíciói a keret bal felső sarkához képest
 // Különböző szélességek a rádió módok szerint (FreqDisplay-hez igazítva: 270px + margók + akkumulátor)
 constexpr int ANIMATION_BORDER_WIDTH_FM = FreqDisplay::FREQDISPLAY_WIDTH - 60;         // FM mód
-constexpr int ANIMATION_BORDER_WIDTH_AM = 310;                                         // AM mód
+constexpr int ANIMATION_BORDER_WIDTH_AM = FreqDisplay::FREQDISPLAY_WIDTH - 100;         // AM mód
 constexpr int ANIMATION_BORDER_WIDTH_SSB_CW = FreqDisplay::FREQDISPLAY_WIDTH - 25;     // SSB/CW módok (LSB/USB)
 constexpr int ANIMATION_BORDER_WIDTH_SSB_CW_BFO = FreqDisplay::FREQDISPLAY_WIDTH - 25; // SSB/CW + BFO
 constexpr int ANIMATION_BORDER_WIDTH_DEFAULT = 320;                                    // Alapértelmezett szélesség

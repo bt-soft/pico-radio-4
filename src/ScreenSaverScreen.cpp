@@ -345,6 +345,13 @@ uint16_t ScreenSaverScreen::getCurrentAccuXOffset() const {
                 break;
 
             case AM:
+                uint8_t bandType = pSi4735Manager->getCurrentBandType();
+                if (bandType == MW_BAND_TYPE || bandType == LW_BAND_TYPE) {
+                    // MW/LW: 1440 kHz
+                } else {
+                    // SW AM: 27.200 MHz (CB) és 30.000 MHz sávok
+                    calculatedX -= (BATTERY_RECT_FULL_W + ELEMENT_GAP);
+                }
                 break;
             case LSB:
             case USB:
