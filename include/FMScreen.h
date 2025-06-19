@@ -8,6 +8,7 @@
 #define __FM_SCREEN_H
 #include "CommonVerticalButtons.h"
 #include "MemoryScreen.h"
+#include "RDSComponent.h"
 #include "RadioScreen.h"
 #include "StereoIndicator.h"
 #include "UIButton.h"
@@ -180,17 +181,31 @@ class FMScreen : public RadioScreen, public CommonVerticalButtons::Mixin<FMScree
      */
     std::shared_ptr<StereoIndicator> stereoIndicator;
 
+    // ===================================================================
+    // RDS komponens kezelés
+    // ===================================================================
+
+    /// RDS (Radio Data System) komponens - FM rádió adatok megjelenítése
+    std::shared_ptr<RDSComponent> rdsComponent;
+
     /**
-     * @brief RDS információs komponens
-     * @details Smart pointer az RDS adatok megjelenítéséhez
-     * - RDS állomásnév, program típus megjelenítés
-     * - Radio text scroll támogatás
-     * - Dátum/idő megjelenítés
-     * - Automatikus frissítés és optimalizálás
-     *
-     * @note Az rdsComponent most a RadioScreen alaposztályban van
+     * @brief Létrehozza az RDS komponenst
+     * @param rdsBounds Az RDS komponens határai (opcionális, most már nem szükséges)
      */
-    // Az rdsComponent és horizontalButtonBar most a RadioScreen-ben van deklarálva
+    inline void createRDSComponent(const Rect &rdsBounds = Rect(0, 0, 0, 0)) {
+        rdsComponent = std::make_shared<RDSComponent>(tft, *pSi4735Manager, rdsBounds);
+        addChild(rdsComponent);
+    }
+
+    /**
+     * @brief RDS cache törlése frekvencia változáskor
+     * @details Biztonságos RDS cache törlés null pointer ellenőrzéssel
+     */
+    inline void clearRDSCache() {
+        if (rdsComponent) {
+            rdsComponent->clearRdsOnFrequencyChange();
+        }
+    }
 };
 
 #endif // __FM_SCREEN_H

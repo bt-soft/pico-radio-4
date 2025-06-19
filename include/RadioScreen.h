@@ -16,7 +16,6 @@
 #ifndef __RADIO_SCREEN_H
 #define __RADIO_SCREEN_H
 
-#include "RDSComponent.h"
 #include "SMeter.h"
 #include "UIHorizontalButtonBar.h"
 #include "UIScreen.h"
@@ -178,22 +177,6 @@ class RadioScreen : public UIScreen {
     void updateSMeter(bool isFMMode);
 
     // ===================================================================
-    // RDS komponens kezelés
-    // ===================================================================
-
-    /// RDS (Radio Data System) komponens - FM rádió adatok megjelenítése
-    std::shared_ptr<RDSComponent> rdsComponent;
-
-    /**
-     * @brief Létrehozza az RDS komponenst
-     * @param rdsBounds Az RDS komponens határai (opcionális, most már nem szükséges)
-     */
-    inline void createRDSComponent(const Rect &rdsBounds = Rect(0, 0, 0, 0)) {
-        rdsComponent = std::make_shared<RDSComponent>(tft, *pSi4735Manager, rdsBounds);
-        addChild(rdsComponent);
-    }
-
-    // ===================================================================
     // Seek (automatikus állomáskeresés) infrastruktúra
     // ===================================================================
 
@@ -224,16 +207,6 @@ class RadioScreen : public UIScreen {
     // ===================================================================
     // Rádió-specifikus utility metódusok
     // ===================================================================
-
-    /**
-     * @brief RDS cache törlése frekvencia változáskor
-     * @details Biztonságos RDS cache törlés null pointer ellenőrzéssel
-     */
-    inline void clearRDSCache() {
-        if (rdsComponent) {
-            rdsComponent->clearRdsOnFrequencyChange();
-        }
-    }
 
     /**
      * @brief Frekvencia mentése a konfigurációba és band táblába

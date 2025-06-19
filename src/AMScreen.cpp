@@ -229,12 +229,6 @@ void AMScreen::activate() {
 
     // Szülő osztály aktiválása (RadioScreen -> UIScreen)
     RadioScreen::activate();
-    // AM módban: RDS komponens eltávolítása (ha létezik)
-    if (rdsComponent) {
-        removeChild(rdsComponent);
-        rdsComponent.reset(); // Shared_ptr nullázása
-        DEBUG("AMScreen::activate() - RDS komponens eltávolítva\n");
-    }
 
     // ===================================================================
     // *** EGYETLEN GOMBÁLLAPOT SZINKRONIZÁLÁSI PONT - Event-driven ***
@@ -289,7 +283,7 @@ void AMScreen::layoutComponents() {
     // Frekvencia kijelző pozicionálás (képernyő közép)
     // ===================================================================
     uint16_t FreqDisplayY = 20;
-    Rect freqBounds(0, FreqDisplayY, FreqDisplay::FREQDISPLAY_WIDTH, FreqDisplay::FREQDISPLAY_HEIGHT);
+    Rect freqBounds(0, FreqDisplayY, FreqDisplay::FREQDISPLAY_WIDTH-25, FreqDisplay::FREQDISPLAY_HEIGHT+10);
     UIScreen::createFreqDisplay(freqBounds);
 
     // Finomhangolás jel (alulvonás) elrejtése a frekvencia kijelzőn, ha nem HAM sávban vagyunk
