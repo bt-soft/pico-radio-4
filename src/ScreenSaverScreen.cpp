@@ -121,16 +121,13 @@ void ScreenSaverScreen::drawContent() {
 void ScreenSaverScreen::updateFrequencyAndBatteryDisplay() {
     tft.fillScreen(TFT_COLOR_BACKGROUND);
 
-    using namespace ScreenSaverConstants;
-
-    // Aktuális keret szélesség lekérése a rádió mód alapján
-    uint16_t currentBorderWidth = getCurrentBorderWidth();
-
-    // Animált keret véletlenszerű pozíciójának meghatározása
-    // Biztosítjuk, hogy a teljes keret a képernyőn maradjon
+    using namespace ScreenSaverConstants;                  // Aktuális keret szélesség lekérése a rádió mód alapján
+    uint16_t currentBorderWidth = getCurrentBorderWidth(); // Animált keret véletlenszerű pozíciójának meghatározása
+    // Most a FreqDisplay és akkumulátor a keret belsejében van, ezért csak a keret mérete számít
     uint16_t maxBorderX = tft.width() - currentBorderWidth;
     uint16_t maxBorderY = tft.height() - ANIMATION_BORDER_HEIGHT;
 
+    // Ellenőrizzük, hogy van-e elég hely
     if (maxBorderX <= 0)
         maxBorderX = 1;
     if (maxBorderY <= 0)
@@ -140,8 +137,8 @@ void ScreenSaverScreen::updateFrequencyAndBatteryDisplay() {
     animationBorderX = random(maxBorderX);
     animationBorderY = random(maxBorderY);
 
-    // FreqDisplay pozícionálása a keret bal felső sarkához képest
-    uint16_t freqDisplayX = animationBorderX + currentBorderWidth + FREQ_DISPLAY_X_OFFSET_FROM_RIGHT;
+    // FreqDisplay pozícionálása a keret belsejében, bal oldaltól INTERNAL_MARGIN távolságra
+    uint16_t freqDisplayX = animationBorderX + INTERNAL_MARGIN;
     uint16_t freqDisplayY = animationBorderY + FREQ_DISPLAY_Y_OFFSET; // Aktuális frekvencia beállítása és FreqDisplay frissítése
     currentFrequencyValue = pSi4735Manager->getCurrentBand().currFreq;
     if (freqDisplayComp) {
@@ -248,20 +245,17 @@ void ScreenSaverScreen::drawBatteryInfo() {
     // Akkumulátor feszültség olvasása és százalék kiszámítása
     float vSupply = PicoSensorUtils::readVBus();
     uint8_t bat_percent = map(static_cast<int>(vSupply * 100), MIN_BATTERY_VOLTAGE, MAX_BATTERY_VOLTAGE, 0, 100);
-    bat_percent = constrain(bat_percent, 0, 100);
-
-    // Akkumulátor szín meghatározása töltöttség alapján
+    bat_percent = constrain(bat_percent, 0, 100); // Akkumulátor szín meghatározása töltöttség alapján
     uint16_t colorBatt = TFT_DARKCYAN;
     if (bat_percent < 5) {
         colorBatt = UIColorPalette::TFT_COLOR_DRAINED_BATTERY; // Lemerült: vörös
     } else if (bat_percent < 15) {
         colorBatt = UIColorPalette::TFT_COLOR_SUBMERSIBLE_BATTERY; // Alacsony: sárga
-    } // Akkumulátor pozicionálása az animált keret pozíciójához relatívan
-    uint16_t currentBorderWidth = getCurrentBorderWidth();
-    uint16_t batteryX = animationBorderX + currentBorderWidth + BATTERY_X_OFFSET_FROM_RIGHT;
-    uint16_t batteryY = animationBorderY + BATTERY_BASE_Y_OFFSET;
+    } // Egyébként: zöld
 
-    // Akkumulátor szimbólum rajzolása
+    // Akkumulátor pozicionálása a keret belsejében az új metódus segítségével
+    uint16_t batteryX = animationBorderX + getCurrentAccuXOffset();
+    uint16_t batteryY = animationBorderY + BATTERY_BASE_Y_OFFSET;                // Akkumulátor szimbólum rajzolása
     tft.fillRect(batteryX, batteryY, BATTERY_RECT_W, BATTERY_RECT_H, TFT_BLACK); // Terület törlése
     tft.drawRect(batteryX, batteryY, BATTERY_RECT_W, BATTERY_RECT_H, colorBatt);
     tft.drawRect(batteryX + BATTERY_RECT_W, batteryY + (BATTERY_RECT_H - BATTERY_NUB_H) / 2, BATTERY_NUB_W, BATTERY_NUB_H,
@@ -287,14 +281,12 @@ bool ScreenSaverScreen::handleTouch(const TouchEvent &event) {
         return true;
     }
     return false;
-}
-
-/**
- * @brief Forgó encoder esemény kezelése
- * @param event Forgó encoder esemény adatok
- * @return true ha kezelte az eseményt (mindig), false egyébként
- * @details Bármilyen forgó encoder esemény (forgatás vagy kattintás) ébreszti a képernyővédőt
- */
+} /**
+   * @brief Forgó encoder esemény kezelése
+   * @param event Forgó encoder esemény adatok
+   * @return true ha kezelte az eseményt (mindig), false egyébként
+   * @details Bármilyen forgó encoder esemény (forgatás vagy kattintás) ébreszti a képernyővédőt
+   */
 bool ScreenSaverScreen::handleRotary(const RotaryEvent &event) {
     // Bármilyen forgó encoder esemény (forgatás vagy kattintás) ébresztő hatású
     if (getScreenManager()) {
@@ -307,15 +299,10 @@ bool ScreenSaverScreen::handleRotary(const RotaryEvent &event) {
  * @brief Aktuális rádió módhoz tartozó keret szélesség meghatározása
  * @return A keret szélessége pixelben
  * @details Különböző szélességek a modulációs típusoknak megfelelően:
- * - FM: 210px (széles keret)
- * - AM: 180px (közepes keret)
- * - SSB módok (LSB/USB): 150px (keskeny keret)
- * - CW: 120px (legkeskenyebb keret)
  */
 uint16_t ScreenSaverScreen::getCurrentBorderWidth() const {
     using namespace ScreenSaverConstants;
 
-    // Si4735Manager közvetlenül implementálja a Band osztályt (Si4735Band->Band)
     if (pSi4735Manager) {
         const BandTable &currentBand = pSi4735Manager->getCurrentBand();
 
@@ -326,13 +313,49 @@ uint16_t ScreenSaverScreen::getCurrentBorderWidth() const {
                 return ANIMATION_BORDER_WIDTH_AM;
             case LSB:
             case USB:
-                return ANIMATION_BORDER_WIDTH_SSB;
             case CW:
-                return ANIMATION_BORDER_WIDTH_CW;
-            default:
-                return ANIMATION_BORDER_WIDTH_DEFAULT;
+                if (rtv::bfoOn) {
+                    return ANIMATION_BORDER_WIDTH_SSB_CW_BFO;
+                }
+                return ANIMATION_BORDER_WIDTH_SSB_CW;
         }
     }
 
     return ANIMATION_BORDER_WIDTH_DEFAULT;
+}
+
+/**
+ * @brief Akkumulátor X pozíciójának meghatározása a keret bal szélétől
+ * @return Az akkumulátor X offset pixelben a keret bal szélétől számítva
+ * @details Számítás: INTERNAL_MARGIN + FreqDisplay szélessége + ELEMENT_GAP
+ * Ez biztosítja, hogy az akkumulátor a FreqDisplay jobb oldalától ELEMENT_GAP távolságra legyen
+ */
+uint16_t ScreenSaverScreen::getCurrentAccuXOffset() const {
+    using namespace ScreenSaverConstants;
+
+    // Akkumulátor pozíciója: belső margó + FreqDisplay szélessége + elemek közötti gap
+    uint16_t calculatedX = getCurrentBorderWidth();
+
+    if (pSi4735Manager) {
+        const BandTable &currentBand = pSi4735Manager->getCurrentBand();
+
+        switch (currentBand.currMod) {
+            case FM:
+                break;
+
+            case AM:
+                break;
+            case LSB:
+            case USB:
+            case CW:
+                if (rtv::bfoOn) {
+                    calculatedX -= (BATTERY_RECT_FULL_W + ELEMENT_GAP);
+                } else {
+                }
+
+                break;
+        }
+    }
+
+    return calculatedX;
 }
