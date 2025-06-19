@@ -341,6 +341,7 @@ uint16_t ScreenSaverScreen::getCurrentAccuXOffset() const {
 
         switch (currentBand.currMod) {
             case FM:
+                calculatedX -= (BATTERY_RECT_FULL_W + ELEMENT_GAP);
                 break;
 
             case AM:

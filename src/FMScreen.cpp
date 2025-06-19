@@ -55,7 +55,7 @@ void FMScreen::layoutComponents() {
     // Frekvencia kijelző pozicionálás (képernyő közép)
     // ===================================================================
     uint16_t FreqDisplayY = 20;
-    Rect freqBounds(0, FreqDisplayY, FreqDisplay::FREQDISPLAY_WIDTH, FreqDisplay::FREQDISPLAY_HEIGHT);
+    Rect freqBounds(0, FreqDisplayY, FreqDisplay::FREQDISPLAY_WIDTH - 60, FreqDisplay::FREQDISPLAY_HEIGHT);
     UIScreen::createFreqDisplay(freqBounds);
     freqDisplayComp->setHideUnderline(true); // Alulvonás elrejtése a frekvencia kijelzőn
 
