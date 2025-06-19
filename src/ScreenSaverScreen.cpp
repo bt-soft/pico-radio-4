@@ -123,9 +123,12 @@ void ScreenSaverScreen::updateFrequencyAndBatteryDisplay() {
 
     using namespace ScreenSaverConstants;
 
+    // Aktuális keret szélesség lekérése a rádió mód alapján
+    uint16_t currentBorderWidth = getCurrentBorderWidth();
+
     // Animált keret véletlenszerű pozíciójának meghatározása
     // Biztosítjuk, hogy a teljes keret a képernyőn maradjon
-    uint16_t maxBorderX = tft.width() - ANIMATION_BORDER_WIDTH;
+    uint16_t maxBorderX = tft.width() - currentBorderWidth;
     uint16_t maxBorderY = tft.height() - ANIMATION_BORDER_HEIGHT;
 
     if (maxBorderX <= 0)
@@ -138,10 +141,8 @@ void ScreenSaverScreen::updateFrequencyAndBatteryDisplay() {
     animationBorderY = random(maxBorderY);
 
     // FreqDisplay pozícionálása a keret bal felső sarkához képest
-    uint16_t freqDisplayX = animationBorderX + FREQ_DISPLAY_X_OFFSET;
-    uint16_t freqDisplayY = animationBorderY + FREQ_DISPLAY_Y_OFFSET;
-
-    // Aktuális frekvencia beállítása és FreqDisplay frissítése
+    uint16_t freqDisplayX = animationBorderX + currentBorderWidth + FREQ_DISPLAY_X_OFFSET_FROM_RIGHT;
+    uint16_t freqDisplayY = animationBorderY + FREQ_DISPLAY_Y_OFFSET; // Aktuális frekvencia beállítása és FreqDisplay frissítése
     currentFrequencyValue = pSi4735Manager->getCurrentBand().currFreq;
     if (freqDisplayComp) {
         freqDisplayComp->setBounds(Rect(freqDisplayX, freqDisplayY, FreqDisplay::FREQDISPLAY_WIDTH, FreqDisplay::FREQDISPLAY_HEIGHT));
@@ -158,7 +159,7 @@ void ScreenSaverScreen::updateFrequencyAndBatteryDisplay() {
 /**
  * @brief Animált keret rajzolása
  * @details Fix méretű téglalap keret rajzolása az animationBorderX, animationBorderY pozícióban
- * A keret mérete konstans, és a teljes képernyőn bárhova pozícionálható
+ * A keret mérete a rádió módjától függ, és a teljes képernyőn bárhova pozícionálható
  */
 void ScreenSaverScreen::drawAnimatedBorder() {
     using namespace ScreenSaverConstants;
@@ -168,9 +169,12 @@ void ScreenSaverScreen::drawAnimatedBorder() {
     uint16_t screenW = tft.width();
     uint16_t screenH = tft.height();
 
+    // Aktuális keret szélesség lekérése a rádió mód alapján
+    uint16_t currentBorderWidth = getCurrentBorderWidth();
+
     // Animált keret koordinátái
     int16_t rectLeft = animationBorderX;
-    int16_t rectRight = animationBorderX + ANIMATION_BORDER_WIDTH;
+    int16_t rectRight = animationBorderX + currentBorderWidth;
     int16_t rectTop = animationBorderY;
     int16_t rectBottom = animationBorderY + ANIMATION_BORDER_HEIGHT;
 
@@ -252,10 +256,9 @@ void ScreenSaverScreen::drawBatteryInfo() {
         colorBatt = UIColorPalette::TFT_COLOR_DRAINED_BATTERY; // Lemerült: vörös
     } else if (bat_percent < 15) {
         colorBatt = UIColorPalette::TFT_COLOR_SUBMERSIBLE_BATTERY; // Alacsony: sárga
-    }
-
-    // Akkumulátor pozicionálása az animált keret pozíciójához relatívan
-    uint16_t batteryX = animationBorderX + BATTERY_BASE_X_OFFSET;
+    } // Akkumulátor pozicionálása az animált keret pozíciójához relatívan
+    uint16_t currentBorderWidth = getCurrentBorderWidth();
+    uint16_t batteryX = animationBorderX + currentBorderWidth + BATTERY_X_OFFSET_FROM_RIGHT;
     uint16_t batteryY = animationBorderY + BATTERY_BASE_Y_OFFSET;
 
     // Akkumulátor szimbólum rajzolása
@@ -298,4 +301,38 @@ bool ScreenSaverScreen::handleRotary(const RotaryEvent &event) {
         getScreenManager()->goBack(); // Visszatérés az előző képernyőre
     }
     return true;
+}
+
+/**
+ * @brief Aktuális rádió módhoz tartozó keret szélesség meghatározása
+ * @return A keret szélessége pixelben
+ * @details Különböző szélességek a modulációs típusoknak megfelelően:
+ * - FM: 210px (széles keret)
+ * - AM: 180px (közepes keret)
+ * - SSB módok (LSB/USB): 150px (keskeny keret)
+ * - CW: 120px (legkeskenyebb keret)
+ */
+uint16_t ScreenSaverScreen::getCurrentBorderWidth() const {
+    using namespace ScreenSaverConstants;
+
+    // Si4735Manager közvetlenül implementálja a Band osztályt (Si4735Band->Band)
+    if (pSi4735Manager) {
+        const BandTable &currentBand = pSi4735Manager->getCurrentBand();
+
+        switch (currentBand.currMod) {
+            case FM:
+                return ANIMATION_BORDER_WIDTH_FM;
+            case AM:
+                return ANIMATION_BORDER_WIDTH_AM;
+            case LSB:
+            case USB:
+                return ANIMATION_BORDER_WIDTH_SSB;
+            case CW:
+                return ANIMATION_BORDER_WIDTH_CW;
+            default:
+                return ANIMATION_BORDER_WIDTH_DEFAULT;
+        }
+    }
+
+    return ANIMATION_BORDER_WIDTH_DEFAULT;
 }

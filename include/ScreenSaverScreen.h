@@ -23,20 +23,25 @@ constexpr int SAVER_COLOR_FACTOR = 64;             // Szín változtatási fakto
 constexpr int SAVER_ANIMATION_STEP_JUMP = 3;       // Animációs lépés ugrás
 
 // Animált keret mérete és UI elemek relatív pozíciói a keret bal felső sarkához képest
-constexpr int ANIMATION_BORDER_WIDTH = 210; // Animált keret szélessége (még kompaktabb)
-constexpr int ANIMATION_BORDER_HEIGHT = 45; // Animált keret magassága (kompaktabb)
+// Különböző szélességek a rádió módok szerint
+constexpr int ANIMATION_BORDER_WIDTH_FM = 210;      // FM mód: széles keret
+constexpr int ANIMATION_BORDER_WIDTH_AM = 180;      // AM mód: közepes keret
+constexpr int ANIMATION_BORDER_WIDTH_SSB = 150;     // SSB módok (LSB/USB): keskeny keret
+constexpr int ANIMATION_BORDER_WIDTH_CW = 120;      // CW mód: legkeskenyebb keret
+constexpr int ANIMATION_BORDER_WIDTH_DEFAULT = 210; // Alapértelmezett szélesség
+constexpr int ANIMATION_BORDER_HEIGHT = 45;         // Animált keret magassága (kompaktabb)
 
 // FreqDisplay pozíció - jobb felső sarokhoz igazítva (negatív offset = jobb oldaltól számítva)
 constexpr int FREQ_DISPLAY_X_OFFSET_FROM_RIGHT = -1 * FreqDisplay::FREQDISPLAY_WIDTH + 35;
 constexpr int FREQ_DISPLAY_Y_OFFSET_FROM_TOP = 0;
 // Konvertált pozíciók (bal felső sarokhoz képest) - ezeket használja a kód
-constexpr int FREQ_DISPLAY_X_OFFSET = ANIMATION_BORDER_WIDTH + FREQ_DISPLAY_X_OFFSET_FROM_RIGHT;
+// Megjegyzés: ezek dinamikusan kerülnek kiszámításra a getCurrentBorderWidth() alapján
 constexpr int FREQ_DISPLAY_Y_OFFSET = FREQ_DISPLAY_Y_OFFSET_FROM_TOP;
 
 // Akkumulátor szimbólum pozíció - jobb felső sarokhoz igazítva
 constexpr int BATTERY_X_OFFSET_FROM_RIGHT = -43; // Akkumulátor jobb szélétől a keret jobb széléig
 constexpr int BATTERY_Y_OFFSET_FROM_TOP = 3;     // Akkumulátor Y pozíció a keret tetejétől
-constexpr int BATTERY_BASE_X_OFFSET = ANIMATION_BORDER_WIDTH + BATTERY_X_OFFSET_FROM_RIGHT;
+// Megjegyzés: BATTERY_BASE_X_OFFSET dinamikusan kerül kiszámításra a getCurrentBorderWidth() alapján
 constexpr int BATTERY_BASE_Y_OFFSET = BATTERY_Y_OFFSET_FROM_TOP;
 constexpr uint8_t BATTERY_RECT_W = 38; // Akkumulátor téglalap szélessége
 constexpr uint8_t BATTERY_RECT_H = 18; // Akkumulátor téglalap magassága
@@ -87,6 +92,13 @@ class ScreenSaverScreen : public UIScreen {
      * @details 15 másodpercenként frissíti a pozíciót és a kijelzett információkat
      */
     void updateFrequencyAndBatteryDisplay();
+
+    /**
+     * @brief Aktuális rádió módhoz tartozó keret szélesség meghatározása
+     * @return A keret szélessége pixelben
+     * @details FM: 210px, AM: 180px, SSB: 150px, CW: 120px
+     */
+    uint16_t getCurrentBorderWidth() const;
 
   public:
     /**
