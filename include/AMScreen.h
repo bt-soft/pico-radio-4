@@ -147,6 +147,12 @@ class AMScreen : public RadioScreen, public CommonVerticalButtons::Mixin<AMScree
     void layoutComponents();
 
     /**
+     * @brief Frissíti a FreqDisplay szélességét az aktuális band típus alapján
+     * @details Dinamikusan állítja be a frekvencia kijelző szélességét
+     */
+    void updateFreqDisplayWidth();
+
+    /**
      * @brief AM specifikus gombok hozzáadása a közös gombokhoz
      * @param buttonConfigs A már meglévő gomb konfigurációk vektora
      * @details Felülírja az ős metódusát, hogy hozzáadja az AM specifikus gombokat

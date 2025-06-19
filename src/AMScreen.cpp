@@ -236,6 +236,7 @@ void AMScreen::activate() {
     updateAllVerticalButtonStates(pSi4735Manager); // Univerzális funkcionális gombok (mixin method)
     updateCommonHorizontalButtonStates();          // Közös gombok szinkronizálása
     updateHorizontalButtonStates();                // AM-specifikus gombok szinkronizálása
+    updateFreqDisplayWidth();                      // FreqDisplay szélességének frissítése
 
     // MEGJEGYZÉS: A frekvencia kijelző frissítése nem szükséges itt,
     // mert a FreqDisplay konstruktor már beállította a helyes frekvenciát
@@ -259,6 +260,7 @@ void AMScreen::onDialogClosed(UIDialogBase *closedDialog) {
         updateAllVerticalButtonStates(pSi4735Manager); // Függőleges gombok szinkronizálása
         updateCommonHorizontalButtonStates();          // Közös gombok szinkronizálása
         updateHorizontalButtonStates();                // AM specifikus gombok szinkronizálása
+        updateFreqDisplayWidth();                      // FreqDisplay szélességének frissítése
 
         // A gombsor konténer teljes újrarajzolása, hogy biztosan megjelenjenek a gombok
         if (horizontalButtonBar) {
@@ -278,13 +280,15 @@ void AMScreen::layoutComponents() {
 
     // Állapotsor komponens létrehozása (felső sáv)
     UIScreen::createStatusLine();
-
     // ===================================================================
     // Frekvencia kijelző pozicionálás (képernyő közép)
     // ===================================================================
     uint16_t FreqDisplayY = 20;
-    Rect freqBounds(0, FreqDisplayY, FreqDisplay::FREQDISPLAY_WIDTH-25, FreqDisplay::FREQDISPLAY_HEIGHT+10);
+    Rect freqBounds(0, FreqDisplayY, FreqDisplay::FREQDISPLAY_WIDTH, FreqDisplay::FREQDISPLAY_HEIGHT + 10);
     UIScreen::createFreqDisplay(freqBounds);
+
+    // Dinamikus szélesség beállítása band típus alapján
+    updateFreqDisplayWidth();
 
     // Finomhangolás jel (alulvonás) elrejtése a frekvencia kijelzőn, ha nem HAM sávban vagyunk
     freqDisplayComp->setHideUnderline(!pSi4735Manager->isCurrentHamBand());
@@ -665,4 +669,34 @@ void AMScreen::handleStepButton(const UIButton::ButtonEvent &event) {
     );
 
     this->showDialog(stepDialog);
+}
+
+/**
+ * @brief Frissíti a FreqDisplay szélességét az aktuális band típus alapján
+ * @details Dinamikusan állítja be a frekvencia kijelző szélességét
+ */
+void AMScreen::updateFreqDisplayWidth() {
+    if (!freqDisplayComp) {
+        return; // Biztonsági ellenőrzés
+    }
+    auto bandType = pSi4735Manager->getCurrentBandType();
+    uint16_t newWidth;
+
+    switch (bandType) {
+        case MW_BAND_TYPE:
+        case LW_BAND_TYPE:
+            newWidth = FreqDisplay::AM_BAND_WIDTH;
+            break;
+        case FM_BAND_TYPE:
+            newWidth = FreqDisplay::FM_BAND_WIDTH;
+            break;
+        case SW_BAND_TYPE:
+            newWidth = FreqDisplay::SW_BAND_WIDTH;
+            break;
+        default:
+            newWidth = FreqDisplay::FREQDISPLAY_WIDTH - 25; // Alapértelmezett
+            break;
+    }
+
+    freqDisplayComp->setWidth(newWidth);
 }

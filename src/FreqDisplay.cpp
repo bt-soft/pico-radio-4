@@ -717,3 +717,14 @@ void FreqDisplay::calculateBfoFrequency(char *buffer, size_t bufferSize) {
 
     snprintf(buffer, bufferSize, "%ld.%02d", khz_part, hz_tens_part);
 }
+
+/**
+ * @brief Beállítja a komponens szélességét dinamikusan
+ */
+void FreqDisplay::setWidth(uint16_t newWidth) {
+    if (bounds.width != newWidth) {
+        bounds.width = newWidth;
+        needsFullClear = true; // Teljes háttér törlés szükséges
+        markForRedraw();
+    }
+}

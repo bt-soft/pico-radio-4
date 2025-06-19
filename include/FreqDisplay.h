@@ -190,6 +190,19 @@ class FreqDisplay : public UIComponent {
      */
     void forceFullRedraw();
 
+    /**
+     * @brief Beállítja a komponens szélességét dinamikusan
+     * @param newWidth Az új szélesség érték
+     */
+    void setWidth(uint16_t newWidth);
+
+    /**
+     * @brief Statikus szélességi konstansok különböző band típusokhoz
+     */
+    static constexpr uint16_t AM_BAND_WIDTH = FREQDISPLAY_WIDTH - 50; // AM sávokhoz
+    static constexpr uint16_t FM_BAND_WIDTH = FREQDISPLAY_WIDTH - 25; // FM sávhoz
+    static constexpr uint16_t SW_BAND_WIDTH = FREQDISPLAY_WIDTH - 30; // SW sávokhoz
+
     // === UIComponent felülírt metódusok ===
     virtual void draw() override;
     virtual bool handleTouch(const TouchEvent &event) override;
