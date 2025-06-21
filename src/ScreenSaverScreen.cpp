@@ -59,7 +59,7 @@ void ScreenSaverScreen::activate() {
     currentAccuXOffset = (currentBorderWidth -= (ScreenSaverConstants::BATTERY_RECT_FULL_W + ScreenSaverConstants::ELEMENT_GAP)); // Akkumulátor X pozíció a keret bal szélétől
 
     // Frekvencia és akkumulátor kezdeti elhelyezése
-    updateFrequencyAndBatteryDisplay(); // Ez törli a képernyőt és beállítja a kezdeti pozíciókat
+    updateFrequencyAndBatteryDisplay();
 }
 
 /**
