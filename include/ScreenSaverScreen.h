@@ -104,13 +104,6 @@ class ScreenSaverScreen : public UIScreen {
      */
     uint16_t getCurrentBorderWidth() const;
 
-    /**
-     * @brief Akkumulátor X pozíciójának meghatározása a keret bal szélétől
-     * @return Az akkumulátor X offset pixelben a keret bal szélétől számítva
-     * @details Számítás: INTERNAL_MARGIN + FreqDisplay szélessége + ELEMENT_GAP
-     */
-    uint16_t getCurrentAccuXOffset() const;
-
   public:
     /**
      * @brief Konstruktor

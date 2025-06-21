@@ -56,7 +56,7 @@ void ScreenSaverScreen::activate() {
 
     // Az eyges pozíciók meghatárotzása az aktuális mód alapján
     currentBorderWidth = getCurrentBorderWidth(); // Animált keret véletlenszerű pozíciójának meghatározása
-    currentAccuXOffset = getCurrentAccuXOffset(); // Akkumulátor X pozíció a keret bal szélétől
+    currentAccuXOffset = (currentBorderWidth -= (ScreenSaverConstants::BATTERY_RECT_FULL_W + ScreenSaverConstants::ELEMENT_GAP)); // Akkumulátor X pozíció a keret bal szélétől
 
     // Frekvencia és akkumulátor kezdeti elhelyezése
     updateFrequencyAndBatteryDisplay(); // Ez törli a képernyőt és beállítja a kezdeti pozíciókat
@@ -333,34 +333,4 @@ uint16_t ScreenSaverScreen::getCurrentBorderWidth() const {
     }
 
     return ANIMATION_BORDER_WIDTH_DEFAULT; // Alapértelmezett szélesség, ha nem ismert a demod típus
-}
-
-/**
- * @brief Akkumulátor X pozíciójának meghatározása a keret bal szélétől
- * @return Az akkumulátor X offset pixelben a keret bal szélétől számítva
- * @details Számítás: INTERNAL_MARGIN + FreqDisplay szélessége + ELEMENT_GAP
- * Ez biztosítja, hogy az akkumulátor a FreqDisplay jobb oldalától ELEMENT_GAP távolságra legyen
- */
-uint16_t ScreenSaverScreen::getCurrentAccuXOffset() const {
-    using namespace ScreenSaverConstants;
-
-    uint16_t calculatedX = currentBorderWidth == 0 ? getCurrentBorderWidth() : currentBorderWidth;
-
-    if (pSi4735Manager) {
-
-        uint8_t bandType = pSi4735Manager->getCurrentBandType();
-        DEBUG("ScreenSaverScreen::getCurrentAccuXOffset(): currentBandName: %s, bandType = %d, currDemod: %s\n", //
-              pSi4735Manager->getCurrentBandName(), bandType, pSi4735Manager->getCurrentBandDemodModDesc());
-
-        switch (bandType) {
-            case FM_BAND_TYPE:
-            case LW_BAND_TYPE:
-            case MW_BAND_TYPE:
-            case SW_BAND_TYPE:
-                calculatedX -= (BATTERY_RECT_FULL_W + ELEMENT_GAP);
-                break;
-        }
-    }
-
-    return calculatedX;
 }
