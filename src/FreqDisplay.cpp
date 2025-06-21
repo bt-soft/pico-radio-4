@@ -306,27 +306,30 @@ void FreqDisplay::drawSsbCwStyle(const FrequencyDisplayData &data) {
 
         // Érintési területek kiszámítása az aláhúzáshoz
         calculateSsbCwTouchAreas(freqSpriteX, freqSpriteWidth);
-    } // 3. Mértékegység pozicionálása: az utolsó digit alatt
-    // Az utolsó digit (10Hz) pozíciója: digit10Hz_offset a sprite bal szélétől
-    int digit10Hz_offset = 196; // 10Hz digit (8. pozíció a maszkban) - ugyanaz mint a drawFineTuningUnderline-ban
-    int digitWidth = 25;        // Ismert DSEG7 digit szélesség
-    int lastDigitRightEdge = freqSpriteX + digit10Hz_offset + (digitWidth / 2);
-
-    // Mértékegység jobb oldala megegyezik az utolsó digit jobb oldalával
-    int unitX = lastDigitRightEdge;
-    int unitY;
+    } // 3. Mértékegység pozicionálása
+    int unitX, unitY;
+    uint8_t textDatum;
 
     if (hideUnderline) {
-        // Képernyővédő mód: mértékegység alja a számok aljával egyezzen meg
+        // Képernyővédő mód: mértékegység az utolsó digit után (jobb oldalán)
+        // Képernyővédő módban a maszk rövidebb ("88 888" vs "88 888.88")
+        // A frekvencia sprite jobb szélétől számoljuk a pozíciót
+        unitX = freqSpriteX + freqSpriteWidth + 5; // 5 pixel távolság a sprite jobb szélétől
         unitY = bounds.y + FREQ_7SEGMENT_HEIGHT + UNIT_Y_OFFSET_SSB_CW;
+        textDatum = BL_DATUM; // Bal alsó sarokhoz igazítás
     } else {
-        // Normál mód: mértékegység az aláhúzás alatt
-        unitY = bounds.y + FREQ_7SEGMENT_HEIGHT         //
-                + UNDERLINE_Y_OFFSET + UNDERLINE_HEIGHT //
-                + 20;                                   // Aláhúzás alatt 20 pixelrel lejjebb
+        // Normál mód: mértékegység az utolsó digit alatt, aláhúzás alatt
+        // Az utolsó digit (10Hz) pozíciója: digit10Hz_offset a sprite bal szélétől
+        int digit10Hz_offset = 196;                                // 10Hz digit (8. pozíció a maszkban)
+        int digitWidth = 25;                                       // Ismert DSEG7 digit szélesség
+        unitX = freqSpriteX + digit10Hz_offset + (digitWidth / 2); // Digit közepéhez igazítva
+        unitY = bounds.y + FREQ_7SEGMENT_HEIGHT                    //
+                + UNDERLINE_Y_OFFSET + UNDERLINE_HEIGHT            //
+                + 20;                                              // Aláhúzás alatt 20 pixelrel lejjebb
+        textDatum = BR_DATUM;                                      // Jobb alsó sarokhoz igazítás
     }
 
-    drawText(data.unit, unitX, unitY, UNIT_TEXT_SIZE, BR_DATUM, colors.indicator); // BR_DATUM: jobb alsó sarokhoz igazítás
+    drawText(data.unit, unitX, unitY, UNIT_TEXT_SIZE, textDatum, colors.indicator);
 }
 
 /**
@@ -363,6 +366,8 @@ int FreqDisplay::calculateFixedSpriteWidth(const String &mask) { // Konstans ér
         return 130; // SW AM: "88.888" (CB és 30MHz sávokhoz)
     } else if (mask == "88 888.88") {
         return 208; // SSB/CW normál: "88 888.88"
+    } else if (mask == "88 888") {
+        return 150; // SSB/CW képernyővédő: "88 888" (5 digit + space, extra margin)
     } else if (mask == "-888") {
         return 100; // BFO: "-888" (-999...+999 tartomány)
     }

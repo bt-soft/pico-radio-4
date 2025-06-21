@@ -29,7 +29,7 @@ constexpr int ANIMATION_BORDER_WIDTH_FM = FreqDisplay::FREQDISPLAY_WIDTH - 70;  
 constexpr int ANIMATION_BORDER_WIDTH_AM_LW = FreqDisplay::FREQDISPLAY_WIDTH - 100;     // AM LW mód
 constexpr int ANIMATION_BORDER_WIDTH_AM_MW = FreqDisplay::FREQDISPLAY_WIDTH - 100;     // AM MW mód
 constexpr int ANIMATION_BORDER_WIDTH_AM_SW = FreqDisplay::FREQDISPLAY_WIDTH - 70;      // AM SW mód
-constexpr int ANIMATION_BORDER_WIDTH_SSB_CW = FreqDisplay::FREQDISPLAY_WIDTH - 25;     // SSB/CW módok (LSB/USB)
+constexpr int ANIMATION_BORDER_WIDTH_SSB_CW = FreqDisplay::FREQDISPLAY_WIDTH - 70;     // SSB/CW módok (LSB/USB + CW)
 constexpr int ANIMATION_BORDER_WIDTH_SSB_CW_BFO = FreqDisplay::FREQDISPLAY_WIDTH - 25; // SSB/CW + BFO
 constexpr int ANIMATION_BORDER_HEIGHT = 45;                                            // Animált keret magassága (kompaktabb)
 

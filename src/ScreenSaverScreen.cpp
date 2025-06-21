@@ -56,7 +56,7 @@ void ScreenSaverScreen::activate() {
 
     // Az eyges pozíciók meghatárotzása az aktuális mód alapján
     currentBorderWidth = getCurrentBorderWidth(); // Animált keret véletlenszerű pozíciójának meghatározása
-    currentAccuXOffset = (currentBorderWidth -= (ScreenSaverConstants::BATTERY_RECT_FULL_W + ScreenSaverConstants::ELEMENT_GAP)); // Akkumulátor X pozíció a keret bal szélétől
+    currentAccuXOffset = currentBorderWidth - (ScreenSaverConstants::BATTERY_RECT_FULL_W + ScreenSaverConstants::ELEMENT_GAP); // Akkumulátor X pozíció a keret bal szélétől
 
     // Frekvencia és akkumulátor kezdeti elhelyezése
     updateFrequencyAndBatteryDisplay();
