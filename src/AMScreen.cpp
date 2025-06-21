@@ -576,10 +576,10 @@ void AMScreen::handleDemodButton(const UIButton::ButtonEvent &event) {
             updateStepButtonState();
 
         },
-        true,                                     // Automatikusan bezárja-e a dialógust gomb kattintáskor
-        pSi4735Manager->getCurrentBandModeDesc(), // Az alapértelmezett (jelenlegi) gomb felirata
-        true,                                     // Ha true, az alapértelmezett gomb le van tiltva; ha false, csak vizuálisan kiemelve
-        Rect(-1, -1, 320, 130)                    // Dialógus mérete (ha -1, akkor automatikusan a képernyő közepére igazítja)
+        true,                                         // Automatikusan bezárja-e a dialógust gomb kattintáskor
+        pSi4735Manager->getCurrentBandDemodModDesc(), // Az alapértelmezett (jelenlegi) gomb felirata
+        true,                                         // Ha true, az alapértelmezett gomb le van tiltva; ha false, csak vizuálisan kiemelve
+        Rect(-1, -1, 320, 130)                        // Dialógus mérete (ha -1, akkor automatikusan a képernyő közepére igazítja)
     );
 
     this->showDialog(demodDialog);

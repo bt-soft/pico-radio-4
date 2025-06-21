@@ -149,7 +149,7 @@ class Band {
     /**
      * @brief Aktuális mód/modulációs típus (FM, AM, LSB, USB, CW)
      */
-    inline const char *getCurrentBandModeDesc() { return bandModeDesc[getCurrentBand().currMod]; }
+    inline const char *getCurrentBandDemodModDesc() { return bandModeDesc[getCurrentBand().currMod]; }
 
     /**
      * @brief A sáv FM? (A többi úgy is AM, emiatt a tagadással egyszerűbb azt kezelni, ha kell)

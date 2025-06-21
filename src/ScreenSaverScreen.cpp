@@ -54,9 +54,12 @@ void ScreenSaverScreen::activate() {
     freqDisplayComp->setCustomColors(UIColorPalette::createScreenSaverFreqColors());
     freqDisplayComp->setHideUnderline(true);
 
+    // Az eyges pozíciók meghatárotzása az aktuális mód alapján
+    currentBorderWidth = getCurrentBorderWidth(); // Animált keret véletlenszerű pozíciójának meghatározása
+    currentAccuXOffset = getCurrentAccuXOffset(); // Akkumulátor X pozíció a keret bal szélétől
+
     // Frekvencia és akkumulátor kezdeti elhelyezése
     updateFrequencyAndBatteryDisplay(); // Ez törli a képernyőt és beállítja a kezdeti pozíciókat
-    // markForRedraw() hívása az updateFrequencyAndBatteryDisplay-ben történik
 }
 
 /**
@@ -121,8 +124,7 @@ void ScreenSaverScreen::drawContent() {
 void ScreenSaverScreen::updateFrequencyAndBatteryDisplay() {
     tft.fillScreen(TFT_COLOR_BACKGROUND);
 
-    using namespace ScreenSaverConstants;                  // Aktuális keret szélesség lekérése a rádió mód alapján
-    uint16_t currentBorderWidth = getCurrentBorderWidth(); // Animált keret véletlenszerű pozíciójának meghatározása
+    using namespace ScreenSaverConstants; // Aktuális keret szélesség lekérése a rádió mód alapján
     // Most a FreqDisplay és akkumulátor a keret belsejében van, ezért csak a keret mérete számít
     uint16_t maxBorderX = tft.width() - currentBorderWidth;
     uint16_t maxBorderY = tft.height() - ANIMATION_BORDER_HEIGHT;
@@ -165,9 +167,6 @@ void ScreenSaverScreen::drawAnimatedBorder() {
     // Képernyő méret ellenőrzése
     uint16_t screenW = tft.width();
     uint16_t screenH = tft.height();
-
-    // Aktuális keret szélesség lekérése a rádió mód alapján
-    uint16_t currentBorderWidth = getCurrentBorderWidth();
 
     // Animált keret koordinátái
     int16_t rectLeft = animationBorderX;
@@ -254,8 +253,10 @@ void ScreenSaverScreen::drawBatteryInfo() {
     } // Egyébként: zöld
 
     // Akkumulátor pozicionálása a keret belsejében az új metódus segítségével
-    uint16_t batteryX = animationBorderX + getCurrentAccuXOffset();
-    uint16_t batteryY = animationBorderY + BATTERY_BASE_Y_OFFSET;                // Akkumulátor szimbólum rajzolása
+    uint16_t batteryX = animationBorderX + currentAccuXOffset; // Akkumulátor X pozíció a keret bal szélétől számítva
+    uint16_t batteryY = animationBorderY + BATTERY_BASE_Y_OFFSET;
+
+    // Akkumulátor szimbólum rajzolása
     tft.fillRect(batteryX, batteryY, BATTERY_RECT_W, BATTERY_RECT_H, TFT_BLACK); // Terület törlése
     tft.drawRect(batteryX, batteryY, BATTERY_RECT_W, BATTERY_RECT_H, colorBatt);
     tft.drawRect(batteryX + BATTERY_RECT_W, batteryY + (BATTERY_RECT_H - BATTERY_NUB_H) / 2, BATTERY_NUB_W, BATTERY_NUB_H,
@@ -306,6 +307,10 @@ uint16_t ScreenSaverScreen::getCurrentBorderWidth() const {
     if (pSi4735Manager) {
         const BandTable &currentBand = pSi4735Manager->getCurrentBand();
 
+        uint8_t bandType = pSi4735Manager->getCurrentBandType();
+        DEBUG("ScreenSaverScreen::getCurrentAccuXOffset: currentBandName: %s, bandType = %d, currDemod: %s\n", //
+              pSi4735Manager->getCurrentBandName(), bandType, pSi4735Manager->getCurrentBandDemodModDesc());
+
         switch (currentBand.currMod) {
             case FM:
                 return ANIMATION_BORDER_WIDTH_FM;
@@ -333,33 +338,19 @@ uint16_t ScreenSaverScreen::getCurrentBorderWidth() const {
 uint16_t ScreenSaverScreen::getCurrentAccuXOffset() const {
     using namespace ScreenSaverConstants;
 
-    // Akkumulátor pozíciója: belső margó + FreqDisplay szélessége + elemek közötti gap
-    uint16_t calculatedX = getCurrentBorderWidth();
+    uint16_t calculatedX = currentBorderWidth == 0 ? getCurrentBorderWidth() : currentBorderWidth;
 
     if (pSi4735Manager) {
-        const BandTable &currentBand = pSi4735Manager->getCurrentBand();
-        switch (currentBand.currMod) {
-            case FM:
+
+        uint8_t bandType = pSi4735Manager->getCurrentBandType();
+        DEBUG("ScreenSaverScreen::getCurrentAccuXOffset: currentBandName: %s, bandType = %d\n", pSi4735Manager->getCurrentBandName(), bandType);
+
+        switch (bandType) {
+            case FM_BAND_TYPE:
+            case LW_BAND_TYPE:
+            case MW_BAND_TYPE:
+            case SW_BAND_TYPE:
                 calculatedX -= (BATTERY_RECT_FULL_W + ELEMENT_GAP);
-                break;
-
-            case AM: {
-                uint8_t bandType = pSi4735Manager->getCurrentBandType();
-                if (bandType == MW_BAND_TYPE || bandType == LW_BAND_TYPE) {
-                    // MW/LW: 1440 kHz
-                } else {
-                    // SW AM: 27.200 MHz (CB) és 30.000 MHz sávok
-                    calculatedX -= (BATTERY_RECT_FULL_W + ELEMENT_GAP);
-                }
-            } break;
-            case LSB:
-            case USB:
-            case CW:
-                if (rtv::bfoOn) {
-                    calculatedX -= (BATTERY_RECT_FULL_W + ELEMENT_GAP);
-                } else {
-                }
-
                 break;
         }
     }

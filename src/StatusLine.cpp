@@ -219,7 +219,7 @@ void StatusLine::updateAgc() {
  */
 void StatusLine::updateMode() {
     // Ha nincs Si4735Manager, akkor N/A-t írunk ki
-    const char *modeText = pSi4735Manager ? (rtv::CWShift ? "CW" : pSi4735Manager->getCurrentBandModeDesc()) : "N/A";
+    const char *modeText = pSi4735Manager ? (rtv::CWShift ? "CW" : pSi4735Manager->getCurrentBandDemodModDesc()) : "N/A";
     clearBoxContent(2);
     drawTextInBox(2, modeText, statusBoxes[2].color);
 }

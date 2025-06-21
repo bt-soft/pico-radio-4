@@ -25,7 +25,7 @@ constexpr int SAVER_ANIMATION_STEP_JUMP = 3;       // Animációs lépés ugrás
 // Animált keret mérete és UI elemek relatív pozíciói a keret bal felső sarkához képest
 // Különböző szélességek a rádió módok szerint (FreqDisplay-hez igazítva: 270px + margók + akkumulátor)
 constexpr int ANIMATION_BORDER_WIDTH_FM = FreqDisplay::FREQDISPLAY_WIDTH - 60;         // FM mód
-constexpr int ANIMATION_BORDER_WIDTH_AM = FreqDisplay::FREQDISPLAY_WIDTH - 100;         // AM mód
+constexpr int ANIMATION_BORDER_WIDTH_AM = FreqDisplay::FREQDISPLAY_WIDTH - 80;        // AM mód
 constexpr int ANIMATION_BORDER_WIDTH_SSB_CW = FreqDisplay::FREQDISPLAY_WIDTH - 25;     // SSB/CW módok (LSB/USB)
 constexpr int ANIMATION_BORDER_WIDTH_SSB_CW_BFO = FreqDisplay::FREQDISPLAY_WIDTH - 25; // SSB/CW + BFO
 constexpr int ANIMATION_BORDER_WIDTH_DEFAULT = 320;                                    // Alapértelmezett szélesség
@@ -58,10 +58,6 @@ class ScreenSaverScreen : public UIScreen {
     uint32_t activationTime;          // Képernyővédő aktiválásának időpontja
     uint32_t lastAnimationUpdateTime; // Utolsó animáció frissítés időpontja
 
-    /**
-     * @brief Képernyővédő aktiválása
-     * @details Privát metódus, konstruktorból hívva
-     */
     virtual void activate() override; // Animáció állapot változók
     uint16_t animationBorderX;        // Animált keret bal felső sarkának X koordinátája
     uint16_t animationBorderY;        // Animált keret bal felső sarkának Y koordinátája
@@ -71,6 +67,14 @@ class ScreenSaverScreen : public UIScreen {
     uint8_t saverLineColors[ScreenSaverConstants::SAVER_ANIMATION_LINE_LENGTH]; // Animációs vonal színei
 
     uint32_t lastFullUpdateSaverTime; // Utolsó teljes frissítés időpontja
+
+    uint16_t currentBorderWidth = 0; // Aktuális keret szélesség a rádió mód szerint
+    uint16_t currentAccuXOffset = 0; // Akkumulátor X pozíció a keret bal szélétől
+
+    /**
+     * @brief Képernyővédő aktiválása
+     * @details Privát metódus, konstruktorból hívva
+     */
 
     /**
      * @brief Animált keret rajzolása
