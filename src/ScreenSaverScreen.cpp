@@ -311,7 +311,7 @@ uint16_t ScreenSaverScreen::getCurrentBorderWidth() const {
         DEBUG("ScreenSaverScreen::getCurrentAccuXOffset: currentBandName: %s, bandType = %d, currDemod: %s\n", //
               pSi4735Manager->getCurrentBandName(), bandType, pSi4735Manager->getCurrentBandDemodModDesc());
 
-        switch (currentBand.currMod) {
+        switch (currentBand.currDemod) {
             case FM:
                 return ANIMATION_BORDER_WIDTH_FM;
             case AM:

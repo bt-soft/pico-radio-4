@@ -92,18 +92,18 @@ void Si4735Band::bandSet(bool useDefaults) {
 
     // Beállítjuk az aktuális Band rekordot - FONTOS: pointer frissítése!
     BandTable &currentBand = getCurrentBand();
-    DEBUG("Si4735Band::bandSet(%s) -> BandIdx: %d, Name: %s, CurrFreq: %d, CurrStep: %d, currMod: %d, antCap: %d\n", //
+    DEBUG("Si4735Band::bandSet(%s) -> BandIdx: %d, Name: %s, CurrFreq: %d, CurrStep: %d, currDemod: %d, antCap: %d\n", //
           useDefaults ? "true" : "false",
           config.data.currentBandIdx, //
           currentBand.bandName,       //
           currentBand.currFreq,       //
           currentBand.currStep,       //
-          currentBand.currMod,        //
+          currentBand.currDemod,      //
           currentBand.antCap          //
     );
 
     // Demoduláció beállítása
-    uint8_t currMod = currentBand.currMod;
+    uint8_t currMod = currentBand.currDemod;
 
     // // A sávhoz preferált demodulációs módot állítunk be?
     // if (useDefaults) {
@@ -147,13 +147,13 @@ void Si4735Band::useBand(bool useDefaults) {
 
     BandTable &currentBand = getCurrentBand();
 
-    DEBUG("Si4735Band::useBand() -> BandIdx: %d, Name: %s, CurrFreq: %d, CurrStep: %d, currMod: %d, antCap: %d\n", //
-          config.data.currentBandIdx,                                                                              //
-          currentBand.bandName,                                                                                    //
-          currentBand.currFreq,                                                                                    //
-          currentBand.currStep,                                                                                    //
-          currentBand.currMod,                                                                                     //
-          currentBand.antCap                                                                                       //
+    DEBUG("Si4735Band::useBand() -> BandIdx: %d, Name: %s, CurrFreq: %d, CurrStep: %d, currDemod: %d, antCap: %d\n", //
+          config.data.currentBandIdx,                                                                                //
+          currentBand.bandName,                                                                                      //
+          currentBand.currFreq,                                                                                      //
+          currentBand.currStep,                                                                                      //
+          currentBand.currDemod,                                                                                     //
+          currentBand.antCap                                                                                         //
     );
 
     // Index ellenőrzés (biztonsági okokból)
@@ -220,14 +220,14 @@ void Si4735Band::useBand(bool useDefaults) {
 
         if (ssbLoaded) { // SSB vagy CW mód
 
-            bool isCWMode = (currentBand.currMod == CW);
+            bool isCWMode = isCurrentDemodCW();
 
             // SSB/CW esetén a step mindig 1kHz a chipen belül
             constexpr uint8_t FREQUENCY_STEP = 1;
 
             // CW mód esetén mindig USB-t használunk, mivel a CW jelek az USB oldalsávban
             // jönnek át jobban (pozitív frekvencia offset)
-            uint8_t modeForChip = isCWMode ? USB : currentBand.currMod;
+            uint8_t modeForChip = isCWMode ? USB : currentBand.currDemod;
             si4735.setSSB(currentBand.minimumFreq, currentBand.maximumFreq, currentBand.currFreq, FREQUENCY_STEP, modeForChip);
 
             // BFO beállítása
@@ -271,9 +271,9 @@ void Si4735Band::setAfBandWidth() {
 
     DEBUG("Si4735Band::setAfBandWidth() -> currentBandIdx: %d\n", config.data.currentBandIdx);
 
-    BandTable &currentBand = getCurrentBand();
-    uint8_t currMod = currentBand.currMod;
-    if (currMod == LSB or currMod == USB or currMod == CW) {
+    // BandTable &currentBand = getCurrentBand();
+    //  uint8_t currDemod = currentBand.currDemod;
+    if (isCurrentDemodSSBorCW()) { // SSB vagy CW mód
         /**
          * @ingroup group17 Patch and SSB support
          *
@@ -312,7 +312,7 @@ void Si4735Band::setAfBandWidth() {
             si4735.setSSBSidebandCutoffFilter(1);
         }
 
-    } else if (currMod == AM) {
+    } else if (isCurrentDemodAM()) { // AM mód
         /**
          * @ingroup group08 Set bandwidth
          * @brief Selects the bandwidth of the channel filter for AM reception.
@@ -330,7 +330,7 @@ void Si4735Band::setAfBandWidth() {
          */
         si4735.setBandwidth(config.data.bwIdxAM, 0);
 
-    } else if (currMod == FM) {
+    } else if (isCurrentDemodFM()) { // FM mód
         /**
          * @brief Sets the Bandwith on FM mode
          * @details Selects bandwidth of channel filter applied at the demodulation stage. Default is automatic which means the device automatically selects proper
@@ -373,7 +373,7 @@ void Si4735Band::tuneMemoryStation(uint8_t bandIndex, uint16_t frequency, uint8_
     }
 
     // Átállítjuk a demodulációs módot
-    currentBand.currMod = demodModIndex;
+    currentBand.currDemod = demodModIndex;
 
     // 3. Sávszélesség index beállítása a configban a MENTETT érték alapján ---
     uint8_t savedBwIndex = bandwidthIndex;

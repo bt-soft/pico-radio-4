@@ -561,7 +561,7 @@ StationData MemoryScreen::getCurrentStationData() {
 
         station.bandIndex = config.data.currentBandIdx; // Band index a config-ból
         station.frequency = currentBand.currFreq;
-        station.modulation = currentBand.currMod;
+        station.modulation = currentBand.currDemod;
         station.bandwidthIndex = 0; // TODO: Ha van bandwidth index tárolás
     }
 

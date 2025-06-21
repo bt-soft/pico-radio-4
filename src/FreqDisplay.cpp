@@ -116,7 +116,7 @@ const FreqSegmentColors &FreqDisplay::getSegmentColors() const {
  * @brief Ellenőrzi, hogy SSB/CW mód van-e aktív
  */
 bool FreqDisplay::isInSsbCwMode() const {
-    uint8_t currentDemod = pSi4735Manager->getCurrentBand().currMod;
+    uint8_t currentDemod = pSi4735Manager->getCurrentBand().currDemod;
     return (currentDemod == LSB || currentDemod == USB || currentDemod == CW);
 }
 
@@ -125,7 +125,7 @@ bool FreqDisplay::isInSsbCwMode() const {
  */
 FreqDisplay::FrequencyDisplayData FreqDisplay::getFrequencyDisplayData(uint16_t frequency) {
     FrequencyDisplayData data;
-    uint8_t demodMode = pSi4735Manager->getCurrentBand().currMod;
+    uint8_t demodMode = pSi4735Manager->getCurrentBand().currDemod;
     uint8_t bandType = pSi4735Manager->getCurrentBandType();
     if (demodMode == FM) {
         // FM mód: 100.50 MHz - optimalizált integer számítás

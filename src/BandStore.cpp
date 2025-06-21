@@ -10,7 +10,7 @@ void BandStore::loadToBandTable(BandTable *bandTable) {
         if (data.bands[i].currFreq != 0) {
             bandTable[i].currFreq = data.bands[i].currFreq;
             bandTable[i].currStep = data.bands[i].currStep;
-            bandTable[i].currMod = data.bands[i].currMod;
+            bandTable[i].currDemod = data.bands[i].currMod;
             bandTable[i].antCap = data.bands[i].antCap;
         }
     }
@@ -24,7 +24,7 @@ void BandStore::saveFromBandTable(const BandTable *bandTable) {
     for (uint8_t i = 0; i < BANDTABLE_SIZE; i++) {
         data.bands[i].currFreq = bandTable[i].currFreq;
         data.bands[i].currStep = bandTable[i].currStep;
-        data.bands[i].currMod = bandTable[i].currMod;
+        data.bands[i].currMod = bandTable[i].currDemod;
         data.bands[i].antCap = bandTable[i].antCap;
     }
     // Az adatok megváltoztak, a checkSave() fogja észlelni

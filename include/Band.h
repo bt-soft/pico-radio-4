@@ -23,10 +23,9 @@ class BandStore;
 
 // Egységes BandTable struktúra
 struct BandTable {
-    // KOnstans adatok
     const char *bandName; // Sáv neve
     uint8_t bandType;     // Sáv típusa (FM, MW, LW vagy SW)
-    uint16_t prefMod;     // Preferált moduláció (AM, FM, USB, LSB, CW)
+    uint16_t prefDemod;   // Preferált demodulációs mód (AM, FM, USB, LSB, CW)
     uint16_t minimumFreq; // A sáv minimum frekvenciája
     uint16_t maximumFreq; // A sáv maximum frekvenciája
     uint16_t defFreq;     // Alapértelmezett frekvencia
@@ -36,7 +35,7 @@ struct BandTable {
     // Változó és mentendő adatok
     uint16_t currFreq; // Aktuális frekvencia
     uint8_t currStep;  // Aktuális lépésköz (növelés/csökkentés)
-    uint8_t currMod;   // Aktuális mód/modulációs típus (FM, AM, LSB, USB, CW)
+    uint8_t currDemod; // Aktuális demodulációs mód (FM, AM, LSB, USB, CW)
     uint16_t antCap;   // Antenna Tuning Capacitor
 };
 
@@ -140,16 +139,16 @@ class Band {
      */
     int8_t getBandIdxByBandName(const char *bandName);
 
-    /**
-     * @brief Demodulációs mód index szerinti elkérése (FM, AM, LSB, USB, CW)
-     * @param demodIndex A demodulációs mód indexe
-     */
-    inline const char *getBandModeDescByIndex(uint8_t demodIndex) { return bandModeDesc[demodIndex]; }
+    // /**
+    //  * @brief Demodulációs mód index szerinti elkérése (FM, AM, LSB, USB, CW)
+    //  * @param demodIndex A demodulációs mód indexe
+    //  */
+    // inline const char *getBandDemoModDescByIndex(uint8_t demodIndex) { return bandModeDesc[demodIndex]; }
 
     /**
      * @brief Aktuális mód/modulációs típus (FM, AM, LSB, USB, CW)
      */
-    inline const char *getCurrentBandDemodModDesc() { return bandModeDesc[getCurrentBand().currMod]; }
+    inline const char *getCurrentBandDemodModDesc() { return bandModeDesc[getCurrentBand().currDemod]; }
 
     /**
      * @brief A sáv FM? (A többi úgy is AM, emiatt a tagadással egyszerűbb azt kezelni, ha kell)
@@ -157,11 +156,11 @@ class Band {
     inline bool isCurrentBandFM() { return getCurrentBand().bandType == FM_BAND_TYPE; }
 
     // Demodulációs módok lekérdezése
-    inline bool isCurrentDemodFM() { return getCurrentBand().currMod == FM; }
-    inline bool isCurrentDemodAM() { return getCurrentBand().currMod == AM; }
-    inline bool isCurrentDemodLSB() { return getCurrentBand().currMod == LSB; }
-    inline bool isCurrentDemodUSB() { return getCurrentBand().currMod == USB; }
-    inline bool isCurrentDemodCW() { return getCurrentBand().currMod == CW; }
+    inline bool isCurrentDemodFM() { return getCurrentBand().currDemod == FM; }
+    inline bool isCurrentDemodAM() { return getCurrentBand().currDemod == AM; }
+    inline bool isCurrentDemodLSB() { return getCurrentBand().currDemod == LSB; }
+    inline bool isCurrentDemodUSB() { return getCurrentBand().currDemod == USB; }
+    inline bool isCurrentDemodCW() { return getCurrentBand().currDemod == CW; }
     inline bool isCurrentDemodSSBorCW() { return isCurrentDemodLSB() || isCurrentDemodUSB() || isCurrentDemodCW(); }
 
     /**
@@ -178,7 +177,7 @@ class Band {
      */
     const char *getCurrentBandWidthLabel() {
         const char *p;
-        uint8_t currMod = getCurrentBand().currMod;
+        uint8_t currMod = getCurrentBand().currDemod;
         if (currMod == AM)
             p = getCurrentBandWidthLabelByIndex(bandWidthAM, config.data.bwIdxAM);
         if (currMod == LSB or currMod == USB or currMod == CW)
@@ -301,7 +300,7 @@ class Band {
         } else { // Nem FM
 
             // Ha SSB vagy CW, akkor a lépésköz a BFO-val van megoldva
-            if (currentBand.currMod == LSB or currentBand.currMod == USB or currentBand.currMod == CW) {
+            if (currentBand.currDemod == LSB or currentBand.currDemod == USB or currentBand.currDemod == CW) {
                 switch (rtv::freqstepnr) {
                     default:
                     case 0:

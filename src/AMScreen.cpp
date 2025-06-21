@@ -131,7 +131,7 @@ bool AMScreen::handleRotary(const RotaryEvent &event) {
         newFreq = pSi4735Manager->getSi4735().getCurrentFrequency();
 
         // SSB hangolás esetén a BFO eltolás beállítása
-        const int16_t cwBaseOffset = (currentBand.currMod == CW) ? config.data.cwReceiverOffsetHz : 0;
+        const int16_t cwBaseOffset = (currentBand.currDemod == CW) ? config.data.cwReceiverOffsetHz : 0;
         int16_t bfoToSet = cwBaseOffset + rtv::currentBFO + rtv::currentBFOmanu;
         pSi4735Manager->getSi4735().setSSBBfo(bfoToSet);
 
@@ -456,7 +456,7 @@ void AMScreen::handleAfBWButton(const UIButton::ButtonEvent &event) {
     }
 
     // Aktuális demodulációs mód
-    uint8_t currMod = pSi4735Manager->getCurrentBand().currMod;
+    uint8_t currMod = pSi4735Manager->getCurrentBand().currDemod;
     // Jelenlegi sávszélesség felirata
     const char *currentBw = pSi4735Manager->getCurrentBandWidthLabel();
 
@@ -527,10 +527,10 @@ void AMScreen::handleAntCapButton(const UIButton::ButtonEvent &event) {
     antCapTempValue = static_cast<int>(currband.antCap);
 
     auto antCapDialog = std::make_shared<ValueChangeDialog>(
-        this, this->tft,                                                                                                //
-        "Antenna Tuning capacitor", "Capacitor value [pF]:",                                                            //
-        &antCapTempValue,                                                                                               //
-        1, currband.currMod == FM ? Si4735Constants::SI4735_MAX_ANT_CAP_FM : Si4735Constants::SI4735_MAX_ANT_CAP_AM, 1, //
+        this, this->tft,                                                                                                  //
+        "Antenna Tuning capacitor", "Capacitor value [pF]:",                                                              //
+        &antCapTempValue,                                                                                                 //
+        1, currband.currDemod == FM ? Si4735Constants::SI4735_MAX_ANT_CAP_FM : Si4735Constants::SI4735_MAX_ANT_CAP_AM, 1, //
         [this](const std::variant<int, float, bool> &liveNewValue) {
             if (std::holds_alternative<int>(liveNewValue)) {
                 int currentDialogVal = std::get<int>(liveNewValue);
@@ -565,7 +565,7 @@ void AMScreen::handleDemodButton(const UIButton::ButtonEvent &event) {
             BandTable &currentband = pSi4735Manager->getCurrentBand();
 
             // Demodulációs mód bellítása
-            currentband.currMod = buttonIndex + 1; // Az FM  mód indexe 0, azt kihagyjuk
+            currentband.currDemod = buttonIndex + 1; // Az FM  mód indexe 0, azt kihagyjuk
 
             // Újra beállítjuk a sávot az új móddal (false -> ne a preferáltat töltse)
             pSi4735Manager->bandSet(false);
@@ -596,7 +596,7 @@ void AMScreen::handleStepButton(const UIButton::ButtonEvent &event) {
     }
 
     // Aktuális demodulációs mód
-    uint8_t currMod = pSi4735Manager->getCurrentBand().currMod;
+    uint8_t currMod = pSi4735Manager->getCurrentBand().currDemod;
 
     // Az aktuális freki lépés felirata
     const char *currentStepStr = pSi4735Manager->currentStepSizeStr();

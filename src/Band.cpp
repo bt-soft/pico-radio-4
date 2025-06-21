@@ -106,8 +106,8 @@ void Band::initializeBandTableData(bool forceReinit) {
             if (bandTable[i].currStep == 0) {
                 bandTable[i].currStep = bandTable[i].defStep; // Lépés
             }
-            if (bandTable[i].currMod == 0) {
-                bandTable[i].currMod = bandTable[i].prefMod; // Moduláció
+            if (bandTable[i].currDemod == 0) {
+                bandTable[i].currDemod = bandTable[i].prefDemod; // Moduláció
             }
 
             // Antenna tunning capacitor - csak ha még 0
