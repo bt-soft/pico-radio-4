@@ -502,7 +502,7 @@ void FreqDisplay::draw() {
     drawFrequencyDisplay(data);
 
     // Debug keret - segít az optimalizálásban és pozíciók ellenőrzésében
-    tft.drawRect(bounds.x, bounds.y, bounds.width, bounds.height, TFT_RED);
+    // tft.drawRect(bounds.x, bounds.y, bounds.width, bounds.height, TFT_RED);
 
     needsRedraw = false;
 }
