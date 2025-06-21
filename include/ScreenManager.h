@@ -11,6 +11,7 @@
 #include "FMScreen.h"
 #include "IScreenManager.h"
 #include "MemoryScreen.h"
+#include "ScanScreen.h"
 #include "ScreenSaverScreen.h"
 #include "TestScreen.h"
 #include "UIScreen.h"

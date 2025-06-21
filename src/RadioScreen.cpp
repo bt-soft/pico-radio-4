@@ -354,13 +354,12 @@ void RadioScreen::processBandButton(bool isHamBand) {
 /**
  * @brief SCAN gomb eseménykezelő - Folyamatos keresés
  * @param event Gomb esemény (Clicked)
- * @details Alapértelmezett implementáció - leszármazott osztályok felülírhatják
+ * @details Átkapcsol a ScanScreen-re spektrum analizátor funkcionalitással
  */
 void RadioScreen::handleScanButton(const UIButton::ButtonEvent &event) {
     if (event.state == UIButton::EventButtonState::Clicked) {
-        // TODO: Scan (folyamatos keresés) funkcionalitás implementálása
-        // Jelenleg placeholder - később implementáljuk
-        Serial.println("RadioScreen::handleScanButton - Scan funkció (TODO)");
+        DEBUG("RadioScreen::handleScanButton - Switching to ScanScreen\n");
+        getScreenManager()->switchToScreen(SCREEN_NAME_SCAN);
     }
 }
 

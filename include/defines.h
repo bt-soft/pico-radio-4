@@ -21,6 +21,7 @@
 #define SCREEN_NAME_SCREENSAVER "ScreenSaver"
 #define SCREEN_NAME_SETUP "SetupScreen"
 #define SCREEN_NAME_MEMORY "MemoryScreen"
+#define SCREEN_NAME_SCAN "ScanScreen"
 
 //--- Debug ---
 #define __DEBUG // Debug mód vezérlése

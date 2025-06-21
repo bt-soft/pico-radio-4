@@ -191,7 +191,9 @@ uint8_t Si4735Runtime::getSNR() { return getSignalQuality().snr; }
  * @brief Lekéri a signal quality adatokat valós időben (közvetlen chip lekérdezés)
  * @return SignalQualityData A friss signal quality adatok
  */
-SignalQualityData Si4735Runtime::getSignalQualityRealtime() { // Frissítsük a chip állapotát
+SignalQualityData Si4735Runtime::getSignalQualityRealtime() {
+
+    // Frissítsük a chip állapotát
     si4735.getCurrentReceivedSignalQuality();
 
     SignalQualityData realtimeData;
@@ -200,10 +202,7 @@ SignalQualityData Si4735Runtime::getSignalQualityRealtime() { // Frissítsük a 
     realtimeData.timestamp = millis();
     realtimeData.isValid = true;
 
-    // Debug: SNR érték ellenőrzése (általános AM/SSB/CW esetén gyakran 0)
-    if (realtimeData.snr == 0) {
-        DEBUG("Si4735Runtime: SNR=0 (normal in AM/SSB/CW modes)\n");
-    }
+    DEBUG("Si4735Runtime::getSignalQualityRealtime() -> RSSI: %d, SNR: %d\n", realtimeData.rssi, realtimeData.snr);
 
     return realtimeData;
 }
