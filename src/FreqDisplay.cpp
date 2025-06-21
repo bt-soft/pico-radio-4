@@ -240,11 +240,11 @@ void FreqDisplay::drawText(const String &text, int x, int y, int textSize, uint8
  */
 void FreqDisplay::drawFmAmLwStyle(const FrequencyDisplayData &data) {
     const FreqSegmentColors &colors = getSegmentColors(); // 1. Frekvencia sprite pozicionálása: keret bal szélénél
-    // Sprite szélesség: maszk és frekvencia szöveg maximuma + kis margó
+    // Sprite szélesség: rögzített szélesség a konzisztens megjelenéshez
     tft.setFreeFont(&DSEG7_Classic_Mini_Regular_34);
-    int maskWidth = tft.textWidth(data.mask);
-    int freqWidth = tft.textWidth(data.freqStr);
-    int freqSpriteWidth = max(maskWidth, freqWidth) + 10; // 10 pixel extra margó
+
+    // Rögzített sprite szélesség a maszk alapján (dinamikus textWidth helyett)
+    int freqSpriteWidth = calculateFixedSpriteWidth(data.mask);
 
     int freqSpriteX = bounds.x; // nincs margin a bal szélétől
     int freqSpriteY = bounds.y; // Frekvencia sprite létrehozása és rajzolása

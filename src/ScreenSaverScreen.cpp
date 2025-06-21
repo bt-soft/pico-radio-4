@@ -103,17 +103,15 @@ void ScreenSaverScreen::handleOwnLoop() {
 /**
  * @brief Tartalom rajzolása
  * @details FreqDisplay gyermek komponensként rajzolódik, mi csak az animált keretet rajzoljuk
- * Az akkumulátor info csak teljes frissítéskor rajzolódik a folyamatos újrarajzolás elkerülésére
+ * Az akkumulátor info csak pozícióváltáskor rajzolódik az updateFrequencyAndBatteryDisplay()-ben
  */
 void ScreenSaverScreen::drawContent() {
     // FreqDisplay gyermek komponens és az UIScreen::draw() rajzolja ha needsRedraw true.
     // Mi csak az animált keretet rajzoljuk itt.
-    // Az akkumulátor info csak teljes frissítéskor rajzolódik az updateFrequencyAndBatteryDisplay()-ben.
 
     drawAnimatedBorder();
 
-    // Az akkumulátor info csak teljes frissítéskor rajzolódik a folyamatos újrarajzolás elkerülésére
-    // Az updateFrequencyAndBatteryDisplay()-ben kerül kirajzolásra pozícióváltáskor
+    // Az akkumulátor info csak pozícióváltáskor rajzolódik az updateFrequencyAndBatteryDisplay()-ben
 }
 
 /**
