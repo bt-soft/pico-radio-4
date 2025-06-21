@@ -300,7 +300,7 @@ void ScanScreen::measureSignalAtCurrentFreq() {
     uint8_t avgSNR = snrSum / 3;
 
     // Debug információ
-    DEBUG("[SCAN] Freq: %d kHz, Line: %d, RSSI: %d dBuV, SNR: %d dB\n", currentScanFreq, currentScanLine, avgRSSI, avgSNR);
+    DEBUG("[SCAN] Freq: %d kHz, Line: %d, RSSI: %d dBuV, SNR: %d dB\n", currentScanFreq / 100, currentScanLine, avgRSSI, avgSNR);
 
     // Spektrum adatok frissítése
     if (currentScanLine < SPECTRUM_WIDTH) {
@@ -360,30 +360,40 @@ void ScanScreen::drawSpectrumBackground() {
  * @brief Frekvencia skála kirajzolása
  */
 void ScanScreen::drawFrequencyScale() {
-    // Skála vonalak számítása
-    uint32_t freqRange = scanEndFreq - scanStartFreq;
+    if (!pSi4735Manager)
+        return;
 
-    // Skála vonalak meghatározása
+    // Skála vonalak számítása a sáv típusa alapján
     for (uint16_t i = 0; i < SPECTRUM_WIDTH; i++) {
         uint32_t freq = pixelToFrequency(i);
         scaleLines[i] = 0;
 
-        // Fő skála vonalak és kisebb vonalak
-        if (freqRange > 20000) { // Nagy tartomány (pl. MW)
-            if ((freq % 1000) == 0)
-                scaleLines[i] = 2; // Nagy vonalak minden 1 MHz-nél
-            else if ((freq % 100) == 0)
-                scaleLines[i] = 1;     // Kis vonalak minden 100 kHz-nél
-        } else if (freqRange > 5000) { // Közepes tartomány (pl. FM)
-            if ((freq % 1000) == 0)
-                scaleLines[i] = 2; // Nagy vonalak minden 1 MHz-nél
-            else if ((freq % 200) == 0)
-                scaleLines[i] = 1; // Kis vonalak minden 200 kHz-nél
-        } else {                   // Kis tartomány (pl. SW)
-            if ((freq % 500) == 0)
-                scaleLines[i] = 2; // Nagy vonalak minden 500 kHz-nél
-            else if ((freq % 100) == 0)
-                scaleLines[i] = 1; // Kis vonalak minden 100 kHz-nél
+        if (pSi4735Manager->isCurrentBandFM()) {
+            // FM sáv: frekvencia 10 kHz egységekben (6400 = 64.0 MHz)
+            // Fő vonalak: 5 MHz lépésekben (500 egység)
+            // Kis vonalak: 1 MHz lépésekben (100 egység)
+            if ((freq % 500) == 0) {
+                scaleLines[i] = 2; // Fő vonalak 5 MHz-nél
+            } else if ((freq % 100) == 0) {
+                scaleLines[i] = 1; // Kis vonalak 1 MHz-nél
+            }
+        } else {
+            // AM/SW sávok: kezelje eltérően a frekvencia egységek szerint
+            uint32_t freqRange = scanEndFreq - scanStartFreq;
+
+            if (freqRange > 20000) { // Nagy tartomány (pl. MW)
+                if ((freq % 1000) == 0) {
+                    scaleLines[i] = 2; // Fő vonalak 1 MHz-nél
+                } else if ((freq % 200) == 0) {
+                    scaleLines[i] = 1; // Kis vonalak 200 kHz-nél
+                }
+            } else { // Kisebb tartomány (pl. SW)
+                if ((freq % 500) == 0) {
+                    scaleLines[i] = 2; // Fő vonalak 500 kHz-nél
+                } else if ((freq % 100) == 0) {
+                    scaleLines[i] = 1; // Kis vonalak 100 kHz-nél
+                }
+            }
         }
     }
 }
@@ -484,16 +494,17 @@ void ScanScreen::drawSpectrumLine(uint16_t lineIndex) {
     // RSSI alapú Y pozíció
     uint16_t rssiY = rssiToPixelY(rssi);
 
-    // Háttér vonal (fekete vagy skála)
-    uint16_t bgColor = TFT_BLACK;
+    // Háttér törlése (fekete háttér)
+    tft.drawLine(x, SPECTRUM_Y, x, SPECTRUM_Y + SPECTRUM_HEIGHT - 1, TFT_BLACK); // Skála vonalak rajzolása (mindig látható, csak az alsó/felső részen)
     if (scaleLines[lineIndex] == 2) {
-        bgColor = SCALE_COLOR; // Fő skála vonalak
+        // Fő skála vonalak - alsó rész (10 pixel magas)
+        tft.drawLine(x, SPECTRUM_Y + SPECTRUM_HEIGHT - 10, x, SPECTRUM_Y + SPECTRUM_HEIGHT - 1, SCALE_COLOR);
+        // Fő skála vonalak - felső rész (5 pixel magas)
+        tft.drawLine(x, SPECTRUM_Y, x, SPECTRUM_Y + 5, SCALE_COLOR);
     } else if (scaleLines[lineIndex] == 1) {
-        bgColor = TFT_DARKGREY; // Kisebb skála vonalak
+        // Kisebb skála vonalak - csak alsó rész (5 pixel magas)
+        tft.drawLine(x, SPECTRUM_Y + SPECTRUM_HEIGHT - 5, x, SPECTRUM_Y + SPECTRUM_HEIGHT - 1, TFT_DARKGREY);
     }
-
-    // Teljes magasság háttér vonal
-    tft.drawLine(x, SPECTRUM_Y, x, SPECTRUM_Y + SPECTRUM_HEIGHT - 1, bgColor);
 
     // Ha van érvényes jel (RSSI > 0), spektrum vonal rajzolása
     if (rssi > 0) {
