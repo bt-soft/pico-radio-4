@@ -144,7 +144,6 @@ class FreqDisplay : public UIComponent {
     void drawFrequencySpriteWithSpaces(const FrequencyDisplayData &data, int x, int y, int width);
 
     // === Érintéskezelés ===
-    bool isInSsbCwMode() const;
     int ssbCwTouchDigitAreas[3][2]; ///< Érintési területek: [digitIndex][0=x_start, 1=x_end]
 
   public:

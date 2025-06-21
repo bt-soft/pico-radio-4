@@ -112,7 +112,7 @@ void Si4735Band::bandSet(bool useDefaults) {
     //     ssbLoaded = false; // SSB patch betöltése szükséges
     // }
 
-    if (currMod == AM or currMod == FM) {
+    if (currMod == AM_DEMOD_TYPE or currMod == FM_DEMOD_TYPE) {
         ssbLoaded = false;
 
     } else if (isCurrentDemodSSBorCW()) { // LSB or USB or CW
@@ -122,7 +122,7 @@ void Si4735Band::bandSet(bool useDefaults) {
     }
 
     // CW módra váltás esetén ellenőrizzük és inicializáljuk a sávszélességet
-    if (currMod == CW) {
+    if (currMod == CW_DEMOD_TYPE) {
         // Ha még nincs megfelelő sávszélesség beállítva CW módhoz,
         // akkor állítsuk be az optimális 1.0 kHz-et (index 5)
         // De csak akkor, ha a jelenlegi érték nem CW-optimalizált (4 vagy 5)
@@ -227,7 +227,7 @@ void Si4735Band::useBand(bool useDefaults) {
 
             // CW mód esetén mindig USB-t használunk, mivel a CW jelek az USB oldalsávban
             // jönnek át jobban (pozitív frekvencia offset)
-            uint8_t modeForChip = isCWMode ? USB : currentBand.currDemod;
+            uint8_t modeForChip = isCWMode ? USB_DEMOD_TYPE : currentBand.currDemod;
             si4735.setSSB(currentBand.minimumFreq, currentBand.maximumFreq, currentBand.currFreq, FREQUENCY_STEP, modeForChip);
 
             // BFO beállítása
@@ -367,7 +367,7 @@ void Si4735Band::tuneMemoryStation(uint8_t bandIndex, uint16_t frequency, uint8_
     // 2. Demodulátor beállítása a chipen.  Ha CW módra
     uint8_t savedMod = demodModIndex; // A demodulációs mód kiemelése
 
-    if (savedMod != CW and rtv::CWShift == true) {
+    if (savedMod != CW_DEMOD_TYPE and rtv::CWShift == true) {
         // TODO: ezt még kidolgozni
         rtv::CWShift = false;
     }
@@ -377,9 +377,9 @@ void Si4735Band::tuneMemoryStation(uint8_t bandIndex, uint16_t frequency, uint8_
 
     // 3. Sávszélesség index beállítása a configban a MENTETT érték alapján ---
     uint8_t savedBwIndex = bandwidthIndex;
-    if (savedMod == FM) {
+    if (savedMod == FM_DEMOD_TYPE) {
         config.data.bwIdxFM = savedBwIndex;
-    } else if (savedMod == AM) {
+    } else if (savedMod == AM_DEMOD_TYPE) {
         config.data.bwIdxAM = savedBwIndex;
     } else { // LSB, USB, CW
         config.data.bwIdxSSB = savedBwIndex;
@@ -393,11 +393,11 @@ void Si4735Band::tuneMemoryStation(uint8_t bandIndex, uint16_t frequency, uint8_
     currentBand.currFreq = si4735.getCurrentFrequency();
 
     // BFO eltolás visszaállítása SSB/CW esetén ---
-    if (demodModIndex == LSB || demodModIndex == USB || demodModIndex == CW) {
-        const int16_t cwBaseOffset = (demodModIndex == CW) ? config.data.cwReceiverOffsetHz : 0;
+    if (demodModIndex == LSB_DEMOD_TYPE || demodModIndex == USB_DEMOD_TYPE || demodModIndex == CW_DEMOD_TYPE) {
+        const int16_t cwBaseOffset = (demodModIndex == CW_DEMOD_TYPE) ? config.data.cwReceiverOffsetHz : 0;
 
         si4735.setSSBBfo(cwBaseOffset);
-        rtv::CWShift = (demodModIndex == CW); // CW shift állapot frissítése
+        rtv::CWShift = (demodModIndex == CW_DEMOD_TYPE); // CW shift állapot frissítése
 
     } else {
         // AM/FM esetén biztosítjuk, hogy a BFO nullázva legyen

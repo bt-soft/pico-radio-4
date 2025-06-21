@@ -15,11 +15,11 @@ class BandStore;
 #define LW_BAND_TYPE 3
 
 // DeModulation types
-#define FM 0
-#define LSB 1
-#define USB 2
-#define AM 3
-#define CW 4
+#define FM_DEMOD_TYPE 0
+#define LSB_DEMOD_TYPE 1
+#define USB_DEMOD_TYPE 2
+#define AM_DEMOD_TYPE 3
+#define CW_DEMOD_TYPE 4
 
 // Egységes BandTable struktúra
 struct BandTable {
@@ -156,11 +156,11 @@ class Band {
     inline bool isCurrentBandFM() { return getCurrentBand().bandType == FM_BAND_TYPE; }
 
     // Demodulációs módok lekérdezése
-    inline bool isCurrentDemodFM() { return getCurrentBand().currDemod == FM; }
-    inline bool isCurrentDemodAM() { return getCurrentBand().currDemod == AM; }
-    inline bool isCurrentDemodLSB() { return getCurrentBand().currDemod == LSB; }
-    inline bool isCurrentDemodUSB() { return getCurrentBand().currDemod == USB; }
-    inline bool isCurrentDemodCW() { return getCurrentBand().currDemod == CW; }
+    inline bool isCurrentDemodFM() { return getCurrentBand().currDemod == FM_DEMOD_TYPE; }
+    inline bool isCurrentDemodAM() { return getCurrentBand().currDemod == AM_DEMOD_TYPE; }
+    inline bool isCurrentDemodLSB() { return getCurrentBand().currDemod == LSB_DEMOD_TYPE; }
+    inline bool isCurrentDemodUSB() { return getCurrentBand().currDemod == USB_DEMOD_TYPE; }
+    inline bool isCurrentDemodCW() { return getCurrentBand().currDemod == CW_DEMOD_TYPE; }
     inline bool isCurrentDemodSSBorCW() { return isCurrentDemodLSB() || isCurrentDemodUSB() || isCurrentDemodCW(); }
 
     /**
@@ -177,12 +177,14 @@ class Band {
      */
     const char *getCurrentBandWidthLabel() {
         const char *p;
-        uint8_t currMod = getCurrentBand().currDemod;
-        if (currMod == AM)
+
+        if (isCurrentDemodAM())
             p = getCurrentBandWidthLabelByIndex(bandWidthAM, config.data.bwIdxAM);
-        if (currMod == LSB or currMod == USB or currMod == CW)
+
+        if (isCurrentDemodSSBorCW())
             p = getCurrentBandWidthLabelByIndex(bandWidthSSB, config.data.bwIdxSSB);
-        if (currMod == FM)
+
+        if (isCurrentBandFM())
             p = getCurrentBandWidthLabelByIndex(bandWidthFM, config.data.bwIdxFM);
 
         return p;
@@ -300,7 +302,7 @@ class Band {
         } else { // Nem FM
 
             // Ha SSB vagy CW, akkor a lépésköz a BFO-val van megoldva
-            if (currentBand.currDemod == LSB or currentBand.currDemod == USB or currentBand.currDemod == CW) {
+            if (isCurrentDemodSSBorCW()) {
                 switch (rtv::freqstepnr) {
                     default:
                     case 0:

@@ -118,7 +118,7 @@ template <typename StationListType, uint8_t MaxStations> class BaseStationStore 
     /**
      * @brief Ellenőrzi, hogy SSB vagy CW moduláció-e
      */
-    inline bool isSSBorCW(uint8_t modulation) const { return (modulation == LSB || modulation == USB || modulation == CW); }
+    inline bool isSSBorCW(uint8_t modulation) const { return (modulation == LSB_DEMOD_TYPE || modulation == USB_DEMOD_TYPE || modulation == CW_DEMOD_TYPE); }
 };
 
 #endif // __BASE_STATION_STORE_H

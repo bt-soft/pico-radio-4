@@ -305,28 +305,34 @@ uint16_t ScreenSaverScreen::getCurrentBorderWidth() const {
     using namespace ScreenSaverConstants;
 
     if (pSi4735Manager) {
-        const BandTable &currentBand = pSi4735Manager->getCurrentBand();
 
-        uint8_t bandType = pSi4735Manager->getCurrentBandType();
-        DEBUG("ScreenSaverScreen::getCurrentAccuXOffset: currentBandName: %s, bandType = %d, currDemod: %s\n", //
-              pSi4735Manager->getCurrentBandName(), bandType, pSi4735Manager->getCurrentBandDemodModDesc());
+        DEBUG("ScreenSaverScreen::getCurrentBorderWidth(): currentBandName: %s, bandType = %d, currDemod: %s\n", //
+              pSi4735Manager->getCurrentBandName(), pSi4735Manager->getCurrentBandType(), pSi4735Manager->getCurrentBandDemodModDesc());
 
-        switch (currentBand.currDemod) {
-            case FM:
+        switch (pSi4735Manager->getCurrentBandType()) {
+            case FM_BAND_TYPE:
                 return ANIMATION_BORDER_WIDTH_FM;
-            case AM:
-                return ANIMATION_BORDER_WIDTH_AM;
-            case LSB:
-            case USB:
-            case CW:
-                if (rtv::bfoOn) {
-                    return ANIMATION_BORDER_WIDTH_SSB_CW_BFO;
+            case LW_BAND_TYPE:
+                return ANIMATION_BORDER_WIDTH_AM_LW;
+            case MW_BAND_TYPE:
+                return ANIMATION_BORDER_WIDTH_AM_MW;
+            case SW_BAND_TYPE:
+                if (pSi4735Manager->isCurrentDemodSSBorCW()) {
+                    if (rtv::bfoOn) {
+                        return ANIMATION_BORDER_WIDTH_SSB_CW_BFO;
+                    }
+                    return ANIMATION_BORDER_WIDTH_SSB_CW;
                 }
-                return ANIMATION_BORDER_WIDTH_SSB_CW;
+
+                return ANIMATION_BORDER_WIDTH_AM_SW;
+
+            default:
+                DEBUG("ScreenSaverScreen::getCurrentBorderWidth(): Unknown band type: %d (BandName: %s), using default width.\n", pSi4735Manager->getCurrentBandType(),
+                      pSi4735Manager->getCurrentBandName());
         }
     }
 
-    return ANIMATION_BORDER_WIDTH_DEFAULT;
+    return ANIMATION_BORDER_WIDTH_DEFAULT; // Alapértelmezett szélesség, ha nem ismert a demod típus
 }
 
 /**
@@ -343,7 +349,8 @@ uint16_t ScreenSaverScreen::getCurrentAccuXOffset() const {
     if (pSi4735Manager) {
 
         uint8_t bandType = pSi4735Manager->getCurrentBandType();
-        DEBUG("ScreenSaverScreen::getCurrentAccuXOffset: currentBandName: %s, bandType = %d\n", pSi4735Manager->getCurrentBandName(), bandType);
+        DEBUG("ScreenSaverScreen::getCurrentAccuXOffset(): currentBandName: %s, bandType = %d, currDemod: %s\n", //
+              pSi4735Manager->getCurrentBandName(), bandType, pSi4735Manager->getCurrentBandDemodModDesc());
 
         switch (bandType) {
             case FM_BAND_TYPE:

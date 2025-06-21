@@ -113,21 +113,14 @@ const FreqSegmentColors &FreqDisplay::getSegmentColors() const {
 }
 
 /**
- * @brief Ellenőrzi, hogy SSB/CW mód van-e aktív
- */
-bool FreqDisplay::isInSsbCwMode() const {
-    uint8_t currentDemod = pSi4735Manager->getCurrentBand().currDemod;
-    return (currentDemod == LSB || currentDemod == USB || currentDemod == CW);
-}
-
-/**
  * @brief Meghatározza a frekvencia formátumot és adatokat a mód alapján
  */
 FreqDisplay::FrequencyDisplayData FreqDisplay::getFrequencyDisplayData(uint16_t frequency) {
     FrequencyDisplayData data;
     uint8_t demodMode = pSi4735Manager->getCurrentBand().currDemod;
     uint8_t bandType = pSi4735Manager->getCurrentBandType();
-    if (demodMode == FM) {
+
+    if (demodMode == FM_DEMOD_TYPE) {
         // FM mód: 100.50 MHz - optimalizált integer számítás
         data.unit = "MHz";
 
@@ -139,7 +132,7 @@ FreqDisplay::FrequencyDisplayData FreqDisplay::getFrequencyDisplayData(uint16_t 
         sprintf(buffer, "%d.%02d", wholePart, fracPart);
         data.freqStr = String(buffer);
 
-    } else if (demodMode == AM) {
+    } else if (demodMode == AM_DEMOD_TYPE) {
         if (bandType == MW_BAND_TYPE || bandType == LW_BAND_TYPE) {
             // MW/LW: 1440 kHz
             data.unit = "kHz";
@@ -157,7 +150,7 @@ FreqDisplay::FrequencyDisplayData FreqDisplay::getFrequencyDisplayData(uint16_t 
             data.freqStr = String(buffer);
         }
 
-    } else if (demodMode == LSB || demodMode == USB || demodMode == CW) {
+    } else if (demodMode == LSB_DEMOD_TYPE || demodMode == USB_DEMOD_TYPE || demodMode == CW_DEMOD_TYPE) {
         // SSB/CW mód: finomhangolással korrigált frekvencia
         if (rtv::bfoOn) {
             // BFO mód: csak BFO értéket mutatunk
@@ -463,7 +456,7 @@ void FreqDisplay::calculateSsbCwTouchAreas(int freqSpriteX, int freqSpriteWidth)
  * @brief Rajzolja a frekvencia kijelzőt a megadott mód szerint
  */
 void FreqDisplay::drawFrequencyDisplay(const FrequencyDisplayData &data) {
-    if (isInSsbCwMode()) {
+    if (pSi4735Manager->isCurrentDemodSSBorCW()) {
         drawSsbCwStyle(data);
     } else {
         drawFmAmLwStyle(data);
@@ -508,7 +501,7 @@ void FreqDisplay::draw() {
  */
 bool FreqDisplay::handleTouch(const TouchEvent &event) {
     // Csak SSB/CW módban és ha nincs elrejtve az aláhúzás
-    if (!isInSsbCwMode() || hideUnderline || rtv::bfoOn) {
+    if (!pSi4735Manager->isCurrentDemodSSBorCW() || hideUnderline || rtv::bfoOn) {
         return false;
     }
 

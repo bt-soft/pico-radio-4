@@ -131,7 +131,7 @@ bool AMScreen::handleRotary(const RotaryEvent &event) {
         newFreq = pSi4735Manager->getSi4735().getCurrentFrequency();
 
         // SSB hangolás esetén a BFO eltolás beállítása
-        const int16_t cwBaseOffset = (currentBand.currDemod == CW) ? config.data.cwReceiverOffsetHz : 0;
+        const int16_t cwBaseOffset = (currentBand.currDemod == CW_DEMOD_TYPE) ? config.data.cwReceiverOffsetHz : 0;
         int16_t bfoToSet = cwBaseOffset + rtv::currentBFO + rtv::currentBFOmanu;
         pSi4735Manager->getSi4735().setSSBBfo(bfoToSet);
 
@@ -467,11 +467,11 @@ void AMScreen::handleAfBWButton(const UIButton::ButtonEvent &event) {
     uint16_t w = 250;
     uint16_t h = 170;
 
-    if (currMod == FM) {
+    if (currMod == FM_DEMOD_TYPE) {
         title = "FM Filter in kHz";
         labels = pSi4735Manager->getBandWidthLabels(Band::bandWidthFM, labelsCount);
 
-    } else if (currMod == AM) {
+    } else if (currMod == AM_DEMOD_TYPE) {
         title = "AM Filter in kHz";
         w = 350;
         h = 160;
@@ -493,9 +493,9 @@ void AMScreen::handleAfBWButton(const UIButton::ButtonEvent &event) {
         [this, currMod](int buttonIndex, const char *buttonLabel, MultiButtonDialog *dialog) { // Gomb kattintás kezelése
             //
 
-            if (currMod == AM) {
+            if (currMod == AM_DEMOD_TYPE) {
                 config.data.bwIdxAM = pSi4735Manager->getBandWidthIndexByLabel(Band::bandWidthAM, buttonLabel);
-            } else if (currMod == FM) {
+            } else if (currMod == FM_DEMOD_TYPE) {
                 config.data.bwIdxFM = pSi4735Manager->getBandWidthIndexByLabel(Band::bandWidthFM, buttonLabel);
             } else {
                 config.data.bwIdxSSB = pSi4735Manager->getBandWidthIndexByLabel(Band::bandWidthSSB, buttonLabel);
@@ -527,10 +527,10 @@ void AMScreen::handleAntCapButton(const UIButton::ButtonEvent &event) {
     antCapTempValue = static_cast<int>(currband.antCap);
 
     auto antCapDialog = std::make_shared<ValueChangeDialog>(
-        this, this->tft,                                                                                                  //
-        "Antenna Tuning capacitor", "Capacitor value [pF]:",                                                              //
-        &antCapTempValue,                                                                                                 //
-        1, currband.currDemod == FM ? Si4735Constants::SI4735_MAX_ANT_CAP_FM : Si4735Constants::SI4735_MAX_ANT_CAP_AM, 1, //
+        this, this->tft,                                                                                                             //
+        "Antenna Tuning capacitor", "Capacitor value [pF]:",                                                                         //
+        &antCapTempValue,                                                                                                            //
+        1, currband.currDemod == FM_DEMOD_TYPE ? Si4735Constants::SI4735_MAX_ANT_CAP_FM : Si4735Constants::SI4735_MAX_ANT_CAP_AM, 1, //
         [this](const std::variant<int, float, bool> &liveNewValue) {
             if (std::holds_alternative<int>(liveNewValue)) {
                 int currentDialogVal = std::get<int>(liveNewValue);
@@ -612,7 +612,7 @@ void AMScreen::handleStepButton(const UIButton::ButtonEvent &event) {
         title = "Step tune BFO";
         labels = pSi4735Manager->getStepSizeLabels(Band::stepSizeBFO, labelsCount);
 
-    } else if (currMod == FM) {
+    } else if (currMod == FM_DEMOD_TYPE) {
         title = "Step tune FM";
         labels = pSi4735Manager->getStepSizeLabels(Band::stepSizeFM, labelsCount);
         w = 300;
@@ -644,7 +644,7 @@ void AMScreen::handleStepButton(const UIButton::ButtonEvent &event) {
             } else { // Nem SSB + BFO módban vagyunk
 
                 // Beállítjuk a konfigban a stepSize-t - a buttonIndex közvetlenül használható
-                if (currMod == FM) {
+                if (currMod == FM_DEMOD_TYPE) {
                     // FM módban
                     config.data.ssIdxFM = buttonIndex;
                     currentband.currStep = pSi4735Manager->getStepSizeByIndex(Band::stepSizeFM, buttonIndex);
