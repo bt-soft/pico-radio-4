@@ -21,6 +21,12 @@ ScanScreen::ScanScreen(TFT_eSPI &tft, Si4735Manager *si4735Manager)
       currentScanLine(0), previousScanLine(0), deltaLine(0), lastScanUpdate(0), scanSpeed(50), // Default 50ms/lépés
       snrThreshold(15) {
 
+    // Spektrum méretek számítása a tényleges képernyő méret alapján
+    SPECTRUM_WIDTH = UIComponent::SCREEN_W - (2 * SPECTRUM_MARGIN);
+    SPECTRUM_X = SPECTRUM_MARGIN;
+
+    DEBUG("ScanScreen initialized - Screen width: %d, Spectrum width: %d\n", UIComponent::SCREEN_W, SPECTRUM_WIDTH);
+
     // Spektrum tömbök inicializálása
     spectrumRSSI.resize(SPECTRUM_WIDTH, 0);
     spectrumSNR.resize(SPECTRUM_WIDTH, 0);
@@ -266,16 +272,21 @@ void ScanScreen::updateSpectrum() {
 
 /**
  * @brief Jelerősség mérés az aktuális frekvencián
+ *
+ * Megjegyzés: A scan közben nem muteljük a rádiót (az orosz kód alapján).
+ * Ez azt jelenti, hogy a felhasználó hallja a scan közben az aktuális frekvenciát,
+ * ami hasznos lehet állomások azonosításához.
  */
 void ScanScreen::measureSignalAtCurrentFreq() {
     if (!pSi4735Manager)
         return;
 
-    uint8_t rssiSum = 0;
-    uint8_t snrSum = 0;
+    // Megjegyzés: Nincs muting, a rádió hallatszik scan közben
+    // Ez az orosz eredeti kód viselkedésének megfelelő
 
-    // Több minta átlagolása
-    for (int i = 0; i < SIGNAL_SAMPLES; i++) {
+    uint8_t rssiSum = 0;
+    uint8_t snrSum = 0; // Több minta átlagolása
+    for (int i = 0; i < 3; i++) {
         SignalQualityData signal = pSi4735Manager->getSignalQualityRealtime();
         if (signal.isValid) {
             rssiSum += signal.rssi;
@@ -285,8 +296,8 @@ void ScanScreen::measureSignalAtCurrentFreq() {
     }
 
     // Átlagértékek számítása
-    uint8_t avgRSSI = rssiSum / SIGNAL_SAMPLES;
-    uint8_t avgSNR = snrSum / SIGNAL_SAMPLES;
+    uint8_t avgRSSI = rssiSum / 3;
+    uint8_t avgSNR = snrSum / 3;
 
     // Debug információ
     DEBUG("[SCAN] Freq: %d kHz, Line: %d, RSSI: %d dBuV, SNR: %d dB\n", currentScanFreq, currentScanLine, avgRSSI, avgSNR);
@@ -378,32 +389,75 @@ void ScanScreen::drawFrequencyScale() {
 }
 
 /**
- * @brief Frekvencia címkék kirajzolása
+ * @brief Frekvencia címkék kirajzolása (orosz kód alapján)
  */
 void ScanScreen::drawFrequencyLabels() {
+    // Csak ha van hely a skálának
+    if (SPECTRUM_Y + SPECTRUM_HEIGHT + 50 > UIComponent::SCREEN_H) {
+        return;
+    }
     tft.setFreeFont();
     tft.setTextSize(1);
-    tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
-    tft.setTextDatum(TC_DATUM);
 
-    uint16_t labelY = SPECTRUM_Y + SPECTRUM_HEIGHT + 5;
-    uint32_t freqRange = scanEndFreq - scanStartFreq;
+    uint16_t labelY = SPECTRUM_Y + SPECTRUM_HEIGHT + 5; // Bal oldal - kezdő frekvencia (orosz stílus)
+    tft.setTextColor(TFT_GREEN, TFT_BLACK);
+    tft.setTextDatum(TL_DATUM);
+    String startText;
+    if (pSi4735Manager && pSi4735Manager->isCurrentBandFM()) {
+        // FM frekvenciák 10 kHz egységekben vannak tárolva (pl. 6400 = 64.0 MHz)
+        startText = String(scanStartFreq / 100.0, 1) + " MHz";
+    } else {
+        startText = String(int(scanStartFreq)) + " KHz";
+    }
+    tft.drawString(startText, SPECTRUM_X, labelY);
 
-    // Címkék száma (5-8 között)
-    int labelCount = (freqRange > 20000) ? 5 : 8;
+    // Jobb oldal - záró frekvencia
+    tft.setTextDatum(TR_DATUM);
+    String endText;
+    if (pSi4735Manager && pSi4735Manager->isCurrentBandFM()) {
+        // FM frekvenciák 10 kHz egységekben vannak tárolva (pl. 10800 = 108.0 MHz)
+        endText = String(scanEndFreq / 100.0, 1) + " MHz";
+    } else {
+        endText = String(int(scanEndFreq)) + " KHz";
+    }
+    tft.drawString(endText, SPECTRUM_X + SPECTRUM_WIDTH, labelY);
 
-    for (int i = 0; i <= labelCount; i++) {
-        uint16_t x = SPECTRUM_X + (i * SPECTRUM_WIDTH) / labelCount;
-        uint32_t freq = scanStartFreq + (i * freqRange) / labelCount;
+    // Skála információ (orosz stílus) - lépésköz megjelenítés
+    tft.fillRect(SPECTRUM_X, labelY + 15, 60, 17, TFT_BLACK);
+    tft.setTextColor(TFT_YELLOW, TFT_BLACK);
+    tft.setTextDatum(TL_DATUM);
 
-        String freqLabel;
-        if (freq >= 1000) {
-            freqLabel = String(freq / 1000.0, 1) + "M";
-        } else {
-            freqLabel = String(freq) + "k";
+    // Lépésköz megjelenítés az orosz kód logikája alapján
+    if (pSi4735Manager && pSi4735Manager->isCurrentBandFM()) {
+        if (scanStep > 4) {
+            tft.drawString("10 MHz", SPECTRUM_X, labelY + 30);
+        } else if (scanStep == 4) {
+            tft.drawString("1 MHz", SPECTRUM_X, labelY + 30);
+        } else if (scanStep == 2) {
+            tft.drawString("500 KHz", SPECTRUM_X, labelY + 30);
+        } else if (scanStep < 2) {
+            tft.drawString("100 KHz", SPECTRUM_X, labelY + 30);
         }
+    } else {
+        // AM/SW/MW/LW band
+        if (scanStep > 4) {
+            tft.drawString("1 MHz", SPECTRUM_X, labelY + 30);
+        } else if (scanStep == 4) {
+            tft.drawString("100 KHz", SPECTRUM_X, labelY + 30);
+        } else if (scanStep == 2) {
+            tft.drawString("50 KHz", SPECTRUM_X, labelY + 30);
+        } else if (scanStep < 2) {
+            tft.drawString("10 KHz", SPECTRUM_X, labelY + 30);
+        }
+    }
 
-        tft.drawString(freqLabel, x, labelY);
+    // Jobb oldal - zoom információ (orosz stílus)
+    tft.fillRect(SPECTRUM_X + SPECTRUM_WIDTH - 50, labelY + 15, 50, 17, TFT_BLACK);
+    tft.setTextDatum(TR_DATUM);
+    if (scanStep >= 1) {
+        tft.drawString("1:" + String(int(scanStep)), SPECTRUM_X + SPECTRUM_WIDTH, labelY + 30);
+    } else {
+        tft.drawString("x" + String(int(1.0 / scanStep)), SPECTRUM_X + SPECTRUM_WIDTH, labelY + 30);
     }
 }
 
@@ -765,10 +819,16 @@ uint16_t ScanScreen::frequencyToPixel(uint32_t frequency) {
  * @brief Frekvencia formázása szöveggé
  */
 String ScanScreen::formatFrequency(uint32_t frequency) {
-    if (frequency >= 1000) {
-        return String(frequency / 1000.0, 3) + " MHz";
+    // FM esetében 10 kHz egységben vannak a frekvenciák (pl. 6400 = 64.0 MHz)
+    // AM/SW/MW/LW esetében kHz egységben (pl. 540 = 540 kHz)
+    if (pSi4735Manager && pSi4735Manager->isCurrentBandFM()) {
+        return String(frequency / 100.0, 1) + " MHz";
     } else {
-        return String(frequency) + " kHz";
+        if (frequency >= 1000) {
+            return String(frequency / 1000.0, 3) + " MHz";
+        } else {
+            return String(frequency) + " kHz";
+        }
     }
 }
 

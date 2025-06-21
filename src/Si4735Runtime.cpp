@@ -202,7 +202,7 @@ SignalQualityData Si4735Runtime::getSignalQualityRealtime() {
     realtimeData.timestamp = millis();
     realtimeData.isValid = true;
 
-    DEBUG("Si4735Runtime::getSignalQualityRealtime() -> RSSI: %d, SNR: %d\n", realtimeData.rssi, realtimeData.snr);
+    // DEBUG("Si4735Runtime::getSignalQualityRealtime() -> RSSI: %d, SNR: %d\n", realtimeData.rssi, realtimeData.snr);
 
     return realtimeData;
 }
