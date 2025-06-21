@@ -17,8 +17,8 @@
  */
 ScanScreen::ScanScreen(TFT_eSPI &tft, Si4735Manager *si4735Manager)
     : UIScreen(tft, SCREEN_NAME_SCAN, si4735Manager), currentState(ScanState::Idle), currentMode(ScanMode::Spectrum), scanStartFreq(0), scanEndFreq(0), currentScanFreq(0),
-      scanStep(5),                                                        // Default 5kHz lépés
-      currentScanLine(0), deltaLine(0), lastScanUpdate(0), scanSpeed(50), // Default 50ms/lépés
+      scanStep(5),                                                                             // Default 5kHz lépés
+      currentScanLine(0), previousScanLine(0), deltaLine(0), lastScanUpdate(0), scanSpeed(50), // Default 50ms/lépés
       snrThreshold(15) {
 
     // Spektrum tömbök inicializálása
@@ -155,6 +155,7 @@ bool ScanScreen::handleRotary(const RotaryEvent &event) {
                 }
                 drawCursor();
                 drawSignalInfo();
+                DEBUG("[ROTARY] UP - Line: %d, Freq: %d kHz\n", currentScanLine, currentScanFreq);
             }
         } else if (event.direction == RotaryEvent::Direction::Down) {
             if (currentScanLine > 0) {
@@ -166,6 +167,7 @@ bool ScanScreen::handleRotary(const RotaryEvent &event) {
                 }
                 drawCursor();
                 drawSignalInfo();
+                DEBUG("[ROTARY] DOWN - Line: %d, Freq: %d kHz\n", currentScanLine, currentScanFreq);
             }
         }
         return true;
@@ -253,11 +255,13 @@ void ScanScreen::updateSpectrum() {
     // Spektrum vonal kirajzolása
     drawSpectrumLine(currentScanLine);
 
-    // Kurzor rajzolása
-    drawCursor();
-
     // Következő frekvenciára lépés
     moveToNextFrequency();
+
+    // Kurzor csak akkor, ha nem scan módban vagyunk, vagy ha megállt
+    if (currentState != ScanState::Scanning) {
+        drawCursor();
+    }
 }
 
 /**
@@ -284,6 +288,9 @@ void ScanScreen::measureSignalAtCurrentFreq() {
     uint8_t avgRSSI = rssiSum / SIGNAL_SAMPLES;
     uint8_t avgSNR = snrSum / SIGNAL_SAMPLES;
 
+    // Debug információ
+    DEBUG("[SCAN] Freq: %d kHz, Line: %d, RSSI: %d dBuV, SNR: %d dB\n", currentScanFreq, currentScanLine, avgRSSI, avgSNR);
+
     // Spektrum adatok frissítése
     if (currentScanLine < SPECTRUM_WIDTH) {
         spectrumRSSI[currentScanLine] = avgRSSI;
@@ -292,6 +299,7 @@ void ScanScreen::measureSignalAtCurrentFreq() {
         // Erős állomás jelölése
         if (avgSNR >= snrThreshold) {
             stationMarks[currentScanLine] = true;
+            DEBUG("[SCAN] Strong station detected at %d kHz (SNR: %d dB)\n", currentScanFreq, avgSNR);
         }
     }
 }
@@ -460,6 +468,7 @@ void ScanScreen::drawCursor() {
     if (currentScanLine < SPECTRUM_WIDTH) {
         uint16_t x = SPECTRUM_X + currentScanLine;
         tft.drawLine(x, SPECTRUM_Y, x, SPECTRUM_Y + SPECTRUM_HEIGHT - 1, CURSOR_COLOR);
+        previousScanLine = currentScanLine; // Pozíció mentése
     }
 }
 
@@ -467,9 +476,9 @@ void ScanScreen::drawCursor() {
  * @brief Kurzor törlése
  */
 void ScanScreen::clearCursor() {
-    if (currentScanLine < SPECTRUM_WIDTH) {
-        // Kurzor helyének újrarajzolása
-        drawSpectrumLine(currentScanLine);
+    if (previousScanLine < SPECTRUM_WIDTH) {
+        // Előző kurzor helyének újrarajzolása
+        drawSpectrumLine(previousScanLine);
     }
 }
 
@@ -559,7 +568,7 @@ void ScanScreen::handleSpectrumTouch(uint16_t x, uint16_t y) {
     drawCursor();
     drawSignalInfo();
 
-    DEBUG("Touch scan: Line %d, Freq %d kHz\n", currentScanLine, currentScanFreq);
+    DEBUG("[TOUCH] Line: %d, Freq: %d kHz (Touch X: %d)\n", currentScanLine, currentScanFreq, x);
 }
 
 // ===================================================================

@@ -63,27 +63,26 @@ class ScanScreen : public UIScreen {
     bool handleRotary(const RotaryEvent &event) override;
 
   private:                                                // === Scan paraméterek ===
-    static constexpr uint16_t SPECTRUM_WIDTH = 280;       ///< Spektrum grafikon szélessége (pixel)
+    static constexpr uint16_t SPECTRUM_WIDTH = 310;       ///< Spektrum grafikon szélessége (pixel) - teljes képernyő
     static constexpr uint16_t SPECTRUM_HEIGHT = 120;      ///< Spektrum grafikon magassága (pixel)
-    static constexpr uint16_t SPECTRUM_X = 20;            ///< Spektrum grafikon X pozíciója (bal margó)
+    static constexpr uint16_t SPECTRUM_X = 5;             ///< Spektrum grafikon X pozíciója (5px bal margó)
     static constexpr uint16_t SPECTRUM_Y = 80;            ///< Spektrum grafikon Y pozíciója
     static constexpr uint16_t CURSOR_COLOR = TFT_RED;     ///< Kurzor színe
     static constexpr uint16_t RSSI_COLOR = TFT_WHITE;     ///< RSSI vonal színe (fehér, jól látható)
     static constexpr uint16_t SCALE_COLOR = TFT_DARKGREY; ///< Skála vonalak színe
     static constexpr uint16_t MARK_COLOR = TFT_YELLOW;    ///< Erős állomás jelölés színe
-    static constexpr uint8_t SIGNAL_SAMPLES = 3;          ///< Jelerősség mérési minták száma
-
-    // === Állapot változók ===
-    ScanState currentState;   ///< Jelenlegi scan állapot
-    ScanMode currentMode;     ///< Jelenlegi scan mód
-    uint32_t scanStartFreq;   ///< Scan kezdő frekvencia (kHz)
-    uint32_t scanEndFreq;     ///< Scan vég frekvencia (kHz)
-    uint32_t currentScanFreq; ///< Aktuális scan frekvencia (kHz)
-    uint16_t scanStep;        ///< Scan lépésköz (kHz)
-    uint16_t currentScanLine; ///< Aktuális pozíció a spektrumban (0-319)
-    int16_t deltaLine;        ///< Eltolás a spektrumban
-    uint32_t lastScanUpdate;  ///< Utolsó scan frissítés ideje
-    uint16_t scanSpeed;       ///< Scan sebesség (ms/lépés)
+    static constexpr uint8_t SIGNAL_SAMPLES = 3;          ///< Jelerősség mérési minták száma    // === Állapot változók ===
+    ScanState currentState;                               ///< Jelenlegi scan állapot
+    ScanMode currentMode;                                 ///< Jelenlegi scan mód
+    uint32_t scanStartFreq;                               ///< Scan kezdő frekvencia (kHz)
+    uint32_t scanEndFreq;                                 ///< Scan vég frekvencia (kHz)
+    uint32_t currentScanFreq;                             ///< Aktuális scan frekvencia (kHz)
+    uint16_t scanStep;                                    ///< Scan lépésköz (kHz)
+    uint16_t currentScanLine;                             ///< Aktuális pozíció a spektrumban (0-319)
+    uint16_t previousScanLine;                            ///< Előző kurzor pozíció törléshez
+    int16_t deltaLine;                                    ///< Eltolás a spektrumban
+    uint32_t lastScanUpdate;                              ///< Utolsó scan frissítés ideje
+    uint16_t scanSpeed;                                   ///< Scan sebesség (ms/lépés)
 
     // === Spektrum adatok ===
     std::vector<uint8_t> spectrumRSSI; ///< RSSI értékek (0-319)
