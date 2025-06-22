@@ -279,7 +279,7 @@ void SMeter::showRSSI(uint8_t rssi, uint8_t snr, bool isFMMode) {
 }
 
 /**
- * @brief Rajzolja a komponenst (UIComponent override)
+ * @brief Kirajzolja a komponenst (UIComponent override)
  *
  * Ez a metódus implementálja az UIComponent draw() interfészét.
  * Inicializáláskor rajzolja ki a teljes skálát.
