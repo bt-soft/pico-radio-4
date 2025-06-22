@@ -135,8 +135,8 @@ void ScanScreen::handleOwnLoop() {
         lastScanUpdate = currentTime;
     }
 
-    // Gomb állapotok frissítése
-    updateScanButtonStates();
+    // Gomb állapotok frissítése csak állapotváltozáskor (nem minden loop-ban)
+    // Az updateScanButtonStates()-t csak a scan indítás/leállítás metódusokban hívjuk
 }
 
 /**
@@ -165,7 +165,7 @@ bool ScanScreen::handleTouch(const TouchEvent &event) {
  * @brief Rotary encoder kezelése
  */
 bool ScanScreen::handleRotary(const RotaryEvent &event) {
-    if (currentState == ScanState::Paused || currentState == ScanState::Idle) {
+    if (currentState == ScanState::Idle) {
         // Orosz-stílusú rotary kezelés: figyelembe veszi a band step-et és zoom szintet
         if (event.direction == RotaryEvent::Direction::Up || event.direction == RotaryEvent::Direction::Down) {
             clearCursor();         // Lépés méret számítása a jelenlegi band alapján
@@ -256,29 +256,10 @@ void ScanScreen::startSpectruScan() {
         if (pSi4735Manager) {
             pSi4735Manager->getSi4735().setFrequency(currentScanFreq);
         }
-
         DEBUG("Scan started: start freq=%d kHz, end freq=%d kHz, scanStep=%.2f, target width=%d\n", scanStartFreq, scanEndFreq, scanStepFloat, SPECTRUM_WIDTH);
-    }
-}
 
-/**
- * @brief Scan szüneteltetése
- */
-void ScanScreen::pauseScan() {
-    if (currentState == ScanState::Scanning) {
-        DEBUG("Pausing scan\n");
-        currentState = ScanState::Paused;
-    }
-}
-
-/**
- * @brief Scan folytatása
- */
-void ScanScreen::resumeScan() {
-    if (currentState == ScanState::Paused) {
-        DEBUG("Resuming scan\n");
-        currentState = ScanState::Scanning;
-        lastScanUpdate = millis();
+        // Gomb állapot frissítése
+        updateScanButtonStates();
     }
 }
 
@@ -294,6 +275,9 @@ void ScanScreen::stopScan() {
         if (pSi4735Manager) {
             pSi4735Manager->getSi4735().setFrequency(currentScanFreq);
         }
+
+        // Gomb állapot frissítése
+        updateScanButtonStates();
     }
 }
 
@@ -533,7 +517,9 @@ void ScanScreen::drawFrequencyLabels() {
         } else if (scanStep < 2) {
             tft.drawString("10 KHz", SPECTRUM_X, labelY + 30);
         }
-    } // Jobb oldal - zoom információ (orosz stílus)
+    }
+
+    // Jobb oldal - zoom információ (orosz stílus)
     uint16_t zoomInfoWidth = 70; // dinamikus, szélesebb kijelzőn több hely
     tft.fillRect(SPECTRUM_X + SPECTRUM_WIDTH - zoomInfoWidth, labelY + 15, zoomInfoWidth, 17, TFT_BLACK);
     tft.setTextDatum(TR_DATUM);
@@ -630,9 +616,7 @@ void ScanScreen::drawScanStatus() {
     tft.setFreeFont();
     tft.setTextSize(1);
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.setTextDatum(TL_DATUM);
-
-    // Állapot
+    tft.setTextDatum(TL_DATUM); // Állapot
     String status;
     switch (currentState) {
         case ScanState::Idle:
@@ -640,9 +624,6 @@ void ScanScreen::drawScanStatus() {
             break;
         case ScanState::Scanning:
             status = "SCANNING";
-            break;
-        case ScanState::Paused:
-            status = "PAUSED";
             break;
     }
     tft.drawString("Status: " + status, 10, statusY);
@@ -686,7 +667,8 @@ void ScanScreen::drawSignalInfo() {
  */
 void ScanScreen::handleSpectrumTouch(uint16_t x, uint16_t y) {
     if (currentState == ScanState::Scanning) {
-        pauseScan();
+        // Scan alatt nem engedjük az érintést
+        return;
     }
 
     // Orosz logika: touch pozíció kezelése
@@ -761,12 +743,10 @@ void ScanScreen::handleSpectrumTouch(uint16_t x, uint16_t y) {
  * @brief Scan gombok létrehozása
  */
 void ScanScreen::createScanButtons() {
-    std::vector<UIHorizontalButtonBar::ButtonConfig> buttonConfigs = {
-        {ScanButtonIDs::START_STOP_BUTTON, "Start", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
+    // Funkcionális gombok (bal oldal)
+    std::vector<UIHorizontalButtonBar::ButtonConfig> mainButtonConfigs = {
+        {ScanButtonIDs::START_STOP_BUTTON, "Scan", UIButton::ButtonType::Toggleable, UIButton::ButtonState::Off,
          [this](const UIButton::ButtonEvent &event) { handleStartStopButton(event); }},
-
-        {ScanButtonIDs::PAUSE_BUTTON, "Pause", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
-         [this](const UIButton::ButtonEvent &event) { handlePauseButton(event); }},
 
         {ScanButtonIDs::MODE_BUTTON, "Mode", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, [this](const UIButton::ButtonEvent &event) { handleModeButton(event); }},
 
@@ -774,24 +754,38 @@ void ScanScreen::createScanButtons() {
          [this](const UIButton::ButtonEvent &event) { handleSpeedButton(event); }},
 
         {ScanButtonIDs::SCALE_BUTTON, "Scale", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
-         [this](const UIButton::ButtonEvent &event) { handleScaleButton(event); }},
+         [this](const UIButton::ButtonEvent &event) { handleScaleButton(event); }}};
 
-        {ScanButtonIDs::BACK_BUTTON, "Back", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
-         [this](const UIButton::ButtonEvent &event) { handleBackButton(event); }}}; // Gombsor létrehozása a képernyő alján (dinamikus méretezés)
-    uint16_t buttonY = tft.height() - 35;
-    uint16_t buttonCount = buttonConfigs.size();
-    uint16_t buttonGap = 3;
-    uint16_t availableWidth = tft.width() - 20; // 10px margó mindkét oldalon
-    uint16_t buttonWidth = (availableWidth - (buttonCount - 1) * buttonGap) / buttonCount;
+    // Back gomb (jobb oldal)
+    std::vector<UIHorizontalButtonBar::ButtonConfig> backButtonConfigs = {
+        {ScanButtonIDs::BACK_BUTTON, "Back", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, [this](const UIButton::ButtonEvent &event) { handleBackButton(event); }}};
+
+    // Gombsor elrendezés - képernyő aljára igazítva
     uint16_t buttonHeight = 30;
-    uint16_t totalWidth = buttonCount * buttonWidth + (buttonCount - 1) * buttonGap;
-    uint16_t buttonX = (tft.width() - totalWidth) / 2;
+    uint16_t buttonY = tft.height() - buttonHeight; // Közvetlenül a képernyő aljára
+    uint16_t buttonGap = 3;
+    uint16_t margin = 10;
 
-    DEBUG("Button layout: count=%d, width=%d, total=%d, screen=%d\n", buttonCount, buttonWidth, totalWidth, tft.width());
+    // Funkcionális gombok bal oldalon
+    uint16_t mainButtonCount = mainButtonConfigs.size();
+    uint16_t mainButtonWidth = 70; // Fix szélesség
+    uint16_t mainTotalWidth = mainButtonCount * mainButtonWidth + (mainButtonCount - 1) * buttonGap;
+    uint16_t mainButtonX = margin;
 
-    scanButtonBar = std::make_shared<UIHorizontalButtonBar>(tft, Rect(buttonX, buttonY, totalWidth, buttonHeight), buttonConfigs, buttonWidth, buttonHeight, buttonGap);
+    // Back gomb jobb oldalon
+    uint16_t backButtonWidth = 60;
+    uint16_t backButtonX = tft.width() - margin - backButtonWidth;
 
+    DEBUG("Button layout: main buttons at %d, back button at %d, screen width: %d\n", mainButtonX, backButtonX, tft.width());
+
+    // Fő gombok létrehozása
+    scanButtonBar =
+        std::make_shared<UIHorizontalButtonBar>(tft, Rect(mainButtonX, buttonY, mainTotalWidth, buttonHeight), mainButtonConfigs, mainButtonWidth, buttonHeight, buttonGap);
     addChild(scanButtonBar);
+
+    // Back gomb létrehozása
+    backButtonBar = std::make_shared<UIHorizontalButtonBar>(tft, Rect(backButtonX, buttonY, backButtonWidth, buttonHeight), backButtonConfigs, backButtonWidth, buttonHeight, 0);
+    addChild(backButtonBar);
 }
 
 /**
@@ -799,32 +793,14 @@ void ScanScreen::createScanButtons() {
  */
 void ScanScreen::handleStartStopButton(const UIButton::ButtonEvent &event) {
     if (event.state == UIButton::EventButtonState::Clicked) {
-        switch (currentState) {
-            case ScanState::Idle:
-                startSpectruScan();
-                break;
-            case ScanState::Scanning:
-            case ScanState::Paused:
-                stopScan();
-                break;
-        }
-    }
-}
-
-/**
- * @brief Pause gomb kezelése
- */
-void ScanScreen::handlePauseButton(const UIButton::ButtonEvent &event) {
-    if (event.state == UIButton::EventButtonState::Clicked) {
-        switch (currentState) {
-            case ScanState::Scanning:
-                pauseScan();
-                break;
-            case ScanState::Paused:
-                resumeScan();
-                break;
-            default:
-                break;
+        if (currentState == ScanState::Idle) {
+            // Scan indítása
+            startSpectruScan();
+            DEBUG("Scan started via toggle button\n");
+        } else {
+            // Scan leállítása (Scanning vagy Paused állapotból)
+            stopScan();
+            DEBUG("Scan stopped via toggle button\n");
         }
     }
 }
@@ -876,6 +852,7 @@ void ScanScreen::handleSpeedButton(const UIButton::ButtonEvent &event) {
  * @brief Scale/Zoom gomb kezelése (orosz logika alapján)
  */
 void ScanScreen::handleScaleButton(const UIButton::ButtonEvent &event) {
+
     if (event.state == UIButton::EventButtonState::Clicked) {
         // Scan alatt ne engedjük a zoom/scale változtatást
         if (currentState == ScanState::Scanning) {
@@ -896,12 +873,19 @@ void ScanScreen::handleScaleButton(const UIButton::ButtonEvent &event) {
                 deltaScanLine *= (currentMaxScanStep / currentMinScanStep);
             }
         }
-
         scanStep = (uint16_t)scanStepFloat;
         updateScanParameters();
-        drawSpectrumDisplay();
 
-        DEBUG("Scale button: step %.2f -> %.2f kHz\n", oldStep, scanStepFloat);
+        // Teljes képernyő újrarajzolása skála változás után
+        drawSpectrumBackground();
+        drawFrequencyScale();
+        drawFrequencyLabels();
+        drawSpectrumDisplay();
+        drawCursor();
+        drawSignalInfo();
+        drawScanStatus();
+
+        DEBUG("Scale button: step %.2f -> %.2f kHz - display refreshed\n", oldStep, scanStepFloat);
     }
 }
 
@@ -1052,43 +1036,35 @@ String ScanScreen::formatFrequency(uint32_t frequency) {
  */
 void ScanScreen::updateScanButtonStates() {
     if (!scanButtonBar)
-        return;
+        return; // Toggle gomb állapot frissítése
+    auto startButton = scanButtonBar->getButton(ScanButtonIDs::START_STOP_BUTTON);
+    if (startButton) {
+        if (currentState == ScanState::Scanning) {
+            // Scan fut: gomb ON állapotban (zöld)
+            startButton->setButtonState(UIButton::ButtonState::On);
+        } else {
+            // Scan nem fut: gomb OFF állapotban
+            startButton->setButtonState(UIButton::ButtonState::Off);
+        }
+    }
 
-    // Start/Stop gomb felirata
-    String startStopLabel = (currentState == ScanState::Idle) ? "Start" : "Stop";
-    // TODO: Gomb felirat frissítése implementálása
-
-    // Pause gomb engedélyezése/tiltása
-    // bool pauseEnabled = (currentState != ScanState::Idle);
-    // TODO: Gomb engedélyezés implementálása
+    DEBUG("Button states updated - Scan state: %d\n", (int)currentState);
 }
 
 /**
  * @brief Band minimum frekvencia lekérése
  */
-uint32_t ScanScreen::getBandMinFreq() {
-    if (!pSi4735Manager)
-        return 87500; // Default FM
-    return pSi4735Manager->getCurrentBand().minimumFreq;
-}
+uint32_t ScanScreen::getBandMinFreq() { return pSi4735Manager->getCurrentBand().minimumFreq; }
 
 /**
  * @brief Band maximum frekvencia lekérése
  */
-uint32_t ScanScreen::getBandMaxFreq() {
-    if (!pSi4735Manager)
-        return 108000; // Default FM
-    return pSi4735Manager->getCurrentBand().maximumFreq;
-}
+uint32_t ScanScreen::getBandMaxFreq() { return pSi4735Manager->getCurrentBand().maximumFreq; }
 
 /**
  * @brief Band név lekérése
  */
-String ScanScreen::getBandName() {
-    if (!pSi4735Manager)
-        return "FM";
-    return String(pSi4735Manager->getCurrentBandName());
-}
+String ScanScreen::getBandName() { return String(pSi4735Manager->getCurrentBandName()); }
 
 // ===================================================================
 // Zoom és sávkezelés (orosz alapján)
@@ -1159,7 +1135,8 @@ void ScanScreen::updateScanParameters() {
  */
 void ScanScreen::zoomIn() {
     if (currentState == ScanState::Scanning) {
-        pauseScan();
+        // Scan alatt nem engedjük a zoom-ot
+        return;
     }
 
     // Orosz logika: scan step kétszerezése = zoom out, felezés = zoom in
@@ -1181,7 +1158,8 @@ void ScanScreen::zoomIn() {
  */
 void ScanScreen::zoomOut() {
     if (currentState == ScanState::Scanning) {
-        pauseScan();
+        // Scan alatt nem engedjük a zoom-ot
+        return;
     }
 
     // Orosz logika: scan step duplikálása

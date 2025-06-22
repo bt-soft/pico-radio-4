@@ -22,9 +22,8 @@
  * @brief Scan képernyő állapotok
  */
 enum class ScanState {
-    Idle,     ///< Nincs aktív scan
-    Scanning, ///< Aktívan pásztáz
-    Paused    ///< Szüneteltetve
+    Idle,    ///< Nincs aktív scan
+    Scanning ///< Aktívan pásztáz
 };
 
 /**
@@ -88,27 +87,24 @@ class ScanScreen : public UIScreen {
     uint16_t scanSpeed;                                   ///< Scan sebesség (ms/lépés)
 
     // === Zoom és sávkezelés (orosz alapján) ===
-    float scanStepFloat;               ///< Floating point scan step (kHz/pixel)
-    float minScanStep;                 ///< Minimum scan step
-    float maxScanStep;                 ///< Maximum scan step
-    bool autoScanStep;                 ///< Automatikus scan step számítás
-    float currentMinScanStep;          ///< Aktuális minimum scan step
-    float currentMaxScanStep;          ///< Aktuális maximum scan step
-    int16_t scanBeginBand;             ///< Sáv eleje a spektrumban (-1 ha nincs)
-    int16_t scanEndBand;               ///< Sáv vége a spektrumban
-    float deltaScanLine;               ///< Float delta line az orosz logika szerint    // === Spektrum adatok ===
-    std::vector<uint8_t> spectrumRSSI; ///< RSSI értékek (0-SPECTRUM_WIDTH-1)
-    std::vector<uint8_t> spectrumSNR;  ///< SNR értékek (0-SPECTRUM_WIDTH-1)
-    std::vector<bool> stationMarks;    ///< Erős állomás jelölések
-    std::vector<uint8_t> scaleLines;   ///< Skála vonalak típusai
-    uint8_t snrThreshold;              ///< SNR küszöb erős állomásokhoz
-
-    // === UI komponensek ===
-    std::shared_ptr<UIHorizontalButtonBar> scanButtonBar; ///< Scan gombok    // === Scan kontroll metódusok ===
+    float scanStepFloat;                                  ///< Floating point scan step (kHz/pixel)
+    float minScanStep;                                    ///< Minimum scan step
+    float maxScanStep;                                    ///< Maximum scan step
+    bool autoScanStep;                                    ///< Automatikus scan step számítás
+    float currentMinScanStep;                             ///< Aktuális minimum scan step
+    float currentMaxScanStep;                             ///< Aktuális maximum scan step
+    int16_t scanBeginBand;                                ///< Sáv eleje a spektrumban (-1 ha nincs)
+    int16_t scanEndBand;                                  ///< Sáv vége a spektrumban
+    float deltaScanLine;                                  ///< Float delta line az orosz logika szerint    // === Spektrum adatok ===
+    std::vector<uint8_t> spectrumRSSI;                    ///< RSSI értékek (0-SPECTRUM_WIDTH-1)
+    std::vector<uint8_t> spectrumSNR;                     ///< SNR értékek (0-SPECTRUM_WIDTH-1)
+    std::vector<bool> stationMarks;                       ///< Erős állomás jelölések
+    std::vector<uint8_t> scaleLines;                      ///< Skála vonalak típusai
+    uint8_t snrThreshold;                                 ///< SNR küszöb erős állomásokhoz    // === UI komponensek ===
+    std::shared_ptr<UIHorizontalButtonBar> scanButtonBar; ///< Fő gombok (Scan, Mode, Speed, Scale)
+    std::shared_ptr<UIHorizontalButtonBar> backButtonBar; ///< Back gomb (jobb oldal)// === Scan kontroll metódusok ===
     void startSpectruScan();
-    void pauseScan();
     void stopScan();
-    void resumeScan();
 
     // === Zoom és sávkezelés (orosz alapján) ===
     void calculateScanStep();
@@ -139,12 +135,9 @@ class ScanScreen : public UIScreen {
     // === Érintés kezelés ===
     void handleSpectrumTouch(uint16_t x, uint16_t y);
     uint32_t pixelToFrequency(uint16_t pixelX);
-    uint16_t frequencyToPixel(uint32_t frequency);
-
-    // === Gomb események ===
+    uint16_t frequencyToPixel(uint32_t frequency); // === Gomb események ===
     void createScanButtons();
     void handleStartStopButton(const UIButton::ButtonEvent &event);
-    void handlePauseButton(const UIButton::ButtonEvent &event);
     void handleModeButton(const UIButton::ButtonEvent &event);
     void handleSpeedButton(const UIButton::ButtonEvent &event);
     void handleScaleButton(const UIButton::ButtonEvent &event); // SCALE/ZOOM gomb
@@ -167,11 +160,10 @@ class ScanScreen : public UIScreen {
 // Gomb azonosítók
 namespace ScanButtonIDs {
 constexpr uint8_t START_STOP_BUTTON = 1;
-constexpr uint8_t PAUSE_BUTTON = 2;
-constexpr uint8_t MODE_BUTTON = 3;
-constexpr uint8_t SPEED_BUTTON = 4;
-constexpr uint8_t SCALE_BUTTON = 5; // SCALE/ZOOM gomb
-constexpr uint8_t BACK_BUTTON = 6;
+constexpr uint8_t MODE_BUTTON = 2;
+constexpr uint8_t SPEED_BUTTON = 3;
+constexpr uint8_t SCALE_BUTTON = 4; // SCALE/ZOOM gomb
+constexpr uint8_t BACK_BUTTON = 5;
 } // namespace ScanButtonIDs
 
 #endif // __SCANSCREEN_H
