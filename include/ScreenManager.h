@@ -44,6 +44,9 @@ class ScreenManager : public IScreenManager {
     // Navigációs stack - többszintű back navigációhoz
     std::vector<String> navigationStack;
 
+    // Screensaver előtti képernyő neve - screensaver visszatéréshez
+    String screenBeforeScreenSaver;
+
     // Deferred action queue - biztonságos képernyőváltáshoz
     std::queue<DeferredAction> deferredActions;
     bool processingEvents = false; // Aktuális képernyő lekérdezése
@@ -110,33 +113,36 @@ class ScreenManager : public IScreenManager {
         if (it == screenFactories.end()) {
             DEBUG("ScreenManager: Screen factory not found for '%s'\n", screenName);
             return false;
-        }
-
-        // Navigációs stack kezelése KÉPERNYŐVÁLTÁS ELŐTT - csak forward navigációnál
+        } // Navigációs stack kezelése KÉPERNYŐVÁLTÁS ELŐTT - csak forward navigációnál
         if (currentScreen && !isBackNavigation) {
             const char *currentName = currentScreen->getName();
 
-            // Ha nem képernyővédőről váltunk (képernyővédő nem kerül a stackre)
-            if (!STREQ(currentName, SCREEN_NAME_SCREENSAVER)) {
-                // És nem képernyővédőre váltunk (képernyővédő nem kerül a stackre)
-                if (!STREQ(screenName, SCREEN_NAME_SCREENSAVER)) {
-                    // Normál forward navigáció - jelenlegi képernyő hozzáadása a stackhez
-                    navigationStack.push_back(String(currentName));
-                    DEBUG("ScreenManager: Added '%s' to navigation stack (size: %d)\n", currentName, navigationStack.size());
-                }
-                // Ha képernyővédőre váltunk, ne módosítsuk a stacket
+            // SCREENSAVER SPECIÁLIS KEZELÉS:
+            if (STREQ(screenName, SCREEN_NAME_SCREENSAVER)) {
+                // Ha képernyővédőre váltunk, eltároljuk az aktuális képernyő nevét
+                screenBeforeScreenSaver = String(currentName);
+                DEBUG("ScreenManager: Screensaver activated from '%s'\n", currentName);
+            } else if (!STREQ(currentName, SCREEN_NAME_SCREENSAVER)) {
+                // Normál forward navigáció - jelenlegi képernyő hozzáadása a stackhez
+                // (de csak ha nem screensaver-ről váltunk)
+                navigationStack.push_back(String(currentName));
+                DEBUG("ScreenManager: Added '%s' to navigation stack (size: %d)\n", currentName, navigationStack.size());
             }
-            // Ha képernyővédőről váltunk vissza, ne módosítsuk a stacket
         } else if (isBackNavigation) {
             DEBUG("ScreenManager: Back navigation - not adding to stack\n");
-        }
-
-        // Jelenlegi képernyő törlése
+        } // Jelenlegi képernyő törlése
         if (currentScreen) {
-            previousScreenName = currentScreen->getName();
+            const char *currentName = currentScreen->getName();
+
+            // previousScreenName csak akkor frissül, ha nem képernyővédőre váltunk
+            // Ez biztosítja, hogy a képernyővédő után vissza tudjunk térni az eredeti képernyőre
+            if (!STREQ(screenName, SCREEN_NAME_SCREENSAVER)) {
+                previousScreenName = currentName;
+            }
+
             currentScreen->deactivate();
             currentScreen.reset(); // Memória felszabadítása
-            DEBUG("ScreenManager: Destroyed screen '%s'\n", previousScreenName);
+            DEBUG("ScreenManager: Destroyed screen '%s'\n", currentName);
         }
 
         // TFT display törlése a képernyőváltás előtt
@@ -176,6 +182,16 @@ class ScreenManager : public IScreenManager {
         }
     } // Azonnali visszaváltás - csak biztonságos kontextusban hívható
     bool immediateGoBack() {
+        // Speciális kezelés: ha screensaver-ből jövünk vissza
+        if (currentScreen && STREQ(currentScreen->getName(), SCREEN_NAME_SCREENSAVER)) {
+            if (!screenBeforeScreenSaver.isEmpty()) {
+                DEBUG("ScreenManager: Going back from screensaver to '%s'\n", screenBeforeScreenSaver.c_str());
+                String targetScreen = screenBeforeScreenSaver;
+                screenBeforeScreenSaver = String();                          // Clear after use
+                return immediateSwitch(targetScreen.c_str(), nullptr, true); // isBackNavigation = true
+            }
+        }
+
         // Navigációs stack használata a többszintű back navigációhoz
         if (!navigationStack.empty()) {
             String previousScreen = navigationStack.back();

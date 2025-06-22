@@ -333,12 +333,20 @@ bool ScanScreen::handleTouch(const TouchEvent &event) {
  * - Ha van scan adat: kurzor mozgatás az érvényes adatpontok között
  * - Ha nincs scan adat: frekvencia léptetés
  * - Scan közben nincs navigáció (biztonsági védelem)
+ * - Klikk: zoom in (ugyanaz mint a Zoom+ gomb)
  *
  * Irányok:
  * - Up (jobbra): következő pozíció/magasabb frekvencia
  * - Down (balra): előző pozíció/alacsonyabb frekvencia
+ * - Click: zoom nagyítás
  */
 bool ScanScreen::handleRotary(const RotaryEvent &event) {
+    // Rotary encoder klikk kezelése - zoom in funkció
+    if (event.buttonState == RotaryEvent::ButtonState::Clicked) {
+        zoomIn(); // Ugyanaz a funkció mint a Zoom+ gomb
+        return true;
+    }
+
     if (event.direction == RotaryEvent::Direction::Up) {
         // Jobbra forgatás - előre lépés
         if (scanPaused) {

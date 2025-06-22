@@ -52,7 +52,7 @@ void FMScreen::layoutComponents() {
 
     // Állapotsor komponens létrehozása (felső sáv)
     UIScreen::createStatusLine();
-    
+
     // ===================================================================
     // Frekvencia kijelző pozicionálás (képernyő közép)
     // ===================================================================
@@ -77,13 +77,13 @@ void FMScreen::layoutComponents() {
     createRDSComponent();
 
     // RDS részkomponensek egyedi pozícionálása
-    // Állomásnév - bal oldal
+    // Állomásnév
     rdsComponent->setStationNameArea(Rect(10, rdsY, 180, 18)); // 180px szélesség
-    // Program típus - középen
+    // Program típus
     rdsComponent->setProgramTypeArea(Rect(200, rdsY, 120, 18)); // 120px szélesség
-    // Dátum/idő - jobb oldal (de nem túl messze)
+    // Dátum/idő
     rdsComponent->setDateTimeArea(Rect(330, rdsY, 80, 18)); // 80px szélesség, 330+80=410px max
-    // Radio text - alsó sor, korlátozva
+    // Radio text
     rdsComponent->setRadioTextArea(Rect(10, rdsY + 20, 380, 18)); // 380px szélesség
 
     // ===================================================================

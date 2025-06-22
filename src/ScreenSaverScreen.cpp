@@ -45,7 +45,6 @@ ScreenSaverScreen::ScreenSaverScreen(TFT_eSPI &tft_ref, Si4735Manager &si4735Man
  */
 void ScreenSaverScreen::activate() {
     UIScreen::activate(); // Szülő osztály activate hívása
-    DEBUG("ScreenSaverScreen activated.\n");
     activationTime = millis();
     lastAnimationUpdateTime = millis();
     lastFullUpdateSaverTime = millis(); // Teljes frissítés időzítő nullázása
@@ -68,7 +67,6 @@ void ScreenSaverScreen::activate() {
  */
 void ScreenSaverScreen::deactivate() {
     UIScreen::deactivate(); // Szülő osztály deactivate hívása
-    DEBUG("ScreenSaverScreen deactivated.\n");
 
     // FreqDisplay visszaállítása normál módra: alapértelmezett színek és látható aláhúzás
     freqDisplayComp->resetToDefaultColors();
@@ -298,12 +296,7 @@ bool ScreenSaverScreen::handleRotary(const RotaryEvent &event) {
  */
 uint16_t ScreenSaverScreen::getCurrentBorderWidth() const {
     using namespace ScreenSaverConstants;
-
     if (pSi4735Manager) {
-
-        DEBUG("ScreenSaverScreen::getCurrentBorderWidth(): currentBandName: %s, bandType = %d, currDemod: %s\n", //
-              pSi4735Manager->getCurrentBandName(), pSi4735Manager->getCurrentBandType(), pSi4735Manager->getCurrentBandDemodModDesc());
-
         switch (pSi4735Manager->getCurrentBandType()) {
             case FM_BAND_TYPE:
                 return ANIMATION_BORDER_WIDTH_FM;
@@ -322,8 +315,8 @@ uint16_t ScreenSaverScreen::getCurrentBorderWidth() const {
                 return ANIMATION_BORDER_WIDTH_AM_SW;
 
             default:
-                DEBUG("ScreenSaverScreen::getCurrentBorderWidth(): Unknown band type: %d (BandName: %s), using default width.\n", pSi4735Manager->getCurrentBandType(),
-                      pSi4735Manager->getCurrentBandName());
+                // Ismeretlen sávtípus esetén alapértelmezett szélesség
+                break;
         }
     }
 
