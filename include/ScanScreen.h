@@ -105,21 +105,13 @@ class ScanScreen : public UIScreen {
     std::shared_ptr<UIHorizontalButtonBar> backButtonBar; ///< Back gomb (jobb oldal)// === Scan kontroll metódusok ===
     void startSpectruScan();
     void stopScan(); // === Zoom és sávkezelés (orosz alapján) ===
-    void calculateScanStep();
-    void updateScanParameters();
-    void zoomIn();
-    void zoomOut();
-    void resetZoom();
     int getCurrentZoomIndex();
     void getZoomLevels(float *levels, int *count);
-    bool isFrequencyInBand(uint32_t frequency);
 
     // === Spektrum kezelés ===
     void updateSpectrum();
     void measureSignalAtCurrentFreq();
-    uint8_t getSignalValue(bool useRSSI);
     void moveToNextFrequency();
-    bool isValidScanFrequency(uint32_t freq);
 
     // === Grafikus megjelenítés ===
     void drawSpectrumDisplay();
@@ -144,7 +136,7 @@ class ScanScreen : public UIScreen {
     void handleBackButton(const UIButton::ButtonEvent &event);
 
     // === Utility metódusok ===
-    void calculateScanParameters();
+    void calculateInitialScanParameters();
     void resetSpectrumData();
     uint16_t rssiToPixelY(uint8_t rssi);
     uint16_t snrToColor(uint8_t snr);

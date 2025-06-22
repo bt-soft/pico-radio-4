@@ -101,7 +101,7 @@ class UIContainerComponent : public UIComponent {
         if (markChildren) {
             for (auto &child : children) {
                 if (child)
-                    child->markForRedraw(); // Mark all children only if requested
+                    child->markForRedraw(true); // Mark all children recursively
             }
         }
     }
