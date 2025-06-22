@@ -87,12 +87,12 @@ void FMScreen::layoutComponents() {
 
     // RDS Radio text
     currentY += 18 + 5;
-    rdsComponent->setRadioTextArea(Rect(2, currentY, SMeterConstants::SMETER_WIDTH, 18));
+    rdsComponent->setRadioTextArea(Rect(2, currentY, SMeterConstants::SMETER_WIDTH, 24));
 
     // ===================================================================
     // S-Meter komponens létrehozása - RadioScreen közös implementáció
     // ===================================================================
-    currentY += 18 + 10;
+    currentY += 24 + 5;
     Rect smeterBounds(2, currentY, SMeterConstants::SMETER_WIDTH, 60);
     createSMeterComponent(smeterBounds);
 
