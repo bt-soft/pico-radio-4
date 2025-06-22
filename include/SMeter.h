@@ -7,6 +7,7 @@
 #include <algorithm> // std::min miatt
 
 namespace SMeterConstants {
+constexpr int16_t SMETER_WIDTH = 240; // S-Meter teljes szélessége
 // Skála méretei és pozíciója
 constexpr uint8_t ScaleWidth = 236;
 constexpr uint8_t ScaleHeight = 46;

@@ -83,17 +83,17 @@ void FMScreen::layoutComponents() {
     rdsComponent->setProgramTypeArea(Rect(2, currentY, 135, 18));
 
     // Dátum/idő
-    rdsComponent->setDateTimeArea(Rect(2 + 130 + 5, currentY, 110, 18)); // Ugyanaz az Y pozíció, mint a program típus, de 120px jobbra
+    rdsComponent->setDateTimeArea(Rect(2 + 130 + 5, currentY, 105, 18)); // Ugyanaz az Y pozíció, mint a program típus
 
     // RDS Radio text
     currentY += 18 + 5;
-    rdsComponent->setRadioTextArea(Rect(2, currentY, 250, 18));
+    rdsComponent->setRadioTextArea(Rect(2, currentY, SMeterConstants::SMETER_WIDTH, 18));
 
     // ===================================================================
     // S-Meter komponens létrehozása - RadioScreen közös implementáció
     // ===================================================================
     currentY += 18 + 10;
-    Rect smeterBounds(2, currentY, 250, 60);
+    Rect smeterBounds(2, currentY, SMeterConstants::SMETER_WIDTH, 60);
     createSMeterComponent(smeterBounds);
 
     // ===================================================================
