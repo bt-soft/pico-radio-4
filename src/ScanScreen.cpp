@@ -131,6 +131,7 @@ void ScanScreen::handleOwnLoop() {
 
     // Scan frissítés időzítéssel
     if (currentState == ScanState::Scanning && (currentTime - lastScanUpdate >= scanSpeed)) {
+        DEBUG("[LOOP] updateSpectrum called - currentTime: %lu, lastScanUpdate: %lu, scanSpeed: %d\n", currentTime, lastScanUpdate, scanSpeed);
         updateSpectrum();
         lastScanUpdate = currentTime;
     }
@@ -237,6 +238,8 @@ bool ScanScreen::handleRotary(const RotaryEvent &event) {
  * @brief Spektrum scan indítása
  */
 void ScanScreen::startSpectruScan() {
+    DEBUG("startSpectruScan called - currentState: %d\n", (int)currentState);
+
     if (currentState == ScanState::Idle) {
         DEBUG("Starting spectrum scan (full coverage) - SPECTRUM_WIDTH: %d\n", SPECTRUM_WIDTH);
         currentState = ScanState::Scanning;
@@ -247,6 +250,8 @@ void ScanScreen::startSpectruScan() {
         deltaScanLine = 0.0;
         lastScanUpdate = millis();
 
+        DEBUG("startSpectruScan: scanStartFreq=%d, scanEndFreq=%d, currentScanFreq=%d\n", scanStartFreq, scanEndFreq, currentScanFreq);
+
         // Spektrum adatok és paraméterek inicializálása
         resetSpectrumData();
         updateScanParameters(); // Sávhatárok és skála vonalak számítása
@@ -255,11 +260,16 @@ void ScanScreen::startSpectruScan() {
         // Első pozíció beállítása
         if (pSi4735Manager) {
             pSi4735Manager->getSi4735().setFrequency(currentScanFreq);
+            DEBUG("startSpectruScan: Si4735 frequency set to %d kHz\n", currentScanFreq);
+        } else {
+            DEBUG("ERROR: pSi4735Manager is null in startSpectruScan!\n");
         }
         DEBUG("Scan started: start freq=%d kHz, end freq=%d kHz, scanStep=%.2f, target width=%d\n", scanStartFreq, scanEndFreq, scanStepFloat, SPECTRUM_WIDTH);
 
         // Gomb állapot frissítése
         updateScanButtonStates();
+    } else {
+        DEBUG("startSpectruScan: Cannot start scan - currentState is not Idle (%d)\n", (int)currentState);
     }
 }
 
@@ -289,8 +299,12 @@ void ScanScreen::stopScan() {
  * @brief Spektrum frissítése
  */
 void ScanScreen::updateSpectrum() {
-    if (currentState != ScanState::Scanning)
+    if (currentState != ScanState::Scanning) {
+        DEBUG("[SPECTRUM] updateSpectrum called but not scanning - currentState: %d\n", (int)currentState);
         return;
+    }
+
+    DEBUG("[SPECTRUM] updateSpectrum: Line %d, Freq %d kHz\n", currentScanLine, currentScanFreq);
 
     // Jelerősség mérés az aktuális frekvencián
     measureSignalAtCurrentFreq();
@@ -792,16 +806,24 @@ void ScanScreen::createScanButtons() {
  * @brief Start/Stop gomb kezelése
  */
 void ScanScreen::handleStartStopButton(const UIButton::ButtonEvent &event) {
-    if (event.state == UIButton::EventButtonState::Clicked) {
-        if (currentState == ScanState::Idle) {
-            // Scan indítása
+    DEBUG("handleStartStopButton: event.state = %d\n", (int)event.state);
+
+    if (event.state == UIButton::EventButtonState::On || event.state == UIButton::EventButtonState::Off) {
+        DEBUG("handleStartStopButton: Button toggled to %s\n", event.state == UIButton::EventButtonState::On ? "ON" : "OFF");
+
+        if (event.state == UIButton::EventButtonState::On) {
+            // Button turned ON - start scan
+            DEBUG("handleStartStopButton: Starting scan (button ON)...\n");
             startSpectruScan();
             DEBUG("Scan started via toggle button\n");
         } else {
-            // Scan leállítása (Scanning vagy Paused állapotból)
+            // Button turned OFF - stop scan
+            DEBUG("handleStartStopButton: Stopping scan (button OFF)...\n");
             stopScan();
             DEBUG("Scan stopped via toggle button\n");
         }
+    } else {
+        DEBUG("handleStartStopButton: Button event ignored - state = %d\n", (int)event.state);
     }
 }
 
@@ -908,8 +930,12 @@ void ScanScreen::handleBackButton(const UIButton::ButtonEvent &event) {
  * @brief Scan paraméterek számítása
  */
 void ScanScreen::calculateScanParameters() {
+    DEBUG("calculateScanParameters: pSi4735Manager = %p\n", pSi4735Manager);
+
     scanStartFreq = getBandMinFreq();
     scanEndFreq = getBandMaxFreq();
+
+    DEBUG("calculateScanParameters: scanStartFreq=%d, scanEndFreq=%d\n", scanStartFreq, scanEndFreq);
 
     // Orosz logika alapján: automatikus scan step kalkuláció
     if (autoScanStep) {
@@ -1054,12 +1080,24 @@ void ScanScreen::updateScanButtonStates() {
 /**
  * @brief Band minimum frekvencia lekérése
  */
-uint32_t ScanScreen::getBandMinFreq() { return pSi4735Manager->getCurrentBand().minimumFreq; }
+uint32_t ScanScreen::getBandMinFreq() {
+    if (!pSi4735Manager) {
+        DEBUG("ERROR: pSi4735Manager is null in getBandMinFreq!\n");
+        return 87500; // Default FM start
+    }
+    return pSi4735Manager->getCurrentBand().minimumFreq;
+}
 
 /**
  * @brief Band maximum frekvencia lekérése
  */
-uint32_t ScanScreen::getBandMaxFreq() { return pSi4735Manager->getCurrentBand().maximumFreq; }
+uint32_t ScanScreen::getBandMaxFreq() {
+    if (!pSi4735Manager) {
+        DEBUG("ERROR: pSi4735Manager is null in getBandMaxFreq!\n");
+        return 108000; // Default FM end
+    }
+    return pSi4735Manager->getCurrentBand().maximumFreq;
+}
 
 /**
  * @brief Band név lekérése
