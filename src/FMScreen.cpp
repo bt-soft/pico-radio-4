@@ -62,37 +62,39 @@ void FMScreen::layoutComponents() {
     freqDisplayComp->setHideUnderline(true); // Alulvonás elrejtése a frekvencia kijelzőn
 
     // ===================================================================
-    // S-Meter komponens létrehozása - RadioScreen közös implementáció
+    // STEREO/MONO jelző létrehozása
     // ===================================================================
-    uint16_t smeterWidth = UIComponent::SCREEN_W - 90; // 90px helyet hagyunk a jobb oldalon
-    Rect smeterBounds(2, FreqDisplayY + FreqDisplay::FREQDISPLAY_HEIGHT + 0, smeterWidth, 60);
-    createSMeterComponent(smeterBounds);
+    uint16_t stereoY = FreqDisplayY;
+    Rect stereoBounds(FreqDisplay::FREQDISPLAY_WIDTH - 130, stereoY, 50, 20);
+    stereoIndicator = std::make_shared<StereoIndicator>(tft, stereoBounds);
+    addChild(stereoIndicator);
 
     // ===================================================================
     // RDS komponens létrehozása és pozicionálása
     // ===================================================================
-    uint16_t rdsY = smeterBounds.y + smeterBounds.height + 10;
+    createRDSComponent(); // RDS komponens létrehozása
 
-    // RDS komponens létrehozása (már nem kell rdsBounds)
-    createRDSComponent();
+    // RDS Állomásnév közvetlenül a frekvencia kijelző alatt
+    uint16_t currentY = FreqDisplayY + FreqDisplay::FREQDISPLAY_HEIGHT - 15;
+    rdsComponent->setStationNameArea(Rect(2, currentY, 180, 32));
 
-    // RDS részkomponensek egyedi pozícionálása
-    // Állomásnév
-    rdsComponent->setStationNameArea(Rect(10, rdsY, 180, 18)); // 180px szélesség
-    // Program típus
-    rdsComponent->setProgramTypeArea(Rect(200, rdsY, 120, 18)); // 120px szélesség
+    // RDS Program típus közvetlenül az állomásnév alatt
+    currentY += 32 + 5; // 18px magasság + 5px kisebb hézag
+    rdsComponent->setProgramTypeArea(Rect(2, currentY, 135, 18));
+
     // Dátum/idő
-    rdsComponent->setDateTimeArea(Rect(330, rdsY, 80, 18)); // 80px szélesség, 330+80=410px max
-    // Radio text
-    rdsComponent->setRadioTextArea(Rect(10, rdsY + 20, 380, 18)); // 380px szélesség
+    rdsComponent->setDateTimeArea(Rect(2 + 130 + 5, currentY, 110, 18)); // Ugyanaz az Y pozíció, mint a program típus, de 120px jobbra
+
+    // RDS Radio text
+    currentY += 18 + 5;
+    rdsComponent->setRadioTextArea(Rect(2, currentY, 250, 18));
 
     // ===================================================================
-    // STEREO/MONO jelző létrehozása
+    // S-Meter komponens létrehozása - RadioScreen közös implementáció
     // ===================================================================
-    uint16_t stereoY = rdsY + 40; // RDS komponens után (20px RDS magasság + 20px margin)
-    Rect stereoBounds(5, stereoY, 50, 20);
-    stereoIndicator = std::make_shared<StereoIndicator>(tft, stereoBounds);
-    addChild(stereoIndicator);
+    currentY += 18 + 10;
+    Rect smeterBounds(2, currentY, 250, 60);
+    createSMeterComponent(smeterBounds);
 
     // ===================================================================
     // Gombsorok létrehozása - Event-driven architektúra

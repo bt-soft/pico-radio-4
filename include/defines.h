@@ -33,6 +33,9 @@
 // Soros portra várakozás a debug üzenetek előtt
 // #define DEBUG_WAIT_FOR_SERIAL
 
+// Debug keretek rajzolása a UI komponensek köré
+#define DRAW_DEBUG_FRAMES
+
 #endif
 
 // Feszültségmérés

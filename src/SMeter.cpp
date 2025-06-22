@@ -285,8 +285,10 @@ void SMeter::showRSSI(uint8_t rssi, uint8_t snr, bool isFMMode) {
  * Inicializáláskor rajzolja ki a teljes skálát.
  */
 void SMeter::draw() {
+#ifdef __DEBUG
     // Debug: Piros keret rajzolás a komponens határainak vizualizálásához
-    // tft.drawRect(bounds.x, bounds.y, bounds.width, bounds.height, TFT_RED);
+    tft.drawRect(bounds.x, bounds.y, bounds.width, bounds.height, TFT_RED);
+#endif
 
     if (needsRedraw) {
         drawSmeterScale();

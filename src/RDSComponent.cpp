@@ -176,12 +176,11 @@ void RDSComponent::initializeScrollSprite() {
     if (scrollSprite || scrollSpriteCreated) {
         cleanupScrollSprite();
     }
-
     if (radioTextArea.width > 0 && radioTextArea.height > 0) {
         scrollSprite = new TFT_eSprite(&tft);
         if (scrollSprite->createSprite(radioTextArea.width, radioTextArea.height)) {
             scrollSprite->setFreeFont(); // Alapértelmezett font
-            scrollSprite->setTextSize(1);
+            scrollSprite->setTextSize(2);
             scrollSprite->setTextColor(radioTextColor, backgroundColor);
             scrollSprite->setTextDatum(TL_DATUM);
             scrollSpriteCreated = true;
@@ -225,7 +224,7 @@ void RDSComponent::updateRdsData() {
         if (!newRadioText.isEmpty()) {
             // Radio text változott - scroll újraszámítás
             tft.setFreeFont();
-            tft.setTextSize(1);
+            tft.setTextSize(2);
             radioTextPixelWidth = tft.textWidth(newRadioText);
             needsScrolling = (radioTextPixelWidth > radioTextArea.width);
             scrollOffset = 0; // Scroll restart
@@ -248,21 +247,23 @@ void RDSComponent::drawStationName() {
     // Terület törlése
     tft.fillRect(stationNameArea.x, stationNameArea.y, stationNameArea.width, stationNameArea.height, backgroundColor);
 
+#ifdef DRAW_DEBUG_FRAMES
     // DEBUG KERET - piros
     tft.drawRect(stationNameArea.x, stationNameArea.y, stationNameArea.width, stationNameArea.height, TFT_RED);
+#endif
 
     if (stationName.isEmpty()) {
         return; // Nincs megjeleníthető adat
     }
-
     tft.setFreeFont();
-    tft.setTextSize(1);
+    tft.setTextSize(3);
     tft.setTextColor(stationNameColor, backgroundColor);
-    tft.setTextDatum(ML_DATUM); // Middle Left - függőlegesen középre, balra igazítva
+    tft.setTextDatum(MC_DATUM); // Middle Center - vízszintesen és függőlegesen is középre igazítva
 
-    // Szöveg kirajzolása - függőlegesen középre + 1px gap
+    // Szöveg kirajzolása - terület közepére (vízszintes és függőleges központ)
+    int16_t centerX = stationNameArea.x + stationNameArea.width / 2;
     int16_t centerY = stationNameArea.y + stationNameArea.height / 2;
-    tft.drawString(stationName, stationNameArea.x + 5, centerY); // +5px gap a bal oldaltól
+    tft.drawString(stationName, centerX, centerY);
 }
 
 /**
@@ -274,8 +275,10 @@ void RDSComponent::drawProgramType() {
     // Terület törlése
     tft.fillRect(programTypeArea.x, programTypeArea.y, programTypeArea.width, programTypeArea.height, backgroundColor);
 
+#ifdef DRAW_DEBUG_FRAMES
     // DEBUG KERET - zöld
     tft.drawRect(programTypeArea.x, programTypeArea.y, programTypeArea.width, programTypeArea.height, TFT_GREEN);
+#endif
 
     if (programType.isEmpty()) {
         return; // Nincs megjeleníthető adat
@@ -283,11 +286,12 @@ void RDSComponent::drawProgramType() {
     tft.setFreeFont();
     tft.setTextSize(1);
     tft.setTextColor(programTypeColor, backgroundColor);
-    tft.setTextDatum(ML_DATUM); // Middle Left - függőlegesen középre, balra igazítva
+    tft.setTextDatum(MC_DATUM); // Middle Center - vízszintesen és függőlegesen is középre igazítva
 
-    // Szöveg kirajzolása - függőlegesen középre + 1px gap
+    // Szöveg kirajzolása - terület közepére (vízszintes és függőleges központ)
+    int16_t centerX = programTypeArea.x + programTypeArea.width / 2;
     int16_t centerY = programTypeArea.y + programTypeArea.height / 2;
-    tft.drawString(programType, programTypeArea.x + 5, centerY); // +5px gap a bal oldaltól
+    tft.drawString(programType, centerX, centerY);
 }
 
 /**
@@ -308,7 +312,7 @@ void RDSComponent::drawRadioText() {
     if (!needsScrolling) {
         // Egyszerű megjelenítés, ha elfér
         tft.setFreeFont();
-        tft.setTextSize(1);
+        tft.setTextSize(2);
         tft.setTextColor(radioTextColor, backgroundColor);
         tft.setTextDatum(ML_DATUM); // Middle Left - függőlegesen középre, balra igazítva
 
@@ -336,20 +340,21 @@ void RDSComponent::drawDateTime() {
     // Háttér törlése
     tft.fillRect(dateTimeArea.x, dateTimeArea.y, dateTimeArea.width, dateTimeArea.height, backgroundColor);
 
+#ifdef DRAW_DEBUG_FRAMES
     // DEBUG KERET - kék
     tft.drawRect(dateTimeArea.x, dateTimeArea.y, dateTimeArea.width, dateTimeArea.height, TFT_BLUE);
-
+#endif
     if (dateTime.isEmpty()) {
         return;
     }
     tft.setFreeFont();
     tft.setTextSize(1);
     tft.setTextColor(dateTimeColor, backgroundColor);
-    tft.setTextDatum(MR_DATUM); // Middle Right - függőlegesen középre, jobbra igazítva
+    tft.setTextDatum(ML_DATUM); // Middle Left - függőlegesen középre, balra igazítva
 
-    // Szöveg kirajzolása - függőlegesen középre + 1px gap a jobb oldaltól
+    // Szöveg kirajzolása - függőlegesen középre + 1px gap a bal oldaltól
     int16_t centerY = dateTimeArea.y + dateTimeArea.height / 2;
-    tft.drawString(dateTime, dateTimeArea.x + dateTimeArea.width - 1, centerY); // -1px gap a jobb oldaltól
+    tft.drawString(dateTime, dateTimeArea.x + 1, centerY); // +1px gap a bal oldaltól
 }
 
 /**
