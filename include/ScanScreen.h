@@ -104,14 +104,14 @@ class ScanScreen : public UIScreen {
     std::shared_ptr<UIHorizontalButtonBar> scanButtonBar; ///< Fő gombok (Scan, Mode, Speed, Scale)
     std::shared_ptr<UIHorizontalButtonBar> backButtonBar; ///< Back gomb (jobb oldal)// === Scan kontroll metódusok ===
     void startSpectruScan();
-    void stopScan();
-
-    // === Zoom és sávkezelés (orosz alapján) ===
+    void stopScan(); // === Zoom és sávkezelés (orosz alapján) ===
     void calculateScanStep();
     void updateScanParameters();
     void zoomIn();
     void zoomOut();
     void resetZoom();
+    int getCurrentZoomIndex();
+    void getZoomLevels(float *levels, int *count);
     bool isFrequencyInBand(uint32_t frequency);
 
     // === Spektrum kezelés ===
@@ -140,7 +140,7 @@ class ScanScreen : public UIScreen {
     void handleStartStopButton(const UIButton::ButtonEvent &event);
     void handleModeButton(const UIButton::ButtonEvent &event);
     void handleSpeedButton(const UIButton::ButtonEvent &event);
-    void handleScaleButton(const UIButton::ButtonEvent &event); // SCALE/ZOOM gomb
+    void handleZoomButton(const UIButton::ButtonEvent &event); // ZOOM gomb
     void handleBackButton(const UIButton::ButtonEvent &event);
 
     // === Utility metódusok ===

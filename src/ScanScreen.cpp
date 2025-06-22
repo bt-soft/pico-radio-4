@@ -268,6 +268,9 @@ void ScanScreen::startSpectruScan() {
 
         // Gomb állapot frissítése
         updateScanButtonStates();
+
+        // Státusz kijelző frissítése
+        drawScanStatus();
     } else {
         DEBUG("startSpectruScan: Cannot start scan - currentState is not Idle (%d)\n", (int)currentState);
     }
@@ -288,6 +291,9 @@ void ScanScreen::stopScan() {
 
         // Gomb állapot frissítése
         updateScanButtonStates();
+
+        // Státusz kijelző frissítése
+        drawScanStatus();
     }
 }
 
@@ -677,7 +683,7 @@ void ScanScreen::drawSignalInfo() {
 // ===================================================================
 
 /**
- * @brief Spektrum érintés kezelése
+ * @brief Spektrum érintés kezelése (zoom-kompatibilis)
  */
 void ScanScreen::handleSpectrumTouch(uint16_t x, uint16_t y) {
     if (currentState == ScanState::Scanning) {
@@ -685,7 +691,6 @@ void ScanScreen::handleSpectrumTouch(uint16_t x, uint16_t y) {
         return;
     }
 
-    // Orosz logika: touch pozíció kezelése
     clearCursor();
 
     // X koordináta átalakítása relatív pozícióvá
@@ -695,56 +700,20 @@ void ScanScreen::handleSpectrumTouch(uint16_t x, uint16_t y) {
     if (relativeX >= SPECTRUM_WIDTH)
         relativeX = SPECTRUM_WIDTH - 1;
 
-    // Orosz logika: delta és frekvencia számítás
-    float tmpDelta = deltaScanLine;
-    int16_t center = SPECTRUM_WIDTH / 2;      // Széleken túlcsúszás kezelése (arányosan a képernyő szélességével)
-    uint16_t edgeMargin = SPECTRUM_WIDTH / 8; // 12.5% margó, dinamikus
-    if (relativeX < edgeMargin && (currentScanFreq + (int32_t)((deltaScanLine - center) * scanStepFloat)) > (int32_t)scanStartFreq) {
-        deltaScanLine -= (edgeMargin - relativeX);
-    }
-    if (relativeX > (SPECTRUM_WIDTH - edgeMargin) && (currentScanFreq + (int32_t)((deltaScanLine + center) * scanStepFloat)) < (int32_t)scanEndFreq) {
-        deltaScanLine += (relativeX - SPECTRUM_WIDTH + edgeMargin);
-    }
+    // Új frekvencia számítása a zoom-kompatibilis pixelToFrequency függvénnyel
+    uint32_t newFreq = pixelToFrequency(relativeX);
 
-    // Új frekvencia számítása
-    float tmpFreq = currentScanFreq + ((relativeX - center + deltaScanLine) * scanStepFloat);
+    // Kurzor pozíció és frekvencia frissítése
+    currentScanLine = relativeX;
+    currentScanFreq = newFreq;
 
-    // Sáv határok ellenőrzése
-    if (tmpFreq <= scanEndFreq && tmpFreq >= scanStartFreq) {
-        currentScanLine = relativeX;
-    } else {
-        // Határ korrekció
-        if (tmpDelta != deltaScanLine) {
-            if (tmpFreq > scanEndFreq) {
-                deltaScanLine -= ((tmpFreq - scanEndFreq) / scanStepFloat);
-            } else {
-                deltaScanLine += ((scanStartFreq - tmpFreq) / scanStepFloat);
-            }
-            tmpFreq = currentScanFreq + ((relativeX - center + deltaScanLine) * scanStepFloat);
-            currentScanLine = relativeX;
-        }
-    }
-
-    // Frekvencia beállítása ha változott
-    if (tmpDelta != deltaScanLine || tmpFreq != currentScanFreq) {
-        currentScanFreq = (uint32_t)tmpFreq;
-
-        // Spektrum újrarajzolása ha delta változott
-        if (tmpDelta != deltaScanLine) {
-            updateScanParameters();
-            drawSpectrumDisplay();
-        }
-
-        // Rádió frekvencia beállítása
-        if (pSi4735Manager && isFrequencyInBand(currentScanFreq)) {
-            pSi4735Manager->getSi4735().setFrequency(currentScanFreq);
-        }
+    // Rádió frekvencia beállítása
+    if (pSi4735Manager && isFrequencyInBand(currentScanFreq)) {
+        pSi4735Manager->getSi4735().setFrequency(currentScanFreq);
     }
 
     drawCursor();
     drawSignalInfo();
-
-    DEBUG("Touch: x=%d, line=%d, freq=%d, delta=%.2f\n", relativeX, currentScanLine, currentScanFreq, deltaScanLine);
 
     DEBUG("[TOUCH] Line: %d, Freq: %d kHz (Touch X: %d)\n", currentScanLine, currentScanFreq, x);
 }
@@ -766,9 +735,7 @@ void ScanScreen::createScanButtons() {
 
         {ScanButtonIDs::SPEED_BUTTON, "Speed", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
          [this](const UIButton::ButtonEvent &event) { handleSpeedButton(event); }},
-
-        {ScanButtonIDs::SCALE_BUTTON, "Scale", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off,
-         [this](const UIButton::ButtonEvent &event) { handleScaleButton(event); }}};
+        {ScanButtonIDs::SCALE_BUTTON, "Zoom", UIButton::ButtonType::Pushable, UIButton::ButtonState::Off, [this](const UIButton::ButtonEvent &event) { handleZoomButton(event); }}};
 
     // Back gomb (jobb oldal)
     std::vector<UIHorizontalButtonBar::ButtonConfig> backButtonConfigs = {
@@ -871,43 +838,87 @@ void ScanScreen::handleSpeedButton(const UIButton::ButtonEvent &event) {
 }
 
 /**
- * @brief Scale/Zoom gomb kezelése (orosz logika alapján)
+ * @brief Zoom gomb kezelése (orosz logika alapján)
  */
-void ScanScreen::handleScaleButton(const UIButton::ButtonEvent &event) {
-
+void ScanScreen::handleZoomButton(const UIButton::ButtonEvent &event) {
     if (event.state == UIButton::EventButtonState::Clicked) {
-        // Scan alatt ne engedjük a zoom/scale változtatást
+        // Scan alatt ne engedjük a zoom változtatást
         if (currentState == ScanState::Scanning) {
-            DEBUG("[SCALE] Scale/Zoom ignored during scanning\n");
+            DEBUG("[ZOOM] Zoom ignored during scanning\n");
             return;
         }
 
-        // Kurzor pozíció újraszámítása zoom után
-        deltaScanLine += currentScanLine - SPECTRUM_WIDTH / 2;
-        currentScanLine = SPECTRUM_WIDTH / 2;
-
-        // Zoom váltás (orosz logika: step duplikálás)
+        // Kurzor frekvencia mentése zoom előtt
+        uint32_t cursorFreq = currentScanFreq; // Körkörös zoom logika - diszkrét zoom szintek használata
         float oldStep = scanStepFloat;
-        scanStepFloat *= 2.0;
-        if (scanStepFloat > currentMaxScanStep) {
-            scanStepFloat = currentMinScanStep;
-            if (oldStep == currentMaxScanStep) {
-                deltaScanLine *= (currentMaxScanStep / currentMinScanStep);
-            }
-        }
-        scanStep = (uint16_t)scanStepFloat;
-        updateScanParameters();
 
-        // Teljes képernyő újrarajzolása skála változás után
+        // Zoom szintek lekérése
+        float zoomLevels[10];
+        int numZoomLevels;
+        getZoomLevels(zoomLevels, &numZoomLevels);
+
+        // Aktuális zoom szint megkeresése
+        int currentZoomIndex = getCurrentZoomIndex();
+        // Következő zoom szintre váltás (körkörös)
+        currentZoomIndex = (currentZoomIndex + 1) % numZoomLevels;
+        scanStepFloat = zoomLevels[currentZoomIndex];
+        scanStep = (uint16_t)scanStepFloat;
+
+        DEBUG("[ZOOM] Circular zoom: level %d/%d, step %.2f -> %.2f kHz\n", currentZoomIndex + 1, numZoomLevels, oldStep, scanStepFloat);
+
+        // ZOOM LOGIKA: A spektrum tartomány újraszámítása a kurzor körül
+        // Az új zoom tartomány a kurzor frekvencia körül lesz központosítva
+        uint32_t halfRange = (SPECTRUM_WIDTH / 2) * scanStepFloat;
+        uint32_t bandMin = getBandMinFreq();
+        uint32_t bandMax = getBandMaxFreq();
+
+        // Új zoom tartomány számítása
+        uint32_t zoomStartFreq = (cursorFreq > halfRange) ? (cursorFreq - halfRange) : bandMin;
+        uint32_t zoomEndFreq = (cursorFreq + halfRange < bandMax) ? (cursorFreq + halfRange) : bandMax;
+
+        // Határok korrekciója
+        if (zoomStartFreq < bandMin)
+            zoomStartFreq = bandMin;
+        if (zoomEndFreq > bandMax)
+            zoomEndFreq = bandMax;
+        if (zoomEndFreq - zoomStartFreq < SPECTRUM_WIDTH * scanStepFloat) {
+            // Ha túl kicsi a tartomány, növeljük
+            uint32_t needed = SPECTRUM_WIDTH * scanStepFloat;
+            if (cursorFreq + needed / 2 <= bandMax && cursorFreq >= needed / 2) {
+                zoomStartFreq = cursorFreq - needed / 2;
+                zoomEndFreq = cursorFreq + needed / 2;
+            }
+        } // Eredeti tartomány mentése és zoom tartomány beállítása
+        scanStartFreq = zoomStartFreq;
+        scanEndFreq = zoomEndFreq;
+
+        // Kurzor pozíció újraszámítása az új tartományban
+        currentScanFreq = cursorFreq;         // Kurzor frekvencia marad ugyanaz
+        currentScanLine = SPECTRUM_WIDTH / 2; // Kurzor a képernyő közepére        deltaScanLine = 0.0; // Delta nullázása
+
+        DEBUG("ZOOM: New range %d-%d kHz, cursor at %d kHz\n", scanStartFreq, scanEndFreq, cursorFreq);
+
+        // Spektrum adatok törlése - zoom után új tartomány, régi adatok érvénytelenek
+        resetSpectrumData();
+
+        // Frekvencia skála újraszámítása az új zoom szinthez
+        drawFrequencyScale(); // Csak a spektrum terület újrarajzolása (nem a gombokat!)
         drawSpectrumBackground();
-        drawFrequencyScale();
         drawFrequencyLabels();
         drawSpectrumDisplay();
         drawCursor();
         drawSignalInfo();
         drawScanStatus();
 
-        DEBUG("Scale button: step %.2f -> %.2f kHz - display refreshed\n", oldStep, scanStepFloat);
+        // Band információ frissítése az új tartománnyal
+        tft.setTextSize(1);
+        tft.fillRect(0, 35, tft.width(), 15, TFT_BLACK); // Töröljük a régi band infót
+        String bandInfo = getBandName() + " BAND (" + formatFrequency(scanStartFreq) + " - " + formatFrequency(scanEndFreq) + ")";
+        tft.setTextColor(TFT_WHITE, TFT_BLACK);
+        tft.setTextDatum(TC_DATUM);
+        tft.drawString(bandInfo, tft.width() / 2, 35);
+
+        DEBUG("Zoom button: step %.2f -> %.2f kHz, cursor centered at %d kHz\n", oldStep, scanStepFloat, cursorFreq);
     }
 }
 
@@ -962,13 +973,16 @@ void ScanScreen::calculateScanParameters() {
     } else {
         currentMinScanStep = minScanStep;
         currentMaxScanStep = maxScanStep;
-    }
-
-    // Kezdő scan step beállítása
-    scanStepFloat = currentMaxScanStep / 2.0;
+    } // Kezdő scan step beállítása - középső zoom szinttel indítunk
+    float zoomLevels[10];
+    int numZoomLevels;
+    getZoomLevels(zoomLevels, &numZoomLevels);
+    int initialZoomIndex = numZoomLevels / 2; // Középső zoom szint
+    scanStepFloat = zoomLevels[initialZoomIndex];
     scanStep = (uint16_t)scanStepFloat;
 
-    DEBUG("Scan parameters: %d-%d kHz, step %.2f kHz (range: %.2f-%.2f)\n", scanStartFreq, scanEndFreq, scanStepFloat, currentMinScanStep, currentMaxScanStep);
+    DEBUG("Scan parameters: %d-%d kHz, initial zoom level %d/%d, step %.2f kHz (range: %.2f-%.2f)\n", scanStartFreq, scanEndFreq, initialZoomIndex + 1, numZoomLevels,
+          scanStepFloat, currentMinScanStep, currentMaxScanStep);
 }
 
 /**
@@ -1005,15 +1019,15 @@ uint16_t ScanScreen::snrToColor(uint8_t snr) {
 }
 
 /**
- * @brief Pixel X pozíció frekvenciává konvertálása (orosz logika)
+ * @brief Pixel X pozíció frekvenciává konvertálása (zoom-kompatibilis)
  */
 uint32_t ScanScreen::pixelToFrequency(uint16_t pixelX) {
     if (pixelX >= SPECTRUM_WIDTH)
         pixelX = SPECTRUM_WIDTH - 1;
 
-    // Orosz logika: currentScanFreq + ((pixelX - center + delta) * step)
-    int16_t center = SPECTRUM_WIDTH / 2;
-    float freq = currentScanFreq + ((pixelX - center + deltaScanLine) * scanStepFloat);
+    // Lineáris interpoláció a jelenlegi spektrum tartományban (zoom-kompatibilis)
+    uint32_t freqRange = scanEndFreq - scanStartFreq;
+    uint32_t freq = scanStartFreq + (pixelX * freqRange) / (SPECTRUM_WIDTH - 1);
 
     // Sáv határok ellenőrzése
     if (freq < scanStartFreq)
@@ -1021,23 +1035,30 @@ uint32_t ScanScreen::pixelToFrequency(uint16_t pixelX) {
     if (freq > scanEndFreq)
         freq = scanEndFreq;
 
-    return (uint32_t)freq;
+    return freq;
 }
 
 /**
- * @brief Frekvencia pixel X pozícióvá konvertálása (orosz logika)
+ * @brief Frekvencia pixel X pozícióvá konvertálása (zoom-kompatibilis)
  */
 uint16_t ScanScreen::frequencyToPixel(uint32_t frequency) {
-    // Orosz logika: (freq - currentScanFreq) / step + center - delta
-    int16_t center = SPECTRUM_WIDTH / 2;
-    float pixelX = ((float)frequency - currentScanFreq) / scanStepFloat + center - deltaScanLine;
-
-    if (pixelX < 0)
+    // Lineáris interpoláció a jelenlegi spektrum tartományban (zoom-kompatibilis)
+    if (frequency <= scanStartFreq)
         return 0;
+    if (frequency >= scanEndFreq)
+        return SPECTRUM_WIDTH - 1;
+
+    uint32_t freqRange = scanEndFreq - scanStartFreq;
+    if (freqRange == 0)
+        return SPECTRUM_WIDTH / 2;
+
+    uint32_t relativeFreq = frequency - scanStartFreq;
+    uint16_t pixelX = (relativeFreq * (SPECTRUM_WIDTH - 1)) / freqRange;
+
     if (pixelX >= SPECTRUM_WIDTH)
         return SPECTRUM_WIDTH - 1;
 
-    return (uint16_t)pixelX;
+    return pixelX;
 }
 
 /**
@@ -1183,9 +1204,9 @@ void ScanScreen::zoomIn() {
         scanStepFloat = currentMaxScanStep; // Körkörös visszatérés
         deltaScanLine *= (currentMaxScanStep / currentMinScanStep);
     }
-
     scanStep = (uint16_t)scanStepFloat;
     updateScanParameters();
+    resetSpectrumData(); // Spektrum adatok törlése zoom után
     drawSpectrumDisplay();
 
     DEBUG("Zoom in: step=%.2f kHz\n", scanStepFloat);
@@ -1209,9 +1230,9 @@ void ScanScreen::zoomOut() {
             deltaScanLine *= (currentMaxScanStep / currentMinScanStep);
         }
     }
-
     scanStep = (uint16_t)scanStepFloat;
     updateScanParameters();
+    resetSpectrumData(); // Spektrum adatok törlése zoom után
     drawSpectrumDisplay();
 
     DEBUG("Zoom out: step=%.2f kHz\n", scanStepFloat);
@@ -1227,9 +1248,40 @@ void ScanScreen::resetZoom() {
     currentScanLine = SPECTRUM_WIDTH / 2;
 
     updateScanParameters();
+    resetSpectrumData(); // Spektrum adatok törlése zoom reset után
     drawSpectrumDisplay();
 
     DEBUG("Zoom reset: step=%.2f kHz\n", scanStepFloat);
+}
+
+/**
+ * @brief Zoom szintek lekérése
+ */
+void ScanScreen::getZoomLevels(float *levels, int *count) {
+    static float zoomLevels[] = {currentMinScanStep, currentMinScanStep * 2.0f, currentMinScanStep * 4.0f, currentMinScanStep * 8.0f, currentMaxScanStep};
+    *count = sizeof(zoomLevels) / sizeof(zoomLevels[0]);
+    for (int i = 0; i < *count; i++) {
+        levels[i] = zoomLevels[i];
+    }
+}
+
+/**
+ * @brief Aktuális zoom szint index lekérése
+ */
+int ScanScreen::getCurrentZoomIndex() {
+    float zoomLevels[10];
+    int numZoomLevels;
+    getZoomLevels(zoomLevels, &numZoomLevels);
+
+    // Aktuális zoom szint megkeresése
+    for (int i = 0; i < numZoomLevels; i++) {
+        if (abs(scanStepFloat - zoomLevels[i]) < 0.01f) {
+            return i;
+        }
+    }
+
+    // Ha nem találjuk, visszaadjuk a középső szintet
+    return numZoomLevels / 2;
 }
 
 /**
