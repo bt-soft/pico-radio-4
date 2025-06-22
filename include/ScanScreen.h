@@ -62,100 +62,13 @@ class ScanScreen : public UIScreen {
     bool handleRotary(const RotaryEvent &event) override;
 
   private:
-    // === Scan paraméterek ===
-    static constexpr uint8_t SPECTRUM_MARGIN = 5;    ///< Spektrum grafikon bal és jobb margója (5px)
-    uint16_t SPECTRUM_WIDTH;                         ///< Spektrum grafikon szélessége (dinamikusan számított)
-    static constexpr uint16_t SPECTRUM_HEIGHT = 120; ///< Spektrum grafikon magassága (pixel)
-    uint16_t SPECTRUM_X;                             ///< Spektrum grafikon X pozíciója (dinamikusan számított)
-    static constexpr uint16_t SPECTRUM_Y = 80;       ///< Spektrum grafikon Y pozíciója
+    static constexpr uint8_t BACK_BUTTON_ID = 40;
 
-    static constexpr uint16_t CURSOR_COLOR = TFT_RED;     ///< Kurzor színe
-    static constexpr uint16_t RSSI_COLOR = TFT_WHITE;     ///< RSSI vonal színe (fehér, jól látható)
-    static constexpr uint16_t SCALE_COLOR = TFT_DARKGREY; ///< Skála vonalak színe
-    static constexpr uint16_t MARK_COLOR = TFT_YELLOW;    ///< Erős állomás jelölés színe
-    static constexpr uint8_t SIGNAL_SAMPLES = 3;          ///< Jelerősség mérési minták száma    // === Állapot változók ===
-    ScanState currentState;                               ///< Jelenlegi scan állapot
-    ScanMode currentMode;                                 ///< Jelenlegi scan mód
-    uint32_t scanStartFreq;                               ///< Scan kezdő frekvencia (kHz)
-    uint32_t scanEndFreq;                                 ///< Scan vég frekvencia (kHz)
-    uint32_t currentScanFreq;                             ///< Aktuális scan frekvencia (kHz)
-    uint16_t scanStep;                                    ///< Scan lépésköz (kHz)
-    uint16_t currentScanLine;                             ///< Aktuális pozíció a spektrumban (0-SPECTRUM_WIDTH-1)
-    uint16_t previousScanLine;                            ///< Előző kurzor pozíció törléshez
-    int16_t deltaLine;                                    ///< Eltolás a spektrumban
-    uint32_t lastScanUpdate;                              ///< Utolsó scan frissítés ideje
-    uint16_t scanSpeed;                                   ///< Scan sebesség (ms/lépés)
+    std::shared_ptr<UIButton> backButton;
 
-    // === Zoom és sávkezelés (orosz alapján) ===
-    float scanStepFloat;                                  ///< Floating point scan step (kHz/pixel)
-    float minScanStep;                                    ///< Minimum scan step
-    float maxScanStep;                                    ///< Maximum scan step
-    bool autoScanStep;                                    ///< Automatikus scan step számítás
-    float currentMinScanStep;                             ///< Aktuális minimum scan step
-    float currentMaxScanStep;                             ///< Aktuális maximum scan step
-    int16_t scanBeginBand;                                ///< Sáv eleje a spektrumban (-1 ha nincs)
-    int16_t scanEndBand;                                  ///< Sáv vége a spektrumban
-    float deltaScanLine;                                  ///< Float delta line az orosz logika szerint    // === Spektrum adatok ===
-    std::vector<uint8_t> spectrumRSSI;                    ///< RSSI értékek (0-SPECTRUM_WIDTH-1)
-    std::vector<uint8_t> spectrumSNR;                     ///< SNR értékek (0-SPECTRUM_WIDTH-1)
-    std::vector<bool> stationMarks;                       ///< Erős állomás jelölések
-    std::vector<uint8_t> scaleLines;                      ///< Skála vonalak típusai
-    uint8_t snrThreshold;                                 ///< SNR küszöb erős állomásokhoz    // === UI komponensek ===
-    std::shared_ptr<UIHorizontalButtonBar> scanButtonBar; ///< Fő gombok (Scan, Mode, Speed, Scale)
-    std::shared_ptr<UIHorizontalButtonBar> backButtonBar; ///< Back gomb (jobb oldal)// === Scan kontroll metódusok ===
-    void startSpectruScan();
-    void stopScan(); // === Zoom és sávkezelés (orosz alapján) ===
-    int getCurrentZoomIndex();
-    void getZoomLevels(float *levels, int *count);
-
-    // === Spektrum kezelés ===
-    void updateSpectrum();
-    void measureSignalAtCurrentFreq();
-    void moveToNextFrequency();
-
-    // === Grafikus megjelenítés ===
-    void drawSpectrumDisplay();
-    void drawSpectrumLine(uint16_t lineIndex);
-    void drawCursor();
-    void clearCursor();
-    void drawFrequencyScale();
-    void drawFrequencyLabels();
-    void drawSpectrumBackground();
-    void drawSignalInfo();
-    void drawScanStatus();
-
-    // === Érintés kezelés ===
-    void handleSpectrumTouch(uint16_t x, uint16_t y);
-    uint32_t pixelToFrequency(uint16_t pixelX);
-    uint16_t frequencyToPixel(uint32_t frequency); // === Gomb események ===
-    void createScanButtons();
-    void handleStartStopButton(const UIButton::ButtonEvent &event);
-    void handleModeButton(const UIButton::ButtonEvent &event);
-    void handleSpeedButton(const UIButton::ButtonEvent &event);
-    void handleZoomButton(const UIButton::ButtonEvent &event); // ZOOM gomb
-    void handleBackButton(const UIButton::ButtonEvent &event);
-
-    // === Utility metódusok ===
-    void calculateInitialScanParameters();
-    void resetSpectrumData();
-    uint16_t rssiToPixelY(uint8_t rssi);
-    uint16_t snrToColor(uint8_t snr);
-    String formatFrequency(uint32_t frequency);
-    void updateScanButtonStates();
-
-    // === Band információ ===
-    uint32_t getBandMinFreq();
-    uint32_t getBandMaxFreq();
-    String getBandName();
+    // Metódusok
+    void layoutComponents();
+    void createHorizontalButtonBar();
 };
-
-// Gomb azonosítók
-namespace ScanButtonIDs {
-constexpr uint8_t START_STOP_BUTTON = 1;
-constexpr uint8_t MODE_BUTTON = 2;
-constexpr uint8_t SPEED_BUTTON = 3;
-constexpr uint8_t SCALE_BUTTON = 4; // SCALE/ZOOM gomb
-constexpr uint8_t BACK_BUTTON = 5;
-} // namespace ScanButtonIDs
 
 #endif // __SCANSCREEN_H
