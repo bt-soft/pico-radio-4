@@ -109,12 +109,17 @@ class RDSComponent : public UIComponent {
     /**
      * @brief Scroll sprite felszabadítása
      */
-    void cleanupScrollSprite();
+    void cleanupScrollSprite(); /**
+                                 * @brief Radio text scroll kezelése
+                                 */
+    void handleRadioTextScroll();
 
     /**
-     * @brief Radio text scroll kezelése
+     * @brief Radio text feldolgozása - többszörös szóközök kezelése
+     * @param radioText A feldolgozandó radio text
+     * @return String A feldolgozott radio text
      */
-    void handleRadioTextScroll();
+    String processRadioText(const String &radioText);
 
     /**
      * @brief Alapértelmezett layout számítása
