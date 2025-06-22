@@ -200,9 +200,7 @@ bool ScanScreen::handleTouch(const TouchEvent &event) {
         // Pixel pozíciót adatponttá konvertálás
         uint16_t relativeDataPos = (relativePixelX * SCAN_RESOLUTION) / SCAN_AREA_WIDTH;
 
-        DEBUG("Touch: relativePixelX=%d, relativeDataPos=%d, currentScanPos=%d\n", relativePixelX, relativeDataPos, currentScanPos);
-
-        // Ha más pozíció, mint a jelenlegi
+        DEBUG("Touch: relativePixelX=%d, relativeDataPos=%d, currentScanPos=%d\n", relativePixelX, relativeDataPos, currentScanPos); // Ha más pozíció, mint a jelenlegi
         if (relativeDataPos != currentScanPos) {
             // Ha scan fut, előbb pause-oljuk
             if (!scanPaused) {
@@ -210,20 +208,27 @@ bool ScanScreen::handleTouch(const TouchEvent &event) {
                 pauseScan();
             }
 
-            // Régi pozíció újrarajzolása kurzor nélkül (pixel koordinátában)
+            // Régi pozíció pixel koordinátája
             uint16_t oldPixelPos = (currentScanPos * SCAN_AREA_WIDTH) / SCAN_RESOLUTION;
-            drawSpectrumLine(oldPixelPos);
 
             // Új pozíció beállítása (adatpont koordinátában)
             currentScanPos = relativeDataPos;
+
+            // Új pixel pozíció számítása
+            uint16_t newPixelPos = (currentScanPos * SCAN_AREA_WIDTH) / SCAN_RESOLUTION;
 
             // Új pozíció frekvenciájának beállítása
             uint32_t newFreq = positionToFreq(currentScanPos);
             setFrequency(newFreq);
 
-            // Új pozíció rajzolása kurzorozva (pixel koordinátában - újraszámított!)
-            uint16_t newPixelPos = (currentScanPos * SCAN_AREA_WIDTH) / SCAN_RESOLUTION;
-            drawSpectrumLine(newPixelPos);
+            // Ha más pixelnél vagyunk, rajzoljuk újra mindkettőt (ugyanúgy, mint a rotary-nál)
+            if (oldPixelPos != newPixelPos) {
+                drawSpectrumLine(oldPixelPos); // Régi törlése
+                drawSpectrumLine(newPixelPos); // Új rajzolása kurzorozva
+            } else {
+                // Ugyanazon a pixelen belül vagyunk, csak újrarajzoljuk
+                drawSpectrumLine(newPixelPos);
+            }
 
             // Info frissítése
             drawScanInfo();
@@ -511,19 +516,12 @@ void ScanScreen::drawSpectrum() {
     // Spektrum terület törlése
     tft.fillRect(SCAN_AREA_X, SCAN_AREA_Y, SCAN_AREA_WIDTH, SCAN_AREA_HEIGHT, TFT_COLOR_BACKGROUND);
 
-    DEBUG("drawSpectrum: scanPaused=%d, currentScanPos=%d, scanEmpty=%d\n", scanPaused, currentScanPos, scanEmpty);
-
-    // Összes spektrum vonal rajzolása
     int linesDrawn = 0;
     for (int x = 0; x < SCAN_AREA_WIDTH; x++) {
-        // Pixel pozíció konvertálása data pozícióra
-        uint16_t dataPos = (x * SCAN_RESOLUTION) / SCAN_AREA_WIDTH;
-
         // Rajzoljuk ki a vonalakat - oliva vonalak mindig látszanak
         drawSpectrumLine(x);
         linesDrawn++;
     }
-    DEBUG("drawSpectrum: drew %d lines\n", linesDrawn);
 }
 
 void ScanScreen::drawSpectrumLine(uint16_t pixelX) {
@@ -630,8 +628,8 @@ void ScanScreen::drawSpectrumLine(uint16_t pixelX) {
     // RSSI háttér rajzolása
     int16_t rssiY = avgRSSI;
     if (rssiY >= SCAN_AREA_Y + SCAN_AREA_HEIGHT) {
-        // Nincs jel, csak fekete háttér
-        tft.drawLine(screenX, SCAN_AREA_Y, screenX, SCAN_AREA_Y + SCAN_AREA_HEIGHT, TFT_COLOR_BACKGROUND);
+        // Nincs jel - használjuk a megfelelő háttérszínt (oliva vonalaknál TFT_OLIVE)
+        tft.drawLine(screenX, SCAN_AREA_Y, screenX, SCAN_AREA_Y + SCAN_AREA_HEIGHT, bgColor);
     } else {
         // Van mért jel, normál megjelenítés
         if (rssiY < SCAN_AREA_Y + 10)
@@ -641,12 +639,7 @@ void ScanScreen::drawSpectrumLine(uint16_t pixelX) {
         tft.drawLine(screenX, SCAN_AREA_Y, screenX, rssiY - 1, bgColor);
     }
 
-    // Skála vonalak rajzolása
-    if (isMainScale) {
-        tft.drawLine(screenX, SCAN_AREA_Y, screenX, SCAN_AREA_Y + 15, TFT_OLIVE);
-    }
-
-    // RSSI görbe rajzolása (simított)
+    // RSSI görbe rajzolása (simított) - ELŐBB, hogy a skála vonalak fedjenek
     if (rssiY < SCAN_AREA_Y + SCAN_AREA_HEIGHT && pixelX > 0) {
         // Előző pixel átlagolt RSSI értéke
         uint16_t prevDataStart = ((pixelX - 1) * SCAN_RESOLUTION) / SCAN_AREA_WIDTH;
@@ -673,14 +666,21 @@ void ScanScreen::drawSpectrumLine(uint16_t pixelX) {
         }
     }
 
+    // Skála vonalak rajzolása - UTOLJÁRA, hogy mindig látszanak
+    if (isMainScale) {
+        tft.drawLine(screenX, SCAN_AREA_Y, screenX, SCAN_AREA_Y + 15, TFT_OLIVE);
+    }
+
     // Aktuális pozíció jelzése (pixel koordinátákban)
     uint16_t currentPixelPos = (currentScanPos * SCAN_AREA_WIDTH) / SCAN_RESOLUTION;
     if (pixelX == currentPixelPos) {
         tft.drawLine(screenX, SCAN_AREA_Y, screenX, SCAN_AREA_Y + SCAN_AREA_HEIGHT, TFT_RED);
-    } // Állomás jelzők
+    }
+
+    // Állomás jelzők
     if (hasStation) {
-        tft.fillCircle(screenX, SCAN_AREA_Y + 5, 2, TFT_WHITE);
-        tft.fillCircle(screenX, SCAN_AREA_Y + 10, 2, TFT_WHITE);
+        tft.fillCircle(screenX, SCAN_AREA_Y + 5, 1, TFT_GREEN);
+        tft.fillCircle(screenX, SCAN_AREA_Y + 10, 1, TFT_GREEN);
     }
 
     // Debug info (csak első néhány pixelhez)
@@ -900,8 +900,10 @@ void ScanScreen::setFrequency(uint32_t freq) {
 
 void ScanScreen::zoomIn() {
     float newZoom = zoomLevel * 1.5f;
-    if (newZoom <= 10.0f) {
+    if (newZoom <= 5.0f) { // Csökkentett maximális zoom szint a stabilitás érdekében
         handleZoom(newZoom);
+    } else {
+        DEBUG("Zoom limit reached - maximum zoom is 5.0x\n");
     }
 }
 
@@ -909,12 +911,35 @@ void ScanScreen::zoomOut() {
     float newZoom = zoomLevel / 1.5f;
     if (newZoom >= 1.0f) { // Ne zoómoljunk ki a teljes sávnál jobban
         handleZoom(newZoom);
+    } else {
+        DEBUG("Zoom limit reached - cannot zoom out beyond 1.0x\n");
     }
 }
 
 void ScanScreen::handleZoom(float newZoomLevel) {
     if (!pSi4735Manager)
         return;
+
+    // Érvényesség ellenőrzése
+    if (newZoomLevel < 0.5f || newZoomLevel > 10.0f) {
+        DEBUG("Invalid zoom level: %.2f - must be between 0.5x and 10.0x\n", newZoomLevel);
+        return;
+    }
+
+    // Ha már ugyanez a zoom szint van beállítva, ne csináljunk semmit
+    if (abs(zoomLevel - newZoomLevel) < 0.01f) {
+        DEBUG("Zoom level already set to %.2f\n", newZoomLevel);
+        return;
+    }
+
+    // Debounce védelem - ne lehessen túl gyorsan zoom-olni
+    static uint32_t lastZoomTime = 0;
+    uint32_t currentTime = millis();
+    if (currentTime - lastZoomTime < 500) { // 500ms minimális várakozás
+        DEBUG("Zoom debounce: too fast, ignoring\n");
+        return;
+    }
+    lastZoomTime = currentTime;
 
     // Ne lehessen kizoómolni a teljes sávnál jobban
     if (newZoomLevel < 1.0f) {
@@ -953,7 +978,9 @@ void ScanScreen::handleZoom(float newZoomLevel) {
         if (newScanStart < bandStartFreq) {
             newScanStart = bandStartFreq;
         }
-    } // Minimális zoom ellenőrzés (ne legyen túl kicsi a tartomány)
+    }
+
+    // Minimális zoom ellenőrzés (ne legyen túl kicsi a tartomány)
     uint32_t minBandwidth = totalBandwidth / 10; // Minimum a teljes sáv 10%-a
     if (minBandwidth < 500)
         minBandwidth = 500; // De legalább 500 kHz
@@ -961,22 +988,96 @@ void ScanScreen::handleZoom(float newZoomLevel) {
     if (newScanEnd - newScanStart < minBandwidth) {
         DEBUG("Zoom limit reached - minimum bandwidth: %d kHz\n", minBandwidth);
         return;
-    }
+    } // Régi értékek mentése az adatok újrafelhasználásához
+    uint32_t oldScanStartFreq = scanStartFreq;
+    uint32_t oldScanEndFreq = scanEndFreq;
+    float oldScanStep = scanStep;
 
     // Értékek frissítése
     zoomLevel = newZoomLevel;
     scanStartFreq = newScanStart;
     scanEndFreq = newScanEnd;
 
-    calculateScanParameters();
+    // Új scan paraméterek számítása
+    calculateScanParameters(); // INTELLIGENS ADATMEGŐRZÉS: Ellenőrizzük, hogy a régi adatok újrafelhasználhatók-e
+    bool canReuseData = false;
 
-    // Zoom után csak a spektrum adatokat inicializáljuk újra, ne a teljes UI-t
-    scanEmpty = true;
-    currentScanPos = 0; // Adatok törlése
+    // Csak zoom IN esetén (szűkítés) próbálunk adatokat megőrizni
+    // És csak akkor, ha az új tartomány teljesen a régi tartományon belül van
+    if (newScanStart >= oldScanStartFreq && newScanEnd <= oldScanEndFreq && !scanEmpty) {
+        canReuseData = true;
+        DEBUG("Zoom IN: Can reuse existing data - new range is subset of old range\n");
+    }
+    if (canReuseData) {
+        DEBUG("Zoom: Starting SAFE in-place data reuse process\n");
+
+        // BIZTONSÁGOS MEGKÖZELÍTÉS: In-place adatmozgatás batch-enként
+        // Először létrehozunk egy "mapping" tömböt, ami megmondja, melyik régi index melyik új indexre kerül
+
+        // Határozunk fel egy kis buffer-t (csak 10 elem)
+        const int BUFFER_SIZE = 10;
+        uint8_t bufferRSSI[BUFFER_SIZE];
+        uint8_t bufferSNR[BUFFER_SIZE];
+        bool bufferMark[BUFFER_SIZE];
+
+        // Először jelöljük meg, mely pozíciók tartalmazzanak érvényes adatokat
+        // és végezzük el a másolást batch-enként
+
+        for (int targetStart = 0; targetStart < SCAN_RESOLUTION; targetStart += BUFFER_SIZE) {
+            int targetEnd = min(targetStart + BUFFER_SIZE, SCAN_RESOLUTION);
+
+            // Buffer feltöltése az új pozíciókra szánt adatokkal
+            for (int t = targetStart; t < targetEnd; t++) {
+                int bufferIndex = t - targetStart;
+                uint32_t targetFreq = scanStartFreq + (uint32_t)(t * scanStep);
+
+                // Alapértelmezett értékek
+                bufferRSSI[bufferIndex] = SCAN_AREA_Y + SCAN_AREA_HEIGHT;
+                bufferSNR[bufferIndex] = 0;
+                bufferMark[bufferIndex] = false;
+
+                // Keressük meg a régi pozíciót
+                if (targetFreq >= oldScanStartFreq && targetFreq <= oldScanEndFreq) {
+                    float oldPosFloat = (float)(targetFreq - oldScanStartFreq) / oldScanStep;
+                    int oldPos = (int)(oldPosFloat + 0.5f);
+
+                    if (oldPos >= 0 && oldPos < SCAN_RESOLUTION) {
+                        bufferRSSI[bufferIndex] = scanValueRSSI[oldPos];
+                        bufferSNR[bufferIndex] = scanValueSNR[oldPos];
+                        bufferMark[bufferIndex] = scanMark[oldPos];
+                    }
+                }
+            }
+
+            // Buffer tartalom visszamásolása
+            for (int t = targetStart; t < targetEnd; t++) {
+                int bufferIndex = t - targetStart;
+                scanValueRSSI[t] = bufferRSSI[bufferIndex];
+                scanValueSNR[t] = bufferSNR[bufferIndex];
+                scanMark[t] = bufferMark[bufferIndex];
+            }
+        }
+
+        scanEmpty = false;
+        DEBUG("Zoom: Data reused successfully with safe in-place processing\n");
+    }
+
+    if (!canReuseData) {
+        // Ha nem lehet újrafelhasználni, törölni kell az adatokat
+        DEBUG("Zoom: Cannot reuse data - clearing all data\n");
+        scanEmpty = true;
+        for (int i = 0; i < SCAN_RESOLUTION; i++) {
+            scanValueRSSI[i] = SCAN_AREA_Y + SCAN_AREA_HEIGHT; // Spektrum alján kezdjük (nincs látható jel)
+            scanValueSNR[i] = 0;
+            scanMark[i] = false;
+        }
+    }
+
+    // Közös inicializálás
+    currentScanPos = 0;
+
+    // Skála vonalak újraszámítása (mindig szükséges zoom után)
     for (int i = 0; i < SCAN_RESOLUTION; i++) {
-        scanValueRSSI[i] = SCAN_AREA_Y + SCAN_AREA_HEIGHT; // Spektrum alján kezdjük (nincs látható jel)
-        scanValueSNR[i] = 0;
-        scanMark[i] = false;
         scanScaleLine[i] = 0;
     }
 
