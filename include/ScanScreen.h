@@ -128,6 +128,7 @@ class ScanScreen : public UIScreen {
     void drawScale();
     void drawFrequencyLabels();
     void drawBandBoundaries();
+    void drawStaticLabels();
     void drawScanInfo();
     void drawSignalInfo();
     int16_t getSignalRSSI();
