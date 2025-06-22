@@ -630,13 +630,18 @@ void ScanScreen::clearCursor() {
  * @brief Scan státusz kirajzolása
  */
 void ScanScreen::drawScanStatus() {
-    uint16_t statusY = SPECTRUM_Y + SPECTRUM_HEIGHT + 20; // 20 pixel lejjebb a címkék után
+    uint16_t statusY = SPECTRUM_Y + SPECTRUM_HEIGHT + 50; // 50 pixel lejjebb a skála címkék után
+
+    // Háttér törlése a status sornak (teljes szélesség)
+    tft.fillRect(0, statusY, tft.width(), 15, TFT_BLACK);
 
     // Font inicializálása
     tft.setFreeFont();
     tft.setTextSize(1);
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.setTextDatum(TL_DATUM); // Állapot
+    tft.setTextDatum(TL_DATUM);
+
+    // Állapot
     String status;
     switch (currentState) {
         case ScanState::Idle:
@@ -657,7 +662,10 @@ void ScanScreen::drawScanStatus() {
  * @brief Jel információk kirajzolása
  */
 void ScanScreen::drawSignalInfo() {
-    uint16_t infoY = SPECTRUM_Y + SPECTRUM_HEIGHT + 35; // 35 pixel lejjebb
+    uint16_t infoY = SPECTRUM_Y + SPECTRUM_HEIGHT + 65; // 65 pixel lejjebb, status után
+
+    // Háttér törlése a signal info sornak (teljes szélesség)
+    tft.fillRect(0, infoY, tft.width(), 15, TFT_BLACK);
 
     // Font inicializálása
     tft.setFreeFont();
@@ -868,33 +876,48 @@ void ScanScreen::handleZoomButton(const UIButton::ButtonEvent &event) {
 
         // ZOOM LOGIKA: A spektrum tartomány újraszámítása a kurzor körül
         // Az új zoom tartomány a kurzor frekvencia körül lesz központosítva
-        uint32_t halfRange = (SPECTRUM_WIDTH / 2) * scanStepFloat;
         uint32_t bandMin = getBandMinFreq();
         uint32_t bandMax = getBandMaxFreq();
 
-        // Új zoom tartomány számítása
-        uint32_t zoomStartFreq = (cursorFreq > halfRange) ? (cursorFreq - halfRange) : bandMin;
-        uint32_t zoomEndFreq = (cursorFreq + halfRange < bandMax) ? (cursorFreq + halfRange) : bandMax;
+        // Új zoom tartomány számítása a scan step alapján
+        uint32_t newRangeSize = (uint32_t)(SPECTRUM_WIDTH * scanStepFloat);
+        uint32_t halfNewRange = newRangeSize / 2;
 
-        // Határok korrekciója
+        // Kurzor körüli zoom tartomány
+        uint32_t zoomStartFreq, zoomEndFreq;
+
+        if (cursorFreq >= halfNewRange && cursorFreq + halfNewRange <= bandMax) {
+            // Normál eset: kurzor körül lehet zoomolni
+            zoomStartFreq = cursorFreq - halfNewRange;
+            zoomEndFreq = cursorFreq + halfNewRange;
+        } else if (cursorFreq < halfNewRange) {
+            // Bal szélen vagyunk: bal szélről indulunk
+            zoomStartFreq = bandMin;
+            zoomEndFreq = bandMin + newRangeSize;
+            if (zoomEndFreq > bandMax)
+                zoomEndFreq = bandMax;
+        } else {
+            // Jobb szélen vagyunk: jobb szélről indulunk
+            zoomEndFreq = bandMax;
+            zoomStartFreq = bandMax - newRangeSize;
+            if (zoomStartFreq < bandMin)
+                zoomStartFreq = bandMin;
+        }
+
+        // Sáv határok ellenőrzése
         if (zoomStartFreq < bandMin)
             zoomStartFreq = bandMin;
         if (zoomEndFreq > bandMax)
             zoomEndFreq = bandMax;
-        if (zoomEndFreq - zoomStartFreq < SPECTRUM_WIDTH * scanStepFloat) {
-            // Ha túl kicsi a tartomány, növeljük
-            uint32_t needed = SPECTRUM_WIDTH * scanStepFloat;
-            if (cursorFreq + needed / 2 <= bandMax && cursorFreq >= needed / 2) {
-                zoomStartFreq = cursorFreq - needed / 2;
-                zoomEndFreq = cursorFreq + needed / 2;
-            }
-        } // Eredeti tartomány mentése és zoom tartomány beállítása
+
+        // Eredeti tartomány mentése és zoom tartomány beállítása
         scanStartFreq = zoomStartFreq;
         scanEndFreq = zoomEndFreq;
 
         // Kurzor pozíció újraszámítása az új tartományban
-        currentScanFreq = cursorFreq;         // Kurzor frekvencia marad ugyanaz
-        currentScanLine = SPECTRUM_WIDTH / 2; // Kurzor a képernyő közepére        deltaScanLine = 0.0; // Delta nullázása
+        currentScanFreq = cursorFreq;                   // Kurzor frekvencia marad ugyanaz
+        currentScanLine = frequencyToPixel(cursorFreq); // Pontos pixel pozíció számítása
+        deltaScanLine = 0.0;                            // Delta nullázása
 
         DEBUG("ZOOM: New range %d-%d kHz, cursor at %d kHz\n", scanStartFreq, scanEndFreq, cursorFreq);
 
@@ -917,7 +940,6 @@ void ScanScreen::handleZoomButton(const UIButton::ButtonEvent &event) {
         tft.setTextColor(TFT_WHITE, TFT_BLACK);
         tft.setTextDatum(TC_DATUM);
         tft.drawString(bandInfo, tft.width() / 2, 35);
-
         DEBUG("Zoom button: step %.2f -> %.2f kHz, cursor centered at %d kHz\n", oldStep, scanStepFloat, cursorFreq);
     }
 }
@@ -973,7 +995,9 @@ void ScanScreen::calculateScanParameters() {
     } else {
         currentMinScanStep = minScanStep;
         currentMaxScanStep = maxScanStep;
-    } // Kezdő scan step beállítása - középső zoom szinttel indítunk
+    }
+
+    // Kezdő scan step beállítása - középső zoom szinttel indítunk
     float zoomLevels[10];
     int numZoomLevels;
     getZoomLevels(zoomLevels, &numZoomLevels);
@@ -1258,11 +1282,13 @@ void ScanScreen::resetZoom() {
  * @brief Zoom szintek lekérése
  */
 void ScanScreen::getZoomLevels(float *levels, int *count) {
-    static float zoomLevels[] = {currentMinScanStep, currentMinScanStep * 2.0f, currentMinScanStep * 4.0f, currentMinScanStep * 8.0f, currentMaxScanStep};
-    *count = sizeof(zoomLevels) / sizeof(zoomLevels[0]);
-    for (int i = 0; i < *count; i++) {
-        levels[i] = zoomLevels[i];
-    }
+    // Dinamikus zoom szintek számítása aktuális értékek alapján
+    levels[0] = currentMinScanStep;
+    levels[1] = currentMinScanStep * 2.0f;
+    levels[2] = currentMinScanStep * 4.0f;
+    levels[3] = currentMinScanStep * 8.0f;
+    levels[4] = currentMaxScanStep;
+    *count = 5;
 }
 
 /**
