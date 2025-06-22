@@ -73,9 +73,8 @@ class ScanScreen : public UIScreen {
     static constexpr uint16_t SCAN_AREA_WIDTH = 460;  // Spektrum szélessége
     static constexpr uint16_t SCAN_AREA_HEIGHT = 180; // Spektrum magassága
     static constexpr uint16_t SCAN_AREA_X = 10;       // Spektrum X pozíciója
-    static constexpr uint16_t SCAN_AREA_Y = 40;       // Spektrum Y pozíciója
-    static constexpr uint16_t SCALE_HEIGHT = 20;      // Skála magassága
-    static constexpr uint16_t INFO_AREA_Y = 230;      // Info terület Y pozíciója
+    static constexpr uint16_t SCAN_AREA_Y = 40;       // Spektrum Y pozíciója    static constexpr uint16_t SCALE_HEIGHT = 20;      // Skála magassága
+    static constexpr uint16_t INFO_AREA_Y = 250;      // Info terület Y pozíciója (frekvencia címkék után)
 
     // UI komponensek
     std::shared_ptr<UIButton> backButton;
@@ -114,6 +113,9 @@ class ScanScreen : public UIScreen {
     uint8_t countScanSignal; // Jel mérések száma átlagoláshoz
     float signalScale;       // Jel skálázási tényező
 
+    // UI állapot cache (villogás elkerülésére)
+    String lastStatusText; // Előző státusz szöveg cache
+
     // Metódusok
     void layoutComponents();
     void createHorizontalButtonBar();
@@ -128,9 +130,8 @@ class ScanScreen : public UIScreen {
     void drawScale();
     void drawFrequencyLabels();
     void drawBandBoundaries();
-    void drawStaticLabels();
+    void drawScanInfoStatic();
     void drawScanInfo();
-    void drawSignalInfo();
     int16_t getSignalRSSI();
     uint8_t getSignalSNR();
     void setFrequency(uint32_t freq);
