@@ -5,7 +5,7 @@
 
 // Egyszerűsített BandTable tömb
 BandTable bandTable[] = {
-    {"FM", FM_BAND_TYPE, FM_DEMOD_TYPE, 6400, 10800, 9390, 10, false, 0, 0, 0, 0},   //  FM          0   // 93.9MHz
+    {"FM", FM_BAND_TYPE, FM_DEMOD_TYPE, 8750, 10800, 9390, 10, false, 0, 0, 0, 0},   //  FM          0   // 93.9MHz, a 64MHz-es sávot nem használjuk
     {"LW", LW_BAND_TYPE, AM_DEMOD_TYPE, 100, 514, 198, 9, false, 0, 0, 0, 0},        //  LW          1
     {"MW", MW_BAND_TYPE, AM_DEMOD_TYPE, 514, 1800, 540, 9, false, 0, 0, 0, 0},       //  MW          2   // 540kHz Kossuth
     {"800m", SW_BAND_TYPE, AM_DEMOD_TYPE, 280, 470, 284, 1, true, 0, 0, 0, 0},       // Ham  800M    3

@@ -67,13 +67,13 @@ class ScanScreen : public UIScreen {
     static constexpr uint8_t PLAY_PAUSE_BUTTON_ID = 41;
     static constexpr uint8_t ZOOM_IN_BUTTON_ID = 42;
     static constexpr uint8_t ZOOM_OUT_BUTTON_ID = 43;
-    static constexpr uint8_t RESET_BUTTON_ID = 44;
-
-    // Screen layout constants (480x320 display)
-    static constexpr uint16_t SCAN_AREA_WIDTH = 460;  // Spektrum szélessége
+    static constexpr uint8_t RESET_BUTTON_ID = 44;    // Screen layout constants (480x320 display)
+    static constexpr uint16_t SCAN_AREA_WIDTH = 460;  // Spektrum szélessége (pixelben)
+    static constexpr uint16_t SCAN_RESOLUTION = 920;  // Mintavételi pontok száma (2x felbontás)
     static constexpr uint16_t SCAN_AREA_HEIGHT = 180; // Spektrum magassága
     static constexpr uint16_t SCAN_AREA_X = 10;       // Spektrum X pozíciója
-    static constexpr uint16_t SCAN_AREA_Y = 40;       // Spektrum Y pozíciója    static constexpr uint16_t SCALE_HEIGHT = 20;      // Skála magassága
+    static constexpr uint16_t SCAN_AREA_Y = 40;       // Spektrum Y pozíciója
+    static constexpr uint16_t SCALE_HEIGHT = 20;      // Skála magassága
     static constexpr uint16_t INFO_AREA_Y = 250;      // Info terület Y pozíciója (frekvencia címkék után)
 
     // UI komponensek
@@ -90,18 +90,16 @@ class ScanScreen : public UIScreen {
     uint32_t lastScanTime;
 
     // Frekvencia és zoom kezelés
-    uint32_t currentScanFreq; // Aktuális scan frekvencia (kHz-ben)
-    uint32_t scanStartFreq;   // Scan tartomány kezdete
-    uint32_t scanEndFreq;     // Scan tartomány vége
-    float scanStep;           // Scan lépésköz (kHz)
-    float zoomLevel;          // Zoom szint (1.0 = teljes sáv)
-    uint16_t currentScanPos;  // Aktuális pozíció a spektrumban
-
-    // RSSI/SNR adatok
-    int16_t scanValueRSSI[SCAN_AREA_WIDTH]; // RSSI értékek
-    uint8_t scanValueSNR[SCAN_AREA_WIDTH];  // SNR értékek
-    bool scanMark[SCAN_AREA_WIDTH];         // Állomás jelzők
-    uint8_t scanScaleLine[SCAN_AREA_WIDTH]; // Skála vonalak
+    uint32_t currentScanFreq;               // Aktuális scan frekvencia (kHz-ben)
+    uint32_t scanStartFreq;                 // Scan tartomány kezdete
+    uint32_t scanEndFreq;                   // Scan tartomány vége
+    float scanStep;                         // Scan lépésköz (kHz)
+    float zoomLevel;                        // Zoom szint (1.0 = teljes sáv)
+    uint16_t currentScanPos;                // Aktuális pozíció a spektrumban    // RSSI/SNR adatok (nagyobb felbontással)
+    int16_t scanValueRSSI[SCAN_RESOLUTION]; // RSSI értékek
+    uint8_t scanValueSNR[SCAN_RESOLUTION];  // SNR értékek
+    bool scanMark[SCAN_RESOLUTION];         // Állomás jelzők
+    uint8_t scanScaleLine[SCAN_RESOLUTION]; // Skála vonalak
 
     // Sáv határok
     int16_t scanBeginBand; // Sáv kezdete a spektrumban

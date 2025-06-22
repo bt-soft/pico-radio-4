@@ -27,11 +27,9 @@ ScanScreen::ScanScreen(TFT_eSPI &tft, Si4735Manager *si4735Manager) : UIScreen(t
     scanEndFreq = 0;
     scanStep = 1.0f;
     zoomLevel = 1.0f;
-    currentScanPos = 0;
-
-    // Sáv határok
+    currentScanPos = 0; // Sáv határok
     scanBeginBand = -1;
-    scanEndBand = SCAN_AREA_WIDTH;
+    scanEndBand = SCAN_RESOLUTION;
     scanMarkSNR = 3;
     scanEmpty = true; // Konfiguráció
     countScanSignal = 3;
@@ -39,7 +37,7 @@ ScanScreen::ScanScreen(TFT_eSPI &tft, Si4735Manager *si4735Manager) : UIScreen(t
 
     // UI cache inicializálása
     lastStatusText = ""; // Tömbök inicializálása
-    for (int i = 0; i < SCAN_AREA_WIDTH; i++) {
+    for (int i = 0; i < SCAN_RESOLUTION; i++) {
         scanValueRSSI[i] = SCAN_AREA_Y + SCAN_AREA_HEIGHT; // Spektrum alján kezdjük (nincs látható jel)
         scanValueSNR[i] = 0;
         scanMark[i] = false;
@@ -182,13 +180,85 @@ void ScanScreen::handleOwnLoop() {
     }
 }
 
-bool ScanScreen::handleTouch(const TouchEvent &event) { return UIScreen::handleTouch(event); }
+bool ScanScreen::handleTouch(const TouchEvent &event) {
+    // Először próbáljuk a szülő osztályt (gombok kezelése)
+    if (UIScreen::handleTouch(event)) {
+        return true;
+    } // Ha scan paused és van scan adat, spektrum terület érintése
+    if (scanPaused && !scanEmpty && event.pressed) {
+        // Ellenőrizzük, hogy a spektrum területen belül van-e az érintés
+        if (event.x >= SCAN_AREA_X && event.x < SCAN_AREA_X + SCAN_AREA_WIDTH && event.y >= SCAN_AREA_Y &&
+            event.y < SCAN_AREA_Y + SCAN_AREA_HEIGHT) { // Relatív pozíció számítás a spektrum területen belül
+            uint16_t relativePixelX = event.x - SCAN_AREA_X;
+
+            // Pozíció korlátozása
+            if (relativePixelX >= SCAN_AREA_WIDTH) {
+                relativePixelX = SCAN_AREA_WIDTH - 1;
+            }
+
+            // Pixel pozíciót adatponttá konvertálás
+            uint16_t relativeDataPos = (relativePixelX * SCAN_RESOLUTION) / SCAN_AREA_WIDTH; // Ha más pozíció, mint a jelenlegi
+            if (relativeDataPos != currentScanPos) {
+                // Régi pozíció újrarajzolása kurzor nélkül (pixel koordinátában)
+                uint16_t oldPixelPos = (currentScanPos * SCAN_AREA_WIDTH) / SCAN_RESOLUTION;
+                drawSpectrumLine(oldPixelPos);
+
+                // Új pozíció beállítása (adatpont koordinátában)
+                currentScanPos = relativeDataPos;
+
+                // Új pozíció frekvenciájának beállítása
+                uint32_t newFreq = positionToFreq(currentScanPos);
+                setFrequency(newFreq);
+
+                // Új pozíció rajzolása kurzorozva (pixel koordinátában - újraszámított!)
+                uint16_t newPixelPos = (currentScanPos * SCAN_AREA_WIDTH) / SCAN_RESOLUTION;
+                drawSpectrumLine(newPixelPos);
+
+                // Info frissítése
+                drawScanInfo();
+            }
+
+            return true;
+        }
+    }
+
+    return false;
+}
 
 bool ScanScreen::handleRotary(const RotaryEvent &event) {
     if (event.direction == RotaryEvent::Direction::Up) {
-        // Jobbra forgatás - frekvencia növelése vagy zoom
-        if (scanPaused) {
-            // Ha pauseban van, akkor frekvencia változtatás
+        // Jobbra forgatás        if (scanPaused) {
+        if (!scanEmpty) {
+            // Ha van scan adat, kurzor mozgatás
+            uint16_t newPos = currentScanPos + 1;
+            if (newPos < SCAN_RESOLUTION) {
+                // Régi pozíció újrarajzolása kurzor nélkül (pixel koordinátában)
+                uint16_t oldPixelPos = (currentScanPos * SCAN_AREA_WIDTH) / SCAN_RESOLUTION;
+
+                // Új pozíció beállítása
+                currentScanPos = newPos;
+
+                // Új pixel pozíció számítása
+                uint16_t newPixelPos = (currentScanPos * SCAN_AREA_WIDTH) / SCAN_RESOLUTION;
+
+                // Új pozíció frekvenciájának beállítása
+                uint32_t newFreq = positionToFreq(currentScanPos);
+                setFrequency(newFreq);
+
+                // Ha más pixelnél vagyunk, rajzoljuk újra mindkettőt
+                if (oldPixelPos != newPixelPos) {
+                    drawSpectrumLine(oldPixelPos); // Régi törlése
+                    drawSpectrumLine(newPixelPos); // Új rajzolása kurzorozva
+                } else {
+                    // Ugyanazon a pixelen belül vagyunk, csak újrarajzoljuk
+                    drawSpectrumLine(newPixelPos);
+                }
+
+                // Info frissítése
+                drawScanInfo();
+            }
+        } else {
+            // Ha nincs scan adat, frekvencia változtatás
             uint32_t newFreq = currentScanFreq + (uint32_t)(scanStep * 10);
             if (newFreq <= scanEndFreq) {
                 currentScanFreq = newFreq;
@@ -198,8 +268,35 @@ bool ScanScreen::handleRotary(const RotaryEvent &event) {
         }
         return true;
     } else if (event.direction == RotaryEvent::Direction::Down) {
-        // Balra forgatás - frekvencia csökkentése
-        if (scanPaused) {
+        // Balra forgatás        if (scanPaused) {
+        if (!scanEmpty) {
+            // Ha van scan adat, kurzor mozgatás
+            if (currentScanPos > 0) {
+                // Régi pozíció pixel koordinátája
+                uint16_t oldPixelPos = (currentScanPos * SCAN_AREA_WIDTH) / SCAN_RESOLUTION;
+
+                // Új pozíció beállítása
+                currentScanPos = currentScanPos - 1;
+
+                // Új pixel pozíció számítása
+                uint16_t newPixelPos = (currentScanPos * SCAN_AREA_WIDTH) / SCAN_RESOLUTION;
+
+                // Új pozíció frekvenciájának beállítása
+                uint32_t newFreq = positionToFreq(currentScanPos);
+                setFrequency(newFreq);
+
+                // Ha más pixelnél vagyunk, rajzoljuk újra mindkettőt
+                if (oldPixelPos != newPixelPos) {
+                    drawSpectrumLine(oldPixelPos); // Régi törlése
+                    drawSpectrumLine(newPixelPos); // Új rajzolása kurzorozva
+                } else {
+                    // Ugyanazon a pixelen belül vagyunk, csak újrarajzoljuk
+                    drawSpectrumLine(newPixelPos);
+                } // Info frissítése
+                drawScanInfo();
+            }
+        } else {
+            // Ha nincs scan adat, frekvencia változtatás
             uint32_t newFreq = currentScanFreq - (uint32_t)(scanStep * 10);
             if (newFreq >= scanStartFreq) {
                 currentScanFreq = newFreq;
@@ -223,23 +320,23 @@ void ScanScreen::initializeScan() {
     // Aktuális sáv információk lekérése a Si4735Manager-ből
     BandTable &currentBand = pSi4735Manager->getCurrentBand();
 
-    scanStartFreq = currentBand.minimumFreq * 10.0; // 87500; // 87.5 MHz (FM sáv)
-    scanEndFreq = currentBand.maximumFreq * 10.0;   // 108000;  // 108.0 MHz
+    scanStartFreq = currentBand.minimumFreq * 10; // kHz-ben
+    scanEndFreq = currentBand.maximumFreq * 10;   // kHz-ben
     currentScanFreq = scanStartFreq;
 
     DEBUG("Scan initialized: %d - %d kHz\n", scanStartFreq, scanEndFreq);
 }
 
 void ScanScreen::calculateScanParameters() {
-    // Scan lépésköz számítása a zoom szint alapján
+    // Scan lépésköz számítása az aktuális tartomány alapján (nagyobb felbontással)
     uint32_t totalBandwidth = scanEndFreq - scanStartFreq;
-    scanStep = (float)totalBandwidth / (SCAN_AREA_WIDTH * zoomLevel);
+    scanStep = (float)totalBandwidth / SCAN_RESOLUTION;
 
     // Minimális lépésköz korlátozása
     if (scanStep < 1.0f)
         scanStep = 1.0f;
 
-    DEBUG("Scan parameters: step=%.2f kHz, zoom=%.2f\n", scanStep, zoomLevel);
+    DEBUG("Scan parameters: step=%.2f kHz, range=%d-%d kHz, resolution=%d points\n", scanStep, scanStartFreq, scanEndFreq, SCAN_RESOLUTION);
 }
 
 void ScanScreen::resetScan() {
@@ -248,15 +345,20 @@ void ScanScreen::resetScan() {
     scanPaused = true;
     scanEmpty = true;
     currentScanPos = 0;
-    zoomLevel = 1.0f; // Zoom visszaállítása 1.0x-ra    // Frekvencia alaphelyzetbe állítása
-    currentScanFreq = scanStartFreq;
+    zoomLevel = 1.0f; // Zoom visszaállítása 1.0x-ra    // Teljes sáv tartomány visszaállítása
+    if (pSi4735Manager) {
+        BandTable &currentBand = pSi4735Manager->getCurrentBand();
+        scanStartFreq = currentBand.minimumFreq * 10; // Teljes sáv kezdete
+        scanEndFreq = currentBand.maximumFreq * 10;   // Teljes sáv vége
+        currentScanFreq = scanStartFreq;
+    }
 
     // UI cache visszaállítása
-    lastStatusText = ""; // Scan paraméterek újraszámítása
-    calculateScanParameters();
+    lastStatusText = "";
 
-    // Adatok törlése
-    for (int i = 0; i < SCAN_AREA_WIDTH; i++) {
+    // Scan paraméterek újraszámítása
+    calculateScanParameters(); // Adatok törlése
+    for (int i = 0; i < SCAN_RESOLUTION; i++) {
         scanValueRSSI[i] = SCAN_AREA_Y + SCAN_AREA_HEIGHT; // Spektrum alján kezdjük (nincs látható jel)
         scanValueSNR[i] = 0;
         scanMark[i] = false;
@@ -265,7 +367,7 @@ void ScanScreen::resetScan() {
 
     // Sáv határok újraszámítása
     scanBeginBand = -1;
-    scanEndBand = SCAN_AREA_WIDTH;
+    scanEndBand = SCAN_RESOLUTION;
     // Gomb állapot frissítése
     if (playPauseButton) {
         playPauseButton->setLabel("Play"); // Reset után Play gomb
@@ -331,37 +433,41 @@ void ScanScreen::stopScan() {
 }
 
 void ScanScreen::updateScan() {
-    if (!pSi4735Manager || scanPaused || currentScanPos >= SCAN_AREA_WIDTH) {
+    if (!pSi4735Manager || scanPaused || currentScanPos >= SCAN_RESOLUTION) {
         return;
     }
 
     // Aktuális frekvencia számítása
     uint32_t scanFreq = positionToFreq(currentScanPos);
-    setFrequency(scanFreq);
-
-    // Jel mérése
+    setFrequency(scanFreq); // Jel mérése
     scanValueRSSI[currentScanPos] = getSignalRSSI();
     scanValueSNR[currentScanPos] = getSignalSNR();
 
-    // Állomás jelzés SNR alapján
+    // Állomás jelzés SNR alapján - minden méréskor újra értékeljük!
     if (scanValueSNR[currentScanPos] >= scanMarkSNR && currentScanPos > scanBeginBand && currentScanPos < scanEndBand) {
         scanMark[currentScanPos] = true;
+    } else {
+        scanMark[currentScanPos] = false; // Töröljük a régi jelzést ha már nincs elég jel
     }
 
-    // Spektrum vonal rajzolása
-    drawSpectrumLine(currentScanPos);
+    // Spektrum vonal rajzolása (pixel pozícióra konvertálás)
+    uint16_t pixelPos = (currentScanPos * SCAN_AREA_WIDTH) / SCAN_RESOLUTION;
+    drawSpectrumLine(pixelPos);
 
     // Előző pozíció kurzorának törlése (ha volt)
     if (currentScanPos > 0) {
-        // Újrarajzoljuk az előző pozíciót kurzor nélkül
-        drawSpectrumLine(currentScanPos - 1);
+        uint16_t prevPixelPos = ((currentScanPos - 1) * SCAN_AREA_WIDTH) / SCAN_RESOLUTION;
+        if (prevPixelPos != pixelPos) {
+            // Újrarajzoljuk az előző pozíciót kurzor nélkül
+            drawSpectrumLine(prevPixelPos);
+        }
     }
 
     // Pozíció léptetése
     currentScanPos++;
 
     // Ha végére értünk, újrakezdés
-    if (currentScanPos >= SCAN_AREA_WIDTH) {
+    if (currentScanPos >= SCAN_RESOLUTION) {
         currentScanPos = 0;
         scanEmpty = false;
     }
@@ -376,50 +482,96 @@ void ScanScreen::updateScan() {
 
 void ScanScreen::drawSpectrum() {
     // Spektrum terület törlése
-    tft.fillRect(SCAN_AREA_X, SCAN_AREA_Y, SCAN_AREA_WIDTH, SCAN_AREA_HEIGHT, TFT_BLACK);
+    tft.fillRect(SCAN_AREA_X, SCAN_AREA_Y, SCAN_AREA_WIDTH, SCAN_AREA_HEIGHT, TFT_COLOR_BACKGROUND);
+
+    DEBUG("drawSpectrum: scanPaused=%d, currentScanPos=%d, scanEmpty=%d\n", scanPaused, currentScanPos, scanEmpty);
 
     // Ha még nincs scan elindítva, csak üres spektrumot rajzolunk
     if (scanPaused && currentScanPos == 0) {
+        DEBUG("drawSpectrum: early return - no data to draw\n");
         return; // Nem rajzolunk semmit, csak fekete háttér
     }
 
     // Összes spektrum vonal rajzolása (csak ha van adat)
+    int linesDrawn = 0;
     for (int x = 0; x < SCAN_AREA_WIDTH; x++) {
+        // Pixel pozíció konvertálása data pozícióra
+        uint16_t dataPos = (x * SCAN_RESOLUTION) / SCAN_AREA_WIDTH;
+
         // Csak azokat a vonalakat rajzoljuk meg, ahol van valós mért adat
-        if (x <= currentScanPos || !scanPaused) {
+        if (dataPos <= currentScanPos || !scanPaused) {
             drawSpectrumLine(x);
+            linesDrawn++;
         }
     }
+    DEBUG("drawSpectrum: drew %d lines\n", linesDrawn);
 }
 
-void ScanScreen::drawSpectrumLine(uint16_t x) {
-    if (x >= SCAN_AREA_WIDTH)
+void ScanScreen::drawSpectrumLine(uint16_t pixelX) {
+    if (pixelX >= SCAN_AREA_WIDTH)
         return;
 
-    uint32_t freq = positionToFreq(x);
-    uint16_t screenX = SCAN_AREA_X + x;
+    uint16_t screenX = SCAN_AREA_X + pixelX;
+
+    // Mintavételi pontok tartománya ennek a pixelnek
+    uint16_t dataStart = (pixelX * SCAN_RESOLUTION) / SCAN_AREA_WIDTH;
+    uint16_t dataEnd = ((pixelX + 1) * SCAN_RESOLUTION) / SCAN_AREA_WIDTH; // Átlagoljuk a mintavételi pontokat ennél a pixelnél
+    int16_t avgRSSI = 0;
+    uint8_t avgSNR = 0;
+    bool hasStation = false;
+    bool isMainScale = false;
+    uint32_t avgFreq = 0;
+
+    int validSamples = 0;
+    for (uint16_t i = dataStart; i < dataEnd && i < SCAN_RESOLUTION; i++) {
+        if (scanValueRSSI[i] < SCAN_AREA_Y + SCAN_AREA_HEIGHT) { // Van valós mért adat
+            avgRSSI += scanValueRSSI[i];
+            avgSNR += scanValueSNR[i];
+            validSamples++;
+        }
+        if (scanMark[i])
+            hasStation = true;
+
+        // Frekvencia számítás az adatponthoz
+        uint32_t freq = scanStartFreq + (uint32_t)(i * scanStep);
+        avgFreq += freq; // Skála vonalak ellenőrzése - dinamikus ritkítás zoom szint alapján
+        if (scanScaleLine[i] == 0 && (!scanPaused || currentScanPos > 0)) {
+            if (zoomLevel < 2.0f) {
+                // Teljes sáv vagy kis zoom esetén: csak minden 5 MHz-nél
+                if ((freq % 5000) < scanStep) {
+                    scanScaleLine[i] = 2;
+                    isMainScale = true;
+                }
+            } else if (scanStep > 100) {
+                // Közepes zoom: minden 1 MHz-nél
+                if ((freq % 1000) < scanStep) {
+                    scanScaleLine[i] = 2;
+                    isMainScale = true;
+                }
+            } else {
+                // Nagy zoom: minden 100 kHz-nél
+                if ((freq % 100) < scanStep) {
+                    scanScaleLine[i] = 2;
+                    isMainScale = true;
+                }
+            }
+        }
+        if (scanScaleLine[i] == 2)
+            isMainScale = true;
+    }
+
+    if (validSamples > 0) {
+        avgRSSI /= validSamples;
+        avgSNR /= validSamples;
+    } else {
+        avgRSSI = SCAN_AREA_Y + SCAN_AREA_HEIGHT; // Nincs jel
+        avgSNR = 0;
+    }
+    avgFreq /= (dataEnd - dataStart);
 
     // Színek meghatározása
     uint16_t lineColor = TFT_NAVY;
     uint16_t bgColor = TFT_BLACK;
-    bool isMainScale = false;
-
-    // Skála vonalak ellenőrzése (csak ha már volt scan)
-    if (scanScaleLine[x] == 0 && (!scanPaused || currentScanPos > 0)) {
-        // Főskála vonalak (MHz határok)
-        if (scanStep > 100) {
-            if ((freq % 1000) < scanStep) {
-                scanScaleLine[x] = 2;
-                isMainScale = true;
-            }
-        } else {
-            // Kisebb lépésközöknél 100 kHz határok
-            if ((freq % 100) < scanStep) {
-                scanScaleLine[x] = 2;
-                isMainScale = true;
-            }
-        }
-    }
 
     if (isMainScale) {
         lineColor = TFT_BLACK;
@@ -427,14 +579,14 @@ void ScanScreen::drawSpectrumLine(uint16_t x) {
     }
 
     // SNR alapú színezés
-    if (scanValueSNR[x] > 0) {
+    if (avgSNR > 0) {
         lineColor = TFT_NAVY;
-        if (scanValueSNR[x] < 16) {
-            lineColor += (scanValueSNR[x] * 2048);
+        if (avgSNR < 16) {
+            lineColor += (avgSNR * 2048);
         } else {
             lineColor = TFT_ORANGE;
-            if (scanValueSNR[x] < 24) {
-                lineColor += ((scanValueSNR[x] - 16) * 258);
+            if (avgSNR < 24) {
+                lineColor += ((avgSNR - 16) * 258);
             } else {
                 lineColor = TFT_RED;
             }
@@ -442,21 +594,21 @@ void ScanScreen::drawSpectrumLine(uint16_t x) {
     }
 
     // Sáv határok ellenőrzése
-    if (freq > scanEndFreq || freq < scanStartFreq) {
+    if (avgFreq > scanEndFreq || avgFreq < scanStartFreq) {
         lineColor = TFT_DARKGREY;
-        if (freq > scanEndFreq && scanEndBand == SCAN_AREA_WIDTH) {
-            scanEndBand = x;
+        if (avgFreq > scanEndFreq && scanEndBand == SCAN_RESOLUTION) {
+            scanEndBand = dataStart;
         }
-        if (freq < scanStartFreq && scanBeginBand < (int16_t)x) {
-            scanBeginBand = x;
+        if (avgFreq < scanStartFreq && scanBeginBand < (int16_t)dataStart) {
+            scanBeginBand = dataStart;
         }
-    } // RSSI háttér rajzolása (csak ha van valós mért jel)
-    int16_t rssiY = scanValueRSSI[x];
+    }
 
-    // Ha még nincs mért adat (alapértelmezett érték a spektrum alján)
+    // RSSI háttér rajzolása
+    int16_t rssiY = avgRSSI;
     if (rssiY >= SCAN_AREA_Y + SCAN_AREA_HEIGHT) {
         // Nincs jel, csak fekete háttér
-        tft.drawLine(screenX, SCAN_AREA_Y, screenX, SCAN_AREA_Y + SCAN_AREA_HEIGHT, TFT_BLACK);
+        tft.drawLine(screenX, SCAN_AREA_Y, screenX, SCAN_AREA_Y + SCAN_AREA_HEIGHT, TFT_COLOR_BACKGROUND);
     } else {
         // Van mért jel, normál megjelenítés
         if (rssiY < SCAN_AREA_Y + 10)
@@ -467,32 +619,50 @@ void ScanScreen::drawSpectrumLine(uint16_t x) {
     }
 
     // Skála vonalak rajzolása
-    if (scanScaleLine[x] == 2) {
+    if (isMainScale) {
         tft.drawLine(screenX, SCAN_AREA_Y, screenX, SCAN_AREA_Y + 15, TFT_OLIVE);
-    } // RSSI görbe rajzolása (csak ha van valós mért jel)
-    if (rssiY < SCAN_AREA_Y + SCAN_AREA_HEIGHT) { // Van valós jel
-        if (x > 0 && x != currentScanPos + 1) {
-            int16_t prevRssiY = scanValueRSSI[x - 1];
-            // Ha az előző pozícióban is van valós jel
-            if (prevRssiY < SCAN_AREA_Y + SCAN_AREA_HEIGHT) {
-                if (prevRssiY < SCAN_AREA_Y + 10)
-                    prevRssiY = SCAN_AREA_Y + 10;
-                tft.drawLine(screenX - 1, prevRssiY, screenX, rssiY, TFT_SILVER);
+    }
+
+    // RSSI görbe rajzolása (simított)
+    if (rssiY < SCAN_AREA_Y + SCAN_AREA_HEIGHT && pixelX > 0) {
+        // Előző pixel átlagolt RSSI értéke
+        uint16_t prevDataStart = ((pixelX - 1) * SCAN_RESOLUTION) / SCAN_AREA_WIDTH;
+        uint16_t prevDataEnd = (pixelX * SCAN_RESOLUTION) / SCAN_AREA_WIDTH;
+
+        int16_t prevAvgRSSI = SCAN_AREA_Y + SCAN_AREA_HEIGHT;
+        int prevValidSamples = 0;
+        for (uint16_t i = prevDataStart; i < prevDataEnd && i < SCAN_RESOLUTION; i++) {
+            if (scanValueRSSI[i] < SCAN_AREA_Y + SCAN_AREA_HEIGHT) {
+                prevAvgRSSI += scanValueRSSI[i];
+                prevValidSamples++;
             }
+        }
+        if (prevValidSamples > 0) {
+            prevAvgRSSI /= prevValidSamples;
+        }
+
+        if (prevAvgRSSI < SCAN_AREA_Y + SCAN_AREA_HEIGHT) {
+            if (prevAvgRSSI < SCAN_AREA_Y + 10)
+                prevAvgRSSI = SCAN_AREA_Y + 10;
+            tft.drawLine(screenX - 1, prevAvgRSSI, screenX, rssiY, TFT_SILVER);
         } else {
             tft.drawPixel(screenX, rssiY, TFT_SILVER);
         }
     }
 
-    // Aktuális pozíció jelzése
-    if (x == currentScanPos) {
+    // Aktuális pozíció jelzése (pixel koordinátákban)
+    uint16_t currentPixelPos = (currentScanPos * SCAN_AREA_WIDTH) / SCAN_RESOLUTION;
+    if (pixelX == currentPixelPos) {
         tft.drawLine(screenX, SCAN_AREA_Y, screenX, SCAN_AREA_Y + SCAN_AREA_HEIGHT, TFT_RED);
-    }
-
-    // Állomás jelzők (két fehér pont a spektrum tetején)
-    if (scanMark[x]) {
+    } // Állomás jelzők
+    if (hasStation) {
         tft.fillCircle(screenX, SCAN_AREA_Y + 5, 2, TFT_WHITE);
         tft.fillCircle(screenX, SCAN_AREA_Y + 10, 2, TFT_WHITE);
+    }
+
+    // Debug info (csak első néhány pixelhez)
+    if (pixelX < 5 && validSamples > 0) {
+        DEBUG("drawSpectrumLine: pixel=%d, dataRange=%d-%d, validSamples=%d, avgRSSI=%d, rssiY=%d\n", pixelX, dataStart, dataEnd, validSamples, avgRSSI, rssiY);
     }
 }
 
@@ -502,15 +672,27 @@ void ScanScreen::drawScale() {
 }
 
 void ScanScreen::drawFrequencyLabels() {
+    // Előbb töröljük a régi címkéket
+    tft.fillRect(SCAN_AREA_X, SCAN_AREA_Y + SCAN_AREA_HEIGHT + 10, SCAN_AREA_WIDTH, 20, TFT_BLACK);
+
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
     tft.setFreeFont();
     tft.setTextSize(1);
+
+    // Debug: aktuális scan tartomány ellenőrzése
+    DEBUG("drawFrequencyLabels: scanStartFreq=%d, scanEndFreq=%d kHz\n", scanStartFreq, scanEndFreq);
 
     // Frekvencia címkék megjelenítése 5-10 helyen
     int labelCount = 6;
     for (int i = 0; i <= labelCount; i++) {
         uint16_t x = SCAN_AREA_X + (i * SCAN_AREA_WIDTH / labelCount);
-        uint32_t freq = positionToFreq(i * SCAN_AREA_WIDTH / labelCount);
+
+        // JAVÍTÁS: Pixel pozíció helyett adatpont pozíciót használunk
+        uint16_t dataPos = (i * SCAN_RESOLUTION) / labelCount;
+        uint32_t freq = positionToFreq(dataPos);
+
+        // Debug: számított frekvencia ellenőrzése
+        DEBUG("Label %d: pixelPos=%d, dataPos=%d, freq=%d kHz\n", i, i * SCAN_AREA_WIDTH / labelCount, dataPos, freq);
 
         String freqText;
         if (freq >= 1000) {
@@ -594,12 +776,12 @@ void ScanScreen::drawScanInfo() {
     // Csak az értékeket frissítjük (statikus címkék már ki vannak írva)
     // Aktuális frekvencia megjelenítése - csak az érték részét frissítjük
     String freqText = String(currentScanFreq / 1000.0f, 3);
-    tft.fillRect(50, INFO_AREA_Y, 50, FONT_HEIGHT, TFT_RED); // Régi érték törlése
+    tft.fillRect(50, INFO_AREA_Y, 50, FONT_HEIGHT, TFT_COLOR_BACKGROUND); // Régi érték törlése
     tft.drawString(freqText, 50, INFO_AREA_Y);
 
     // Zoom szint - csak az érték részét frissítjük
     String zoomText = String(zoomLevel, 1);
-    tft.fillRect(50, INFO_AREA_Y + 15, 20, FONT_HEIGHT, TFT_RED); // Régi érték törlése
+    tft.fillRect(50, INFO_AREA_Y + 15, 20, FONT_HEIGHT, TFT_COLOR_BACKGROUND); // Régi érték törlése
     tft.drawString(zoomText, 50, INFO_AREA_Y + 15);
 
     // Scan állapot - csak akkor írjuk ki, ha változott (villogás elkerülése)
@@ -613,7 +795,7 @@ void ScanScreen::drawScanInfo() {
     }
     // Csak akkor frissítjük, ha változott
     if (statusText != lastStatusText) {
-        tft.fillRect(220, INFO_AREA_Y, 100, FONT_HEIGHT, TFT_RED); // Régi érték törlése
+        tft.fillRect(220, INFO_AREA_Y, 100, FONT_HEIGHT, TFT_COLOR_BACKGROUND); // Régi érték törlése
         tft.drawString(statusText, 220, INFO_AREA_Y);
         lastStatusText = statusText; // Cache frissítése
     }
@@ -622,14 +804,14 @@ void ScanScreen::drawScanInfo() {
     int16_t rssi = getSignalRSSI();
     int16_t rssiValue = (SCAN_AREA_Y + SCAN_AREA_HEIGHT - rssi) / signalScale;
     String rssiText = String(rssiValue);
-    tft.fillRect(365, INFO_AREA_Y, 15, FONT_HEIGHT, TFT_RED); // Régi érték törlése
+    tft.fillRect(365, INFO_AREA_Y, 15, FONT_HEIGHT, TFT_COLOR_BACKGROUND); // Régi érték törlése
     tft.drawString(rssiText, 365, INFO_AREA_Y);
 
     // SNR érték - csak az érték részét frissítjük
     uint8_t snr = getSignalSNR();
     String snrText = String(snr);
     tft.setTextColor(TFT_ORANGE, TFT_COLOR_BACKGROUND);
-    tft.fillRect(365, INFO_AREA_Y + 15, 15, FONT_HEIGHT, TFT_RED); // Régi érték törlése
+    tft.fillRect(365, INFO_AREA_Y + 15, 15, FONT_HEIGHT, TFT_COLOR_BACKGROUND); // Régi érték törlése
     tft.drawString(snrText, 365, INFO_AREA_Y + 15);
 }
 
@@ -649,9 +831,23 @@ int16_t ScanScreen::getSignalRSSI() {
         rssiSum += rssi;
     }
 
-    int avgRssi = rssiSum / countScanSignal;
-    // RSSI értéket Y koordinátára konvertálás (nagyobb RSSI = magasabb pozíció)
-    return SCAN_AREA_Y + SCAN_AREA_HEIGHT - (avgRssi * signalScale);
+    int avgRssi = rssiSum / countScanSignal; // RSSI értéket Y koordinátára konvertálás (nagyobb RSSI = magasabb pozíció)
+    // Javított skála: több érzékenység és jobb láthatóság
+    int16_t result = SCAN_AREA_Y + SCAN_AREA_HEIGHT - (avgRssi * signalScale * 2); // Dupla szorzó a jobb láthatóságért
+
+    // Korlátozás a spektrum területére
+    if (result < SCAN_AREA_Y + 10)
+        result = SCAN_AREA_Y + 10; // Minimum 10px a tetejétől
+    if (result > SCAN_AREA_Y + SCAN_AREA_HEIGHT - 10)
+        result = SCAN_AREA_Y + SCAN_AREA_HEIGHT - 10; // Maximum 10px az aljától
+
+    // Debug info - csak időnként
+    static int debugCounter = 0;
+    if (debugCounter++ % 50 == 0) {
+        DEBUG("getSignalRSSI: rawRSSI=%d, avgRSSI=%d, signalScale=%.1f, result=%d (Y=%d-H=%d)\n", rssiSum, avgRssi, signalScale, result, SCAN_AREA_Y, SCAN_AREA_HEIGHT);
+    }
+
+    return result;
 }
 
 uint8_t ScanScreen::getSignalSNR() {
@@ -695,19 +891,73 @@ void ScanScreen::zoomIn() {
 
 void ScanScreen::zoomOut() {
     float newZoom = zoomLevel / 1.5f;
-    if (newZoom >= 0.1f) {
+    if (newZoom >= 1.0f) { // Ne zoómoljunk ki a teljes sávnál jobban
         handleZoom(newZoom);
     }
 }
 
 void ScanScreen::handleZoom(float newZoomLevel) {
+    if (!pSi4735Manager)
+        return;
+
+    // Ne lehessen kizoómolni a teljes sávnál jobban
+    if (newZoomLevel < 1.0f) {
+        DEBUG("Zoom limit reached - cannot zoom out beyond full band\n");
+        return;
+    }
+
+    // Aktuális sáv információk lekérése
+    BandTable &currentBand = pSi4735Manager->getCurrentBand();
+    uint32_t bandStartFreq = currentBand.minimumFreq * 10; // kHz-ben
+    uint32_t bandEndFreq = currentBand.maximumFreq * 10;   // kHz-ben
+
+    // Zoom központ meghatározása (aktuális frekvencia)
+    uint32_t zoomCenter = currentScanFreq;
+
+    // Új scan tartomány számítása a zoom körül
+    uint32_t totalBandwidth = bandEndFreq - bandStartFreq;
+    uint32_t newScanBandwidth = (uint32_t)(totalBandwidth / newZoomLevel);
+
+    // Új scan határok számítása a központ körül
+    uint32_t halfBandwidth = newScanBandwidth / 2;
+    uint32_t newScanStart = (zoomCenter > halfBandwidth) ? zoomCenter - halfBandwidth : bandStartFreq;
+    uint32_t newScanEnd = (zoomCenter + halfBandwidth < bandEndFreq) ? zoomCenter + halfBandwidth : bandEndFreq;
+
+    // Sáv határokon belül tartás
+    if (newScanStart < bandStartFreq) {
+        newScanStart = bandStartFreq;
+        newScanEnd = newScanStart + newScanBandwidth;
+        if (newScanEnd > bandEndFreq) {
+            newScanEnd = bandEndFreq;
+        }
+    }
+    if (newScanEnd > bandEndFreq) {
+        newScanEnd = bandEndFreq;
+        newScanStart = newScanEnd - newScanBandwidth;
+        if (newScanStart < bandStartFreq) {
+            newScanStart = bandStartFreq;
+        }
+    } // Minimális zoom ellenőrzés (ne legyen túl kicsi a tartomány)
+    uint32_t minBandwidth = totalBandwidth / 10; // Minimum a teljes sáv 10%-a
+    if (minBandwidth < 500)
+        minBandwidth = 500; // De legalább 500 kHz
+
+    if (newScanEnd - newScanStart < minBandwidth) {
+        DEBUG("Zoom limit reached - minimum bandwidth: %d kHz\n", minBandwidth);
+        return;
+    }
+
+    // Értékek frissítése
     zoomLevel = newZoomLevel;
+    scanStartFreq = newScanStart;
+    scanEndFreq = newScanEnd;
+
     calculateScanParameters();
 
     // Zoom után csak a spektrum adatokat inicializáljuk újra, ne a teljes UI-t
     scanEmpty = true;
     currentScanPos = 0; // Adatok törlése
-    for (int i = 0; i < SCAN_AREA_WIDTH; i++) {
+    for (int i = 0; i < SCAN_RESOLUTION; i++) {
         scanValueRSSI[i] = SCAN_AREA_Y + SCAN_AREA_HEIGHT; // Spektrum alján kezdjük (nincs látható jel)
         scanValueSNR[i] = 0;
         scanMark[i] = false;
@@ -716,34 +966,34 @@ void ScanScreen::handleZoom(float newZoomLevel) {
 
     // Sáv határok újraszámítása
     scanBeginBand = -1;
-    scanEndBand = SCAN_AREA_WIDTH;
+    scanEndBand = SCAN_RESOLUTION;
 
-    // Csak a spektrum területet és az info panelt frissítjük
+    // Spektrum és címkék frissítése
     drawSpectrum();
     drawScale();
-    drawFrequencyLabels();
+    drawFrequencyLabels(); // Ez most frissülni fog!
     drawBandBoundaries();
     drawScanInfo();
 
-    DEBUG("Zoom changed to: %.2f\n", zoomLevel);
+    DEBUG("Zoom changed to: %.2f, range: %d-%d kHz\n", zoomLevel, scanStartFreq, scanEndFreq);
 }
 
-uint32_t ScanScreen::positionToFreq(uint16_t x) {
-    if (x >= SCAN_AREA_WIDTH)
+uint32_t ScanScreen::positionToFreq(uint16_t dataPos) {
+    if (dataPos >= SCAN_RESOLUTION)
         return scanEndFreq;
 
-    float ratio = (float)x / SCAN_AREA_WIDTH;
+    float ratio = (float)dataPos / SCAN_RESOLUTION;
     uint32_t totalBandwidth = scanEndFreq - scanStartFreq;
-    return scanStartFreq + (uint32_t)(ratio * totalBandwidth / zoomLevel);
+    return scanStartFreq + (uint32_t)(ratio * totalBandwidth);
 }
 
 uint16_t ScanScreen::freqToPosition(uint32_t freq) {
     if (freq <= scanStartFreq)
         return 0;
     if (freq >= scanEndFreq)
-        return SCAN_AREA_WIDTH - 1;
+        return SCAN_RESOLUTION - 1;
 
     uint32_t totalBandwidth = scanEndFreq - scanStartFreq;
-    float ratio = (float)(freq - scanStartFreq) / totalBandwidth * zoomLevel;
-    return (uint16_t)(ratio * SCAN_AREA_WIDTH);
+    float ratio = (float)(freq - scanStartFreq) / totalBandwidth;
+    return (uint16_t)(ratio * SCAN_RESOLUTION);
 }
