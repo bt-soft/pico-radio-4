@@ -87,19 +87,21 @@ class ScanScreen : public UIScreen {
     ScanState scanState;
     ScanMode scanMode;
     bool scanPaused;
-    uint32_t lastScanTime;
+    uint32_t lastScanTime;    // Frekvencia és zoom kezelés
+    uint32_t currentScanFreq; // Aktuális scan frekvencia (kHz-ben)
+    uint32_t scanStartFreq;   // Scan tartomány kezdete
+    uint32_t scanEndFreq;     // Scan tartomány vége
+    float scanStep;           // Scan lépésköz (kHz)
+    float zoomLevel;          // Zoom szint (1.0 = teljes sáv)
+    uint16_t currentScanPos;  // Aktuális pozíció a spektrumban
+    uint8_t zoomGeneration;   // Zoom generációk száma (interpoláció limitáláshoz)
 
-    // Frekvencia és zoom kezelés
-    uint32_t currentScanFreq;               // Aktuális scan frekvencia (kHz-ben)
-    uint32_t scanStartFreq;                 // Scan tartomány kezdete
-    uint32_t scanEndFreq;                   // Scan tartomány vége
-    float scanStep;                         // Scan lépésköz (kHz)
-    float zoomLevel;                        // Zoom szint (1.0 = teljes sáv)
-    uint16_t currentScanPos;                // Aktuális pozíció a spektrumban    // RSSI/SNR adatok (nagyobb felbontással)
+    // RSSI/SNR adatok (nagyobb felbontással)
     int16_t scanValueRSSI[SCAN_RESOLUTION]; // RSSI értékek
     uint8_t scanValueSNR[SCAN_RESOLUTION];  // SNR értékek
     bool scanMark[SCAN_RESOLUTION];         // Állomás jelzők
     uint8_t scanScaleLine[SCAN_RESOLUTION]; // Skála vonalak
+    bool scanDataValid[SCAN_RESOLUTION];    // Érvényes adatok jelzői
 
     // Sáv határok
     int16_t scanBeginBand; // Sáv kezdete a spektrumban
@@ -112,9 +114,7 @@ class ScanScreen : public UIScreen {
     float signalScale;       // Jel skálázási tényező
 
     // UI állapot cache (villogás elkerülésére)
-    String lastStatusText; // Előző státusz szöveg cache
-
-    // Metódusok
+    String lastStatusText; // Előző státusz szöveg cache    // Metódusok
     void layoutComponents();
     void createHorizontalButtonBar();
     void initializeScan();
@@ -138,6 +138,7 @@ class ScanScreen : public UIScreen {
     uint32_t positionToFreq(uint16_t x);
     uint16_t freqToPosition(uint32_t freq);
     void handleZoom(float newZoomLevel);
+    bool isDataValid(uint16_t scanPos) const;
 };
 
 #endif // __SCANSCREEN_H
