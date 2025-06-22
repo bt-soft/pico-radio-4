@@ -499,6 +499,7 @@ void ScanScreen::drawBandBoundaries() {
 
 void ScanScreen::drawScanInfo() {
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    tft.setFreeFont();
     tft.setTextSize(1);
     tft.setTextDatum(TL_DATUM);
 
