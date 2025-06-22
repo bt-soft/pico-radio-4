@@ -899,21 +899,43 @@ void ScanScreen::setFrequency(uint32_t freq) {
 // ===================================================================
 
 void ScanScreen::zoomIn() {
-    float newZoom = zoomLevel * 1.5f;
-    if (newZoom <= 5.0f) { // Csökkentett maximális zoom szint a stabilitás érdekében
-        handleZoom(newZoom);
+    float newZoom;
+
+    // Intelligens zoom szintek: 1.0 → 1.5 → 2.25 → 3.4 → 5.1
+    if (zoomLevel < 1.4f) {
+        newZoom = 1.5f;
+    } else if (zoomLevel < 2.0f) {
+        newZoom = 2.25f;
+    } else if (zoomLevel < 3.0f) {
+        newZoom = 3.375f;
+    } else if (zoomLevel < 4.5f) {
+        newZoom = 5.0625f;
     } else {
-        DEBUG("Zoom limit reached - maximum zoom is 5.0x\n");
+        DEBUG("Zoom limit reached - maximum zoom is ~5.1x\n");
+        return;
     }
+
+    handleZoom(newZoom);
 }
 
 void ScanScreen::zoomOut() {
-    float newZoom = zoomLevel / 1.5f;
-    if (newZoom >= 1.0f) { // Ne zoómoljunk ki a teljes sávnál jobban
-        handleZoom(newZoom);
+    float newZoom;
+
+    // Intelligens zoom szintek visszafelé: 5.1 → 3.4 → 2.25 → 1.5 → 1.0
+    if (zoomLevel > 4.5f) {
+        newZoom = 3.375f;
+    } else if (zoomLevel > 3.0f) {
+        newZoom = 2.25f;
+    } else if (zoomLevel > 2.0f) {
+        newZoom = 1.5f;
+    } else if (zoomLevel > 1.2f) {
+        newZoom = 1.0f;
     } else {
         DEBUG("Zoom limit reached - cannot zoom out beyond 1.0x\n");
+        return;
     }
+
+    handleZoom(newZoom);
 }
 
 void ScanScreen::handleZoom(float newZoomLevel) {
