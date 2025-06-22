@@ -513,23 +513,15 @@ void ScanScreen::drawSpectrum() {
 
     DEBUG("drawSpectrum: scanPaused=%d, currentScanPos=%d, scanEmpty=%d\n", scanPaused, currentScanPos, scanEmpty);
 
-    // Ha még nincs scan elindítva, csak üres spektrumot rajzolunk
-    if (scanPaused && currentScanPos == 0) {
-        DEBUG("drawSpectrum: early return - no data to draw\n");
-        return; // Nem rajzolunk semmit, csak fekete háttér
-    }
-
-    // Összes spektrum vonal rajzolása (csak ha van adat)
+    // Összes spektrum vonal rajzolása
     int linesDrawn = 0;
     for (int x = 0; x < SCAN_AREA_WIDTH; x++) {
         // Pixel pozíció konvertálása data pozícióra
         uint16_t dataPos = (x * SCAN_RESOLUTION) / SCAN_AREA_WIDTH;
 
-        // Csak azokat a vonalakat rajzoljuk meg, ahol van valós mért adat
-        if (dataPos <= currentScanPos || !scanPaused) {
-            drawSpectrumLine(x);
-            linesDrawn++;
-        }
+        // Rajzoljuk ki a vonalakat - oliva vonalak mindig látszanak
+        drawSpectrumLine(x);
+        linesDrawn++;
     }
     DEBUG("drawSpectrum: drew %d lines\n", linesDrawn);
 }
@@ -883,11 +875,11 @@ void ScanScreen::getSignalQuality(int16_t &rssiY, uint8_t &snr) {
     // SNR átlag
     snr = snrSum / countScanSignal;
 
-    // Debug info - csak időnként
-    static int debugCounter = 0;
-    if (debugCounter++ % 50 == 0) {
-        DEBUG("getSignalQuality: avgRSSI=%d, avgSNR=%d, rssiY=%d\n", avgRssi, snr, rssiY);
-    }
+    // // Debug info - csak időnként
+    // static int debugCounter = 0;
+    // if (debugCounter++ % 50 == 0) {
+    //     DEBUG("getSignalQuality: avgRSSI=%d, avgSNR=%d, rssiY=%d\n", avgRssi, snr, rssiY);
+    // }
 }
 
 void ScanScreen::setFrequency(uint32_t freq) {
