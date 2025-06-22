@@ -130,8 +130,7 @@ class ScanScreen : public UIScreen {
     void drawBandBoundaries();
     void drawScanInfoStatic();
     void drawScanInfo();
-    int16_t getSignalRSSI();
-    uint8_t getSignalSNR();
+    void getSignalQuality(int16_t &rssiY, uint8_t &snr);
     void setFrequency(uint32_t freq);
     void calculateScanParameters();
     void zoomIn();
