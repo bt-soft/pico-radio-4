@@ -105,8 +105,8 @@ void FMScreen::layoutComponents() {
     uint16_t rightButtonsStartX = 480 - 60;                         // Feltételezve 60px széles függőleges gombok
     uint16_t miniAudioX = SMeterConstants::SMETER_WIDTH + 10;       // 10px hézag az S-Meter után
     uint16_t miniAudioWidth = rightButtonsStartX - miniAudioX - 10; // 10px hézag a gombokig
-    uint16_t miniAudioHeight = 120;                                 // Kétszer olyan magas mint az S-Meter    // EREDETI pozíció visszaállítása - S-Meter jobb oldalán
-    Rect miniAudioBounds(miniAudioX, currentY, miniAudioWidth, miniAudioHeight);
+    uint16_t miniAudioHeight = 120; // Kétszer olyan magas mint az S-Meter    // EREDETI pozíció visszaállítása - S-Meter jobb oldalán, 50px-el feljebb emelve
+    Rect miniAudioBounds(miniAudioX, currentY - 50, miniAudioWidth, miniAudioHeight);
     miniAudioDisplay = std::make_shared<MiniAudioDisplay>(tft, miniAudioBounds,
                                                           g_audioProcessor,               // audio data provider
                                                           config.data.miniAudioFftModeFm, // config mód referencia

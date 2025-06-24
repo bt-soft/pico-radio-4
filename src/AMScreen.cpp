@@ -312,12 +312,11 @@ void AMScreen::layoutComponents() {
     Rect smeterBounds(2, FreqDisplayY + FreqDisplay::FREQDISPLAY_HEIGHT, SMeterConstants::SMETER_WIDTH, 60);
     createSMeterComponent(smeterBounds); // ===================================================================
     // Mini Audio Display komponens létrehozása
-    // ===================================================================
-    // A S-Meter jobb oldalán helyezzük el (S-Meter szélessége: ~240px)
-    uint16_t miniAudioX = SMeterConstants::SMETER_WIDTH + 10; // 10px hézag
-    uint16_t miniAudioWidth = 480 - miniAudioX - 90;          // Maradék hely a jobb oldali gombok előtt (90px gomboknak)
-    uint16_t miniAudioHeight = 120;                           // Kétszer olyan magas mint az S-Meter
-    uint16_t miniAudioY = FreqDisplayY + FreqDisplay::FREQDISPLAY_HEIGHT;
+    // ===================================================================    // A S-Meter jobb oldalán helyezzük el (S-Meter szélessége: ~240px)
+    uint16_t miniAudioX = SMeterConstants::SMETER_WIDTH + 10;                  // 10px hézag
+    uint16_t miniAudioWidth = 480 - miniAudioX - 90;                           // Maradék hely a jobb oldali gombok előtt (90px gomboknak)
+    uint16_t miniAudioHeight = 120;                                            // Kétszer olyan magas mint az S-Meter
+    uint16_t miniAudioY = FreqDisplayY + FreqDisplay::FREQDISPLAY_HEIGHT - 50; // 50px-el feljebb emelve
 
     Rect miniAudioBounds(miniAudioX, miniAudioY, miniAudioWidth, miniAudioHeight); // Globális audio processor deklarálása (extern)
     extern DmaAudioProcessor *g_audioProcessor;

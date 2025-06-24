@@ -202,9 +202,7 @@ void MiniAudioDisplay::drawSpectrumLowRes() {
     // Sprite vagy közvetlen rajzolás
     TFT_eSPI *canvas = spriteCreated ? (TFT_eSPI *)spectrumSprite : &tft;
     int offsetX = spriteCreated ? 0 : bounds.x;
-    int offsetY = spriteCreated ? 0 : bounds.y;
-
-    // Sprite esetén teljes háttér törlése
+    int offsetY = spriteCreated ? 0 : bounds.y; // Sprite esetén teljes háttér törlése
     if (spriteCreated) {
         spectrumSprite->fillScreen(COLOR_BACKGROUND);
 
@@ -213,12 +211,35 @@ void MiniAudioDisplay::drawSpectrumLowRes() {
 
         // Rácsvonalak
         for (int i = 1; i < 4; i++) {
-            int lineY = 10 + (i * (bounds.height - 20) / 4);
+            int lineY = 10 + (i * (bounds.height - 30) / 4); // -30 hogy hely legyen a címkéknek
             spectrumSprite->drawFastHLine(1, lineY, bounds.width - 2, COLOR_GRID);
         }
         for (int i = 1; i < 4; i++) {
             int lineX = (i * bounds.width / 4);
-            spectrumSprite->drawFastVLine(lineX, 10, bounds.height - 20, COLOR_GRID);
+            spectrumSprite->drawFastVLine(lineX, 10, bounds.height - 30, COLOR_GRID); // -30 hogy hely legyen a címkéknek
+        } // Frekvencia címkék hozzáadása a függőleges vonalak alá
+        spectrumSprite->setTextColor(COLOR_GRID, COLOR_BACKGROUND);
+        spectrumSprite->setTextSize(1);
+
+        for (int i = 0; i <= 4; i++) { // 0, 1, 2, 3, 4 - összesen 5 címke
+            int lineX = (i * bounds.width / 4);
+            float freq = LOW_RES_MIN_FREQ_HZ + (i * (maxDisplayFreqHz - LOW_RES_MIN_FREQ_HZ) / 4);
+
+            String freqText;
+            if (freq >= 1000.0f) {
+                freqText = String((int)(freq / 1000.0f)) + "k"; // kHz formátum
+            } else {
+                freqText = String((int)freq); // Hz formátum
+            } // Címke igazítás: első balra, utolsó jobbra, középsők középre
+            if (i == 0) {
+                spectrumSprite->setTextDatum(TL_DATUM); // Top Left - első címke balra igazítva (bal szélnél)
+            } else if (i == 4) {
+                spectrumSprite->setTextDatum(TR_DATUM); // Top Right - utolsó címke jobbra igazítva (jobb szélnél)
+            } else {
+                spectrumSprite->setTextDatum(TC_DATUM); // Top Center - középsők középre igazítva
+            }
+
+            spectrumSprite->drawString(freqText, lineX, bounds.height - 18); // 18px a keret aljától
         }
     }
 
@@ -241,8 +262,8 @@ void MiniAudioDisplay::drawSpectrumLowRes() {
         if (binCount > 0) {
             avgMagnitude /= binCount;
         } // Magnitude -> pixel magasság konverzió - 25x nagyobb érzékenység
-        int barHeight = (int)(avgMagnitude * bounds.height * 25.0); // 25x skálázás
-        barHeight = constrain(barHeight, 0, bounds.height - 15);    // Csúcsérték követés - lassú, de hatékony decay
+        int barHeight = (int)(avgMagnitude * (bounds.height - 30) * 25.0); // 25x skálázás, -30 a címkéknek
+        barHeight = constrain(barHeight, 0, bounds.height - 35);           // -35 hogy hely legyen a címkéknek        // Csúcsérték követés - lassú, de hatékony decay
         if (barHeight > peakBuffer[band]) {
             peakBuffer[band] = barHeight; // Új csúcs
         } else {
@@ -252,7 +273,7 @@ void MiniAudioDisplay::drawSpectrumLowRes() {
                 peakBuffer[band] = max(0, peakBuffer[band] - 1);
 
                 // Ha nincs jel hosszabb ideje, akkor gyorsabb tisztítás
-                if (barHeight == 0 && peakBuffer[band] > bounds.height / 3) {
+                if (barHeight == 0 && peakBuffer[band] > (bounds.height - 30) / 3) { // Frissített magasság
                     // Ha nincs jel és túl magas a peak, akkor 2 pixel csökkentés
                     peakBuffer[band] = max(0, peakBuffer[band] - 2);
                 }
@@ -264,25 +285,21 @@ void MiniAudioDisplay::drawSpectrumLowRes() {
 
         // Spektrum sáv
         if (barHeight > 0) {
-            canvas->fillRect(bandX + 1, offsetY + bounds.height - 10 - barHeight, bandWidth - 1, barHeight, COLOR_SPECTRUM);
-        }
-
-        // Csúcsérték vonal - vastagabb és láthatóbb
+            canvas->fillRect(bandX + 1, offsetY + bounds.height - 30 - barHeight, bandWidth - 1, barHeight, COLOR_SPECTRUM); // -30 a címkéknek
+        } // Csúcsérték vonal - vastagabb és láthatóbb
         if (peakBuffer[band] > 0) {
-            int peakY = offsetY + bounds.height - 10 - peakBuffer[band];
+            int peakY = offsetY + bounds.height - 30 - peakBuffer[band]; // -30 a címkéknek
             // Dupla vastagságú peak vonal a jobb láthatóságért
             canvas->drawFastHLine(bandX + 1, peakY, bandWidth - 1, COLOR_PEAK);
             if (peakY > offsetY + 5) {
                 canvas->drawFastHLine(bandX + 1, peakY - 1, bandWidth - 1, COLOR_PEAK);
             }
         }
-    }
-
-    // Sprite esetén függőleges rácsvonalak újrarajzolása a spektrum sávok után
+    } // Sprite esetén függőleges rácsvonalak újrarajzolása a spektrum sávok után
     if (spriteCreated) {
         for (int i = 1; i < 4; i++) {
             int lineX = (i * bounds.width / 4);
-            spectrumSprite->drawFastVLine(lineX, 10, bounds.height - 20, COLOR_GRID);
+            spectrumSprite->drawFastVLine(lineX, 10, bounds.height - 30, COLOR_GRID); // -30 a címkéknek
         }
 
         // Sprite tartalom megjelenítése
@@ -291,7 +308,7 @@ void MiniAudioDisplay::drawSpectrumLowRes() {
         // Függőleges rácsvonalak újrarajzolása a spektrum sávok után (közvetlen rajzolásnál)
         for (int i = 1; i < 4; i++) {
             int lineX = bounds.x + (i * bounds.width / 4);
-            tft.drawFastVLine(lineX, bounds.y + 10, bounds.height - 20, COLOR_GRID);
+            tft.drawFastVLine(lineX, bounds.y + 10, bounds.height - 30, COLOR_GRID); // -30 a címkéknek
         }
     }
 }
@@ -312,9 +329,7 @@ void MiniAudioDisplay::drawSpectrumHighRes() {
     // Sprite vagy közvetlen rajzolás
     TFT_eSPI *canvas = spriteCreated ? (TFT_eSPI *)spectrumSprite : &tft;
     int offsetX = spriteCreated ? 0 : bounds.x;
-    int offsetY = spriteCreated ? 0 : bounds.y;
-
-    // Sprite esetén teljes háttér törlése
+    int offsetY = spriteCreated ? 0 : bounds.y; // Sprite esetén teljes háttér törlése
     if (spriteCreated) {
         spectrumSprite->fillScreen(COLOR_BACKGROUND);
 
@@ -323,12 +338,35 @@ void MiniAudioDisplay::drawSpectrumHighRes() {
 
         // Rácsvonalak
         for (int i = 1; i < 4; i++) {
-            int lineY = 10 + (i * (bounds.height - 20) / 4);
+            int lineY = 10 + (i * (bounds.height - 30) / 4); // -30 hogy hely legyen a címkéknek
             spectrumSprite->drawFastHLine(1, lineY, bounds.width - 2, COLOR_GRID);
         }
         for (int i = 1; i < 4; i++) {
             int lineX = (i * bounds.width / 4);
-            spectrumSprite->drawFastVLine(lineX, 10, bounds.height - 20, COLOR_GRID);
+            spectrumSprite->drawFastVLine(lineX, 10, bounds.height - 30, COLOR_GRID); // -30 hogy hely legyen a címkéknek
+        } // Frekvencia címkék hozzáadása a függőleges vonalak alá
+        spectrumSprite->setTextColor(COLOR_GRID, COLOR_BACKGROUND);
+        spectrumSprite->setTextSize(1);
+
+        for (int i = 0; i <= 4; i++) { // 0, 1, 2, 3, 4 - összesen 5 címke
+            int lineX = (i * bounds.width / 4);
+            float freq = LOW_RES_MIN_FREQ_HZ + (i * (maxDisplayFreqHz - LOW_RES_MIN_FREQ_HZ) / 4);
+
+            String freqText;
+            if (freq >= 1000.0f) {
+                freqText = String((int)(freq / 1000.0f)) + "k"; // kHz formátum
+            } else {
+                freqText = String((int)freq); // Hz formátum
+            } // Címke igazítás: első balra, utolsó jobbra, középsők középre
+            if (i == 0) {
+                spectrumSprite->setTextDatum(TL_DATUM); // Top Left - első címke balra igazítva (bal szélnél)
+            } else if (i == 4) {
+                spectrumSprite->setTextDatum(TR_DATUM); // Top Right - utolsó címke jobbra igazítva (jobb szélnél)
+            } else {
+                spectrumSprite->setTextDatum(TC_DATUM); // Top Center - középsők középre igazítva
+            }
+
+            spectrumSprite->drawString(freqText, lineX, bounds.height - 18); // 18px a keret aljától
         }
     }
 
@@ -339,12 +377,12 @@ void MiniAudioDisplay::drawSpectrumHighRes() {
         int bin = (int)(freq / binWidth);
         if (bin < fftSize / 2) {
             // Magnitude -> pixel magasság konverzió - 40x nagyobb érzékenység
-            int lineHeight = (int)(magnitudeData[bin] * bounds.height * 40.0); // 40x skálázás
-            lineHeight = constrain(lineHeight, 0, bounds.height - 20);
+            int lineHeight = (int)(magnitudeData[bin] * (bounds.height - 30) * 40.0); // 40x skálázás, -30 a címkéknek
+            lineHeight = constrain(lineHeight, 0, bounds.height - 35);                // -35 hogy hely legyen a címkéknek
 
             // Spektrum vonal
             if (lineHeight > 0) {
-                canvas->drawFastVLine(offsetX + px + 1, offsetY + bounds.height - 10 - lineHeight, lineHeight, COLOR_SPECTRUM);
+                canvas->drawFastVLine(offsetX + px + 1, offsetY + bounds.height - 30 - lineHeight, lineHeight, COLOR_SPECTRUM); // -30 a címkéknek
             }
         }
     }
