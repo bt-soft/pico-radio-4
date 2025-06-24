@@ -23,6 +23,15 @@
 #define SCREEN_NAME_MEMORY "MemoryScreen"
 #define SCREEN_NAME_SCAN "ScanScreen"
 
+//--- Audio screens (for future use) ---
+#define SCREEN_NAME_AUDIO_SPECTRUM_LOW "AudioSpectrumLow"
+#define SCREEN_NAME_AUDIO_SPECTRUM_HIGH "AudioSpectrumHigh"
+#define SCREEN_NAME_AUDIO_OSCILLOSCOPE "AudioOscilloscope"
+#define SCREEN_NAME_AUDIO_ENVELOPE "AudioEnvelope"
+#define SCREEN_NAME_CW_TUNING "CwTuning"
+#define SCREEN_NAME_RTTY_TUNING "RttyTuning"
+#define SCREEN_NAME_SSTV_DISPLAY "SstvDisplay"
+
 //--- Debug ---
 #define __DEBUG // Debug mód vezérlése
 
@@ -31,7 +40,7 @@
 #define MEMORY_INFO_INTERVAL 20 * 1000 // 20mp
 
 // Soros portra várakozás a debug üzenetek előtt
-// #define DEBUG_WAIT_FOR_SERIAL
+#define DEBUG_WAIT_FOR_SERIAL
 
 // Debug keretek rajzolása a UI komponensek köré
 #define DRAW_DEBUG_FRAMES
@@ -86,5 +95,19 @@
 #else
 #define DEBUG(fmt, ...) // Üres makró, ha __DEBUG nincs definiálva
 #endif
+
+// Audio DSP/FFT beállítások
+#define AUDIO_FFT_IMPLEMENTATION_ARDUINO 1
+#define AUDIO_FFT_IMPLEMENTATION_CMSIS 2
+
+// Választható FFT implementáció (változtatható a platformio.ini-ben)
+#ifndef AUDIO_FFT_IMPLEMENTATION
+#define AUDIO_FFT_IMPLEMENTATION AUDIO_FFT_IMPLEMENTATION_ARDUINO
+#endif
+
+// FFT méretek (power of 2)
+#define AUDIO_FFT_SIZE_MIN 256
+#define AUDIO_FFT_SIZE_MAX 4096
+#define AUDIO_FFT_SIZE_DEFAULT 1024
 
 #endif // DEFINES_H

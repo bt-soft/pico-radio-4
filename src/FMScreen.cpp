@@ -1,6 +1,8 @@
 #include "FMScreen.h"
 #include "Band.h"
 #include "CommonVerticalButtons.h"
+#include "Config.h"
+#include "DmaAudioProcessor.h"
 #include "FreqDisplay.h"
 #include "StatusLine.h"
 #include "UIColorPalette.h"
@@ -87,9 +89,7 @@ void FMScreen::layoutComponents() {
 
     // RDS Radio text
     currentY += 18 + 5;
-    rdsComponent->setRadioTextArea(Rect(2, currentY, SMeterConstants::SMETER_WIDTH, 24));
-
-    // ===================================================================
+    rdsComponent->setRadioTextArea(Rect(2, currentY, SMeterConstants::SMETER_WIDTH, 24)); // ===================================================================
     // S-Meter komponens létrehozása - RadioScreen közös implementáció
     // ===================================================================
     currentY += 24 + 5;
@@ -97,10 +97,30 @@ void FMScreen::layoutComponents() {
     createSMeterComponent(smeterBounds);
 
     // ===================================================================
+    // Mini Audio Display komponens létrehozása
+    // ===================================================================
+
+    // Globális audio processor deklarálása (extern)
+    extern DmaAudioProcessor *g_audioProcessor;                     // A S-Meter jobb oldalán helyezzük el, de a függőleges gombsor bal oldalától 10px-el balra
+    uint16_t rightButtonsStartX = 480 - 60;                         // Feltételezve 60px széles függőleges gombok
+    uint16_t miniAudioX = SMeterConstants::SMETER_WIDTH + 10;       // 10px hézag az S-Meter után
+    uint16_t miniAudioWidth = rightButtonsStartX - miniAudioX - 10; // 10px hézag a gombokig
+    uint16_t miniAudioHeight = 120;                                 // Kétszer olyan magas mint az S-Meter    // EREDETI pozíció visszaállítása - S-Meter jobb oldalán
+    Rect miniAudioBounds(miniAudioX, currentY, miniAudioWidth, miniAudioHeight);
+    miniAudioDisplay = std::make_shared<MiniAudioDisplay>(tft, miniAudioBounds,
+                                                          g_audioProcessor,               // audio data provider
+                                                          config.data.miniAudioFftModeFm, // config mód referencia
+                                                          20000.0f                        // max freq Hz (20kHz FM audio)
+    );
+
+    // ===================================================================
     // Gombsorok létrehozása - Event-driven architektúra
     // ===================================================================
     createCommonVerticalButtonsWithCustomMemo(); // ButtonsGroupManager alapú függőleges gombsor egyedi Memo kezelővel
     createCommonHorizontalButtons();             // Alsó közös + FM specifikus vízszintes gombsor
+
+    // MiniAudioDisplay hozzáadása UTOLJÁRA a Z-order miatt (hogy felül legyen)
+    addChild(miniAudioDisplay);
 }
 
 // ===================================================================
@@ -168,35 +188,37 @@ void FMScreen::handleOwnLoop() {
     // ===================================================================
     // S-Meter (jelerősség) időzített frissítése - Közös RadioScreen implementáció
     // ===================================================================
-    updateSMeter(true /* FM mód */);
-
-    // ===================================================================
-    // RDS adatok valós idejű frissítése (optimalizált)
+    updateSMeter(true /* FM mód */); // ===================================================================
+    // RDS adatok valós idejű frissítése
     // ===================================================================
     if (rdsComponent) {
-        // RDS frissítés gyakrabban, de az RDSComponent maga időzít (1-3s adaptívan)
         static uint32_t lastRdsCall = 0;
         uint32_t currentTime = millis();
 
-        // 100ms = 10 Hz (nem túl gyakori, de elég a responsiveness-hez)
-        if (currentTime - lastRdsCall >= 100) {
+        // 500ms frissítési időköz az RDS adatokhoz
+        if (currentTime - lastRdsCall >= 500) {
             rdsComponent->updateRDS();
             lastRdsCall = currentTime;
         }
     }
 
     // Néhány adatot csak ritkábban frissítünk
-#define SCREEN_COMPS_REFRESH_TIME_MSEC 1000 // Frissítési időköz
-    static uint32_t elapsedTimedValues = 0; // Kezdőérték nulla
-    if ((millis() - elapsedTimedValues) >= SCREEN_COMPS_REFRESH_TIME_MSEC) {
-
-        // ===================================================================
+#define SCREEN_COMPS_REFRESH_TIME_MSEC 1000                                  // Frissítési időköz
+    static uint32_t elapsedTimedValues = 0;                                  // Kezdőérték nulla
+    if ((millis() - elapsedTimedValues) >= SCREEN_COMPS_REFRESH_TIME_MSEC) { // ===================================================================
         // STEREO/MONO jelző frissítése
         // ===================================================================
         if (stereoIndicator && pSi4735Manager) {
             // Si4735 stereo állapot lekérdezése
             bool isStereo = pSi4735Manager->getSi4735().getCurrentPilot();
             stereoIndicator->setStereo(isStereo);
+        }
+
+        // ===================================================================
+        // Mini Audio Display frissítése
+        // ===================================================================
+        if (miniAudioDisplay) {
+            miniAudioDisplay->update();
         }
 
         // Frissítjük az időbélyeget
@@ -220,6 +242,8 @@ void FMScreen::drawContent() {
     if (smeterComp) {
         smeterComp->drawSmeterScale();
     }
+
+    // TESZT kód eltávolítva - nem kell többé direkt rajzolás
 }
 
 /**

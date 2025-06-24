@@ -48,22 +48,24 @@ const Config_t DEFAULT_CONFIG = {
     .rotaryAcceleratonEnabled = true,                  // Rotary gyorsítás engedélyezése
 
     // MiniAudioFft módok
-    .miniAudioFftModeAm = 0, // SpectrumLowRes mode
-    .miniAudioFftModeFm = 0, // SpectrumLowRes mode
-
-    // MiniAudioFft erősítés
+    .miniAudioFftModeAm = 0,            // SpectrumLowRes mode
+    .miniAudioFftModeFm = 0,            // SpectrumLowRes mode    // MiniAudioFft erősítés
     .miniAudioFftConfigAm = 0.0f,       // Auto Gain
     .miniAudioFftConfigFm = 0.0f,       // Auto Gain
     .miniAudioFftConfigAnalyzer = 0.0f, // Analyzerhez alapértelmezetten Auto Gain
     .miniAudioFftConfigRtty = 0.0f,     // RTTY-hez alapértelmezetten Auto Gain
 
-    // CW vételi eltolás
-    .cwReceiverOffsetHz = CW_DECODER_DEFAULT_FREQUENCY, // Default CW vételi eltolás Hz-ben
+    // CW és RTTY beállítások
+    .cwReceiverOffsetHz = 600,      // 600 Hz CW offset
+    .rttyMarkFrequencyHz = 2125.0f, // RTTY Mark frequency
+    .rttyShiftHz = 170.0f,          // RTTY Shift
 
-    // RTTY frekvenciák
-    .rttyMarkFrequencyHz = RTTY_DEFAULT_MARKER_FREQUENCY, // Alapértelmezett RTTY Mark frekvencia
-    .rttyShiftHz = RTTY_DEFAULT_SHIFT_FREQUENCY,          // Alapértelmezett RTTY Shift (pozitív érték)
-
+    // Audio processing alapértelmezett beállítások
+    .audioModeAM = 0,     // AudioComponentType::SPECTRUM_LOW_RES
+    .audioModeFM = 0,     // AudioComponentType::SPECTRUM_LOW_RES
+    .audioEnabled = true, // Audio vizualizáció engedélyezve
+    .audioFftSize = 1024, // Közepes FFT méret
+    .audioGain = 1.0f,    // Alapértelmezett erősítés
 };
 
 // Globális konfiguráció példány

@@ -46,20 +46,25 @@ struct Config_t {
 
     // MiniAudioFft módok
     uint8_t miniAudioFftModeAm; // MiniAudioFft módja AM képernyőn
-    uint8_t miniAudioFftModeFm; // MiniAudioFft módja FM képernyőn
-
-    // MiniAudioFft erősítés
+    uint8_t miniAudioFftModeFm; // MiniAudioFft módja FM képernyőn    // MiniAudioFft erősítés
     float miniAudioFftConfigAm; // -1.0f: Disabled, 0.0f: Auto, >0.0f: Manual Gain Factor
     float miniAudioFftConfigFm; // -1.0f: Disabled, 0.0f: Auto, >0.0f: Manual Gain Factor
 
     float miniAudioFftConfigAnalyzer; // MiniAudioFft erősítés konfigurációja az Analyzerhez
     float miniAudioFftConfigRtty;     // MiniAudioFft erősítés konfigurációja az RTTY-hez
 
+    // CW és RTTY beállítások
     uint16_t cwReceiverOffsetHz; // CW vételi eltolás Hz-ben
-
     // RTTY frekvenciák
     float rttyMarkFrequencyHz; // RTTY Mark frekvencia Hz-ben
-    float rttyShiftHz;
+    float rttyShiftHz;         // RTTY Shift Hz-ben
+
+    // Audio processing beállítások
+    uint8_t audioModeAM;   // Utolsó audio mód AM képernyőn (AudioComponentType)
+    uint8_t audioModeFM;   // Utolsó audio mód FM képernyőn (AudioComponentType)
+    bool audioEnabled;     // Audio vizualizáció be/ki
+    uint16_t audioFftSize; // FFT méret (512, 1024, 2048, 4096)
+    float audioGain;       // Audio erősítés (0.1 - 10.0)
 };
 
 #endif // CONFIG_DATA_H

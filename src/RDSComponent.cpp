@@ -459,6 +459,9 @@ void RDSComponent::draw() {
     drawProgramType();
     drawRadioText();
     drawDateTime();
+
+    // Clear the redraw flag after drawing
+    needsRedraw = false;
 }
 
 /**

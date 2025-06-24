@@ -146,11 +146,11 @@ class UIContainerComponent : public UIComponent {
         if (UIComponent::isRedrawNeeded()) {  // Ellenőrzi a UIComponent::needsRedraw flag-et
             drawSelf();                       // Leszármazott implementálja, ha van mit rajzolnia (pl. háttér)
             UIComponent::needsRedraw = false; // Fontos: töröljük a flag-et, miután a "saját" rajzolás megtörtént
-        }
-
-        // 2. Gyerekek rajzolása (ők maguk ellenőrzik a saját needsRedraw flag-jüket és láthatóságukat)
+        } // 2. Gyerekek rajzolása (csak ha szükséges újrarajzolás)
         for (auto &child : children) {
-            child->draw();
+            if (child->isRedrawNeeded()) {
+                child->draw();
+            }
         }
     }
 

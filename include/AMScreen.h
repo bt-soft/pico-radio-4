@@ -17,6 +17,7 @@
 #ifndef __AM_SCREEN_H
 #define __AM_SCREEN_H
 #include "CommonVerticalButtons.h"
+#include "MiniAudioDisplay.h"
 #include "RadioScreen.h"
 #include "UIButton.h"
 #include "UIHorizontalButtonBar.h"
@@ -221,11 +222,12 @@ class AMScreen : public RadioScreen, public CommonVerticalButtons::Mixin<AMScree
      * @param event Gomb esemény (Clicked)
      * @details AM specifikus funkcionalitás
      */
-    void handleStepButton(const UIButton::ButtonEvent &event);
-
-    // ===================================================================
+    void handleStepButton(const UIButton::ButtonEvent &event); // ===================================================================
     // UI komponens objektumok - Smart pointer kezelés
     // ===================================================================
+
+    /// Mini Audio Display komponens - spektrum, oszcilloszkóp, stb.
+    std::shared_ptr<MiniAudioDisplay> miniAudioDisplay;
 
     // A horizontalButtonBar most a RadioScreen-ben van deklarálva
 };
