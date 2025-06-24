@@ -216,99 +216,112 @@ void MiniAudioDisplay::drawSpectrumLowRes() {
         }
         for (int i = 1; i < 4; i++) {
             int lineX = (i * bounds.width / 4);
-            spectrumSprite->drawFastVLine(lineX, 10, bounds.height - 30, COLOR_GRID); // -30 hogy hely legyen a címkéknek
-        } // Frekvencia címkék hozzáadása a függőleges vonalak alá
-        spectrumSprite->setTextColor(COLOR_GRID, COLOR_BACKGROUND);
-        spectrumSprite->setTextSize(1);
+            spectrumSprite->drawFastVLine(lineX, 10, bounds.height - 30, COLOR_GRID); // -30 hogy hely legyen a címkéknek        }
 
-        for (int i = 0; i <= 4; i++) { // 0, 1, 2, 3, 4 - összesen 5 címke
-            int lineX = (i * bounds.width / 4);
-            float freq = LOW_RES_MIN_FREQ_HZ + (i * (maxDisplayFreqHz - LOW_RES_MIN_FREQ_HZ) / 4);
+            // Frekvencia címkék hozzáadása a függőleges vonalak alá
+            spectrumSprite->setTextColor(COLOR_GRID, COLOR_BACKGROUND);
+            spectrumSprite->setTextSize(1);
 
-            String freqText;
-            if (freq >= 1000.0f) {
-                freqText = String((int)(freq / 1000.0f)) + "k"; // kHz formátum
-            } else {
-                freqText = String((int)freq); // Hz formátum
-            } // Címke igazítás: első balra, utolsó jobbra, középsők középre
-            if (i == 0) {
-                spectrumSprite->setTextDatum(TL_DATUM); // Top Left - első címke balra igazítva (bal szélnél)
-            } else if (i == 4) {
-                spectrumSprite->setTextDatum(TR_DATUM); // Top Right - utolsó címke jobbra igazítva (jobb szélnél)
-            } else {
-                spectrumSprite->setTextDatum(TC_DATUM); // Top Center - középsők középre igazítva
+            for (int i = 0; i <= 4; i++) { // 0, 1, 2, 3, 4 - összesen 5 címke
+                int lineX = (i * bounds.width / 4);
+                float freq = LOW_RES_MIN_FREQ_HZ + (i * (maxDisplayFreqHz - LOW_RES_MIN_FREQ_HZ) / 4);
+
+                String freqText;
+                if (freq >= 1000.0f) {
+                    freqText = String((int)(freq / 1000.0f)) + "k"; // kHz formátum
+                } else {
+                    freqText = String((int)freq); // Hz formátum
+                }
+
+                // Címke pozíció beállítása 1px gap-pel a kerettől
+                int textX = lineX; // Alapértelmezett pozíció
+                if (i == 0) {
+                    spectrumSprite->setTextDatum(TL_DATUM); // Top Left - első címke balra igazítva (bal szélnél)
+                    textX = 1;                              // 1px gap a bal kerettől
+                } else if (i == 4) {
+                    spectrumSprite->setTextDatum(TR_DATUM); // Top Right - utolsó címke jobbra igazítva (jobb szélnél)
+                    textX = bounds.width - 1;               // 1px gap a jobb kerettől
+                } else {
+                    spectrumSprite->setTextDatum(TC_DATUM); // Top Center - középsők középre igazítva
+                }
+
+                spectrumSprite->drawString(freqText, textX, bounds.height - 18); // 18px a keret aljától
+            }
+        }
+
+        for (int band = 0; band < numBands; band++) {
+            // Frekvencia tartomány számítása ehhez a sávhoz
+            float freqStart = LOW_RES_MIN_FREQ_HZ + (band * (maxDisplayFreqHz - LOW_RES_MIN_FREQ_HZ) / numBands);
+            float freqEnd = LOW_RES_MIN_FREQ_HZ + ((band + 1) * (maxDisplayFreqHz - LOW_RES_MIN_FREQ_HZ) / numBands);
+
+            // FFT bin-ek tartománya
+            int binStart = (int)(freqStart / binWidth);
+            int binEnd = (int)(freqEnd / binWidth);
+
+            // Átlagos magnitude számítása a sávban
+            double avgMagnitude = 0.0;
+            int binCount = 0;
+            for (int bin = binStart; bin <= binEnd && bin < fftSize / 2; bin++) {
+                avgMagnitude += magnitudeData[bin];
+                binCount++;
+            }
+            if (binCount > 0) {
+                avgMagnitude /= binCount;
             }
 
-            spectrumSprite->drawString(freqText, lineX, bounds.height - 18); // 18px a keret aljától
-        }
-    }
+            // Magnitude -> pixel magasság konverzió - 25x nagyobb érzékenység
+            int barHeight = (int)(avgMagnitude * (bounds.height - 30) * 25.0); // 25x skálázás, -30 a címkéknek
+            barHeight = constrain(barHeight, 0, bounds.height - 35);           // -35 hogy hely legyen a címkéknek
 
-    for (int band = 0; band < numBands; band++) {
-        // Frekvencia tartomány számítása ehhez a sávhoz
-        float freqStart = LOW_RES_MIN_FREQ_HZ + (band * (maxDisplayFreqHz - LOW_RES_MIN_FREQ_HZ) / numBands);
-        float freqEnd = LOW_RES_MIN_FREQ_HZ + ((band + 1) * (maxDisplayFreqHz - LOW_RES_MIN_FREQ_HZ) / numBands);
+            // Csúcsérték követés - lassú, de hatékony decay
+            if (barHeight > peakBuffer[band]) {
+                peakBuffer[band] = barHeight; // Új csúcs
+            } else {
+                // Lassú, gravitációs decay
+                if (peakBuffer[band] > 0) {
+                    // Konstans lassú csökkenés, függetlenül a magasságtól
+                    peakBuffer[band] = max(0, peakBuffer[band] - 1);
 
-        // FFT bin-ek tartománya
-        int binStart = (int)(freqStart / binWidth);
-        int binEnd = (int)(freqEnd / binWidth);
+                    // Ha nincs jel hosszabb ideje, akkor gyorsabb tisztítás
+                    if (barHeight == 0 && peakBuffer[band] > (bounds.height - 30) / 3) { // Frissített magasság
+                        // Ha nincs jel és túl magas a peak, akkor 2 pixel csökkentés
+                        peakBuffer[band] = max(0, peakBuffer[band] - 2);
+                    }
+                }
+            }
 
-        // Átlagos magnitude számítása a sávban
-        double avgMagnitude = 0.0;
-        int binCount = 0;
-        for (int bin = binStart; bin <= binEnd && bin < fftSize / 2; bin++) {
-            avgMagnitude += magnitudeData[bin];
-            binCount++;
-        }
-        if (binCount > 0) {
-            avgMagnitude /= binCount;
-        } // Magnitude -> pixel magasság konverzió - 25x nagyobb érzékenység
-        int barHeight = (int)(avgMagnitude * (bounds.height - 30) * 25.0); // 25x skálázás, -30 a címkéknek
-        barHeight = constrain(barHeight, 0, bounds.height - 35);           // -35 hogy hely legyen a címkéknek        // Csúcsérték követés - lassú, de hatékony decay
-        if (barHeight > peakBuffer[band]) {
-            peakBuffer[band] = barHeight; // Új csúcs
-        } else {
-            // Lassú, gravitációs decay
+            // Sáv rajzolása - sprite vagy közvetlen
+            int bandX = offsetX + band * bandWidth; // Spektrum sáv
+            if (barHeight > 0) {
+                canvas->fillRect(bandX + 1, offsetY + bounds.height - 30 - barHeight, bandWidth - 1, barHeight, COLOR_SPECTRUM); // -30 a címkéknek
+            }
+
+            // Csúcsérték vonal - vastagabb és láthatóbb
             if (peakBuffer[band] > 0) {
-                // Konstans lassú csökkenés, függetlenül a magasságtól
-                peakBuffer[band] = max(0, peakBuffer[band] - 1);
-
-                // Ha nincs jel hosszabb ideje, akkor gyorsabb tisztítás
-                if (barHeight == 0 && peakBuffer[band] > (bounds.height - 30) / 3) { // Frissített magasság
-                    // Ha nincs jel és túl magas a peak, akkor 2 pixel csökkentés
-                    peakBuffer[band] = max(0, peakBuffer[band] - 2);
+                int peakY = offsetY + bounds.height - 30 - peakBuffer[band]; // -30 a címkéknek
+                // Dupla vastagságú peak vonal a jobb láthatóságért
+                canvas->drawFastHLine(bandX + 1, peakY, bandWidth - 1, COLOR_PEAK);
+                if (peakY > offsetY + 5) {
+                    canvas->drawFastHLine(bandX + 1, peakY - 1, bandWidth - 1, COLOR_PEAK);
                 }
             }
         }
 
-        // Sáv rajzolása - sprite vagy közvetlen
-        int bandX = offsetX + band * bandWidth;
-
-        // Spektrum sáv
-        if (barHeight > 0) {
-            canvas->fillRect(bandX + 1, offsetY + bounds.height - 30 - barHeight, bandWidth - 1, barHeight, COLOR_SPECTRUM); // -30 a címkéknek
-        } // Csúcsérték vonal - vastagabb és láthatóbb
-        if (peakBuffer[band] > 0) {
-            int peakY = offsetY + bounds.height - 30 - peakBuffer[band]; // -30 a címkéknek
-            // Dupla vastagságú peak vonal a jobb láthatóságért
-            canvas->drawFastHLine(bandX + 1, peakY, bandWidth - 1, COLOR_PEAK);
-            if (peakY > offsetY + 5) {
-                canvas->drawFastHLine(bandX + 1, peakY - 1, bandWidth - 1, COLOR_PEAK);
+        // Sprite esetén függőleges rácsvonalak újrarajzolása a spektrum sávok után
+        if (spriteCreated) {
+            for (int i = 1; i < 4; i++) {
+                int lineX = (i * bounds.width / 4);
+                spectrumSprite->drawFastVLine(lineX, 10, bounds.height - 30, COLOR_GRID); // -30 a címkéknek
             }
-        }
-    } // Sprite esetén függőleges rácsvonalak újrarajzolása a spektrum sávok után
-    if (spriteCreated) {
-        for (int i = 1; i < 4; i++) {
-            int lineX = (i * bounds.width / 4);
-            spectrumSprite->drawFastVLine(lineX, 10, bounds.height - 30, COLOR_GRID); // -30 a címkéknek
-        }
 
-        // Sprite tartalom megjelenítése
-        spectrumSprite->pushSprite(bounds.x, bounds.y);
-    } else {
-        // Függőleges rácsvonalak újrarajzolása a spektrum sávok után (közvetlen rajzolásnál)
-        for (int i = 1; i < 4; i++) {
-            int lineX = bounds.x + (i * bounds.width / 4);
-            tft.drawFastVLine(lineX, bounds.y + 10, bounds.height - 30, COLOR_GRID); // -30 a címkéknek
+            // Sprite tartalom megjelenítése
+            spectrumSprite->pushSprite(bounds.x, bounds.y);
+        } else {
+            // Függőleges rácsvonalak újrarajzolása a spektrum sávok után (közvetlen rajzolásnál)
+            for (int i = 1; i < 4; i++) {
+                int lineX = bounds.x + (i * bounds.width / 4);
+                tft.drawFastVLine(lineX, bounds.y + 10, bounds.height - 30, COLOR_GRID); // -30 a címkéknek
+            }
         }
     }
 }
@@ -344,7 +357,9 @@ void MiniAudioDisplay::drawSpectrumHighRes() {
         for (int i = 1; i < 4; i++) {
             int lineX = (i * bounds.width / 4);
             spectrumSprite->drawFastVLine(lineX, 10, bounds.height - 30, COLOR_GRID); // -30 hogy hely legyen a címkéknek
-        } // Frekvencia címkék hozzáadása a függőleges vonalak alá
+        }
+
+        // Frekvencia címkék hozzáadása a függőleges vonalak alá
         spectrumSprite->setTextColor(COLOR_GRID, COLOR_BACKGROUND);
         spectrumSprite->setTextSize(1);
 
@@ -357,16 +372,21 @@ void MiniAudioDisplay::drawSpectrumHighRes() {
                 freqText = String((int)(freq / 1000.0f)) + "k"; // kHz formátum
             } else {
                 freqText = String((int)freq); // Hz formátum
-            } // Címke igazítás: első balra, utolsó jobbra, középsők középre
+            }
+
+            // Címke pozíció beállítása 1px gap-pel a kerettől
+            int textX = lineX; // Alapértelmezett pozíció
             if (i == 0) {
                 spectrumSprite->setTextDatum(TL_DATUM); // Top Left - első címke balra igazítva (bal szélnél)
+                textX = 1;                              // 1px gap a bal kerettől
             } else if (i == 4) {
                 spectrumSprite->setTextDatum(TR_DATUM); // Top Right - utolsó címke jobbra igazítva (jobb szélnél)
+                textX = bounds.width - 1;               // 1px gap a jobb kerettől
             } else {
                 spectrumSprite->setTextDatum(TC_DATUM); // Top Center - középsők középre igazítva
             }
 
-            spectrumSprite->drawString(freqText, lineX, bounds.height - 18); // 18px a keret aljától
+            spectrumSprite->drawString(freqText, textX, bounds.height - 18); // 18px a keret aljától
         }
     }
 
