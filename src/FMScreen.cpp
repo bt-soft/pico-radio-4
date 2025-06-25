@@ -37,6 +37,20 @@ FMScreen::FMScreen(TFT_eSPI &tft, Si4735Manager &si4735Manager) : RadioScreen(tf
     layoutComponents();
 }
 
+/**
+ * @brief FMScreen destruktor - MiniAudioDisplay parent pointer törlése
+ * @details Biztosítja, hogy az MiniAudioDisplay ne próbáljon hozzáférni
+ * a törölt screen objektumhoz képernyőváltáskor
+ */
+FMScreen::~FMScreen() {
+    DEBUG("FMScreen::~FMScreen() - Destruktor hívása\n");
+    if (miniAudioDisplay) {
+        DEBUG("FMScreen::~FMScreen() - miniAudioDisplay parent pointer törlése\n");
+        miniAudioDisplay->clearParentScreen();
+    }
+    DEBUG("FMScreen::~FMScreen() - Destruktor befejezve\n");
+}
+
 // ===================================================================
 // UI komponensek layout és elhelyezés
 // ===================================================================
@@ -110,6 +124,7 @@ void FMScreen::layoutComponents() {
     miniAudioDisplay = std::make_shared<MiniAudioDisplay>(tft, miniAudioBounds,
                                                           g_audioProcessor,               // audio data provider
                                                           config.data.miniAudioFftModeFm, // config mód referencia
+                                                          this,                           // parent screen referencia
                                                           20000.0f                        // max freq Hz (20kHz FM audio)
     );
 

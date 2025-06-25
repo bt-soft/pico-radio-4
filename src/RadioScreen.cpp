@@ -21,8 +21,15 @@
  * @param name Képernyő egyedi neve
  * @param si4735Manager Si4735 rádió chip kezelő referencia
  */
-RadioScreen::RadioScreen(TFT_eSPI &tft, const char *name, Si4735Manager *si4735Manager) : UIScreen(tft, name, si4735Manager) {
-    // A leszármazott osztályok fogják létrehozni a specifikus komponenseket
+RadioScreen::RadioScreen(TFT_eSPI &tft, const char *name, Si4735Manager *si4735Manager)
+    : UIScreen(tft, name, si4735Manager) { // A leszármazott osztályok fogják létrehozni a specifikus komponenseket
+}
+
+/**
+ * @brief RadioScreen destruktor
+ */
+RadioScreen::~RadioScreen() {
+    // Alapértelmezett destruktor - a leszármazott osztályok saját cleanup-ot végeznek
 }
 
 // ===================================================================

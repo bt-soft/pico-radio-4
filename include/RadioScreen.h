@@ -72,7 +72,7 @@ class RadioScreen : public UIScreen {
     /**
      * @brief Virtuális destruktor - Automatikus cleanup
      */
-    virtual ~RadioScreen() = default;
+    virtual ~RadioScreen();
 
   protected:
     // ===================================================================

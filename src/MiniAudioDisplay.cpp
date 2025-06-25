@@ -1,11 +1,12 @@
 #include "MiniAudioDisplay.h"
+#include "UIScreen.h"
 #include "defines.h"
 #include <cmath>
 
-MiniAudioDisplay::MiniAudioDisplay(TFT_eSPI &tft, const Rect &bounds, IAudioDataProvider *audioProvider, uint8_t &configModeRef, float maxDisplayFreqHz)
+MiniAudioDisplay::MiniAudioDisplay(TFT_eSPI &tft, const Rect &bounds, IAudioDataProvider *audioProvider, uint8_t &configModeRef, UIScreen *parentScreen, float maxDisplayFreqHz)
     : UIComponent(tft, bounds), currentMode(DisplayMode::SpectrumLowRes), currentTuningAidType(TuningAidType::CW_TUNING), configModeFieldRef(configModeRef),
-      audioProvider(audioProvider), maxDisplayFreqHz(maxDisplayFreqHz), lastModeChangeTime(0), lastTouchTime(0), lastPeakResetTime(0), needsRedraw(true),
-      modeIndicatorVisible(false), spectrumSprite(nullptr), spriteCreated(false) {
+      audioProvider(audioProvider), parentScreen(nullptr), maxDisplayFreqHz(maxDisplayFreqHz), lastModeChangeTime(0), lastTouchTime(0), lastPeakResetTime(0),
+      constructionTime(millis()), needsRedraw(true), modeIndicatorVisible(false), spectrumSprite(nullptr), spriteCreated(false) {
 
     // Buffer-ek inicializálása
     memset(peakBuffer, 0, sizeof(peakBuffer));
@@ -13,6 +14,12 @@ MiniAudioDisplay::MiniAudioDisplay(TFT_eSPI &tft, const Rect &bounds, IAudioData
 
     // Alapértelmezett mód: SpectrumLowRes
     setDisplayMode(DisplayMode::SpectrumLowRes);
+
+    // FONTOS: Parent screen pointer-t csak a konstruktor végén állítjuk be,
+    // amikor az objektum már teljesen kész
+    this->parentScreen = parentScreen;
+
+    DEBUG("MiniAudioDisplay::constructor() - parent=%p, construction_time=%lu\n", parentScreen, constructionTime);
 }
 
 MiniAudioDisplay::~MiniAudioDisplay() {
@@ -20,11 +27,37 @@ MiniAudioDisplay::~MiniAudioDisplay() {
     cleanupSpectrumSprite();
 }
 
+void MiniAudioDisplay::clearParentScreen() {
+    DEBUG("MiniAudioDisplay::clearParentScreen() - parent pointer törlése\n");
+    parentScreen = nullptr;
+}
+
 void MiniAudioDisplay::draw() {
     if (!audioProvider) {
         return;
     }
+
+    // KEZDETI VÁRAKOZÁS: Az objektum létrehozása után 1000ms-ig ne rajzoljunk
+    // Ez biztosítja, hogy a parent screen teljesen inicializálódjon
     uint32_t now = millis();
+    if (now - constructionTime < 1000) {
+        return; // Még túl korai a rajzoláshoz
+    }
+
+    // KRITIKUS: Ellenőrizzük a parentScreen érvényességét
+    // Ha nullptr, akkor ne folytassuk - az objektum valószínűleg törlés alatt áll
+    if (!parentScreen) {
+        static uint32_t lastNullWarning = 0;
+        if (now - lastNullWarning > 1000) { // Csak másodpercenként írjuk ki a hibaüzenetet
+            DEBUG("MiniAudioDisplay::draw() - parentScreen NULL, skip rajzolás\n");
+            lastNullWarning = now;
+        }
+        return; // Biztonságos kilépés - ne próbáljunk rajzolni érvénytelen kontextusban
+    } // Dialóg ellenőrzés - egyszerűen és biztonságosan
+    if (parentScreen->isDialogActive()) {
+        return;
+    }
+
     static uint32_t lastDrawTime = 0;
 
     // Mód kijelző elrejtése timeout után
@@ -577,7 +610,7 @@ void MiniAudioDisplay::drawTuningAid() {
         float centerFreq = 850.0f; // CW center frequency
         float spanFreq = 600.0f;   // CW span
         float minFreq = centerFreq - spanFreq / 2;
-        float maxFreq = centerFreq + spanFreq / 2;
+        // float maxFreq = centerFreq + spanFreq / 2;
 
         // Vízesés-szerű megjelenítés - minden pixel egy frekvenciát reprezentál
         for (int px = 0; px < bounds.width; px++) {
@@ -611,7 +644,7 @@ void MiniAudioDisplay::drawTuningAid() {
         float centerFreq = (markFreq + spaceFreq) / 2;
         float spanFreq = 800.0f; // RTTY sáv
         float minFreq = centerFreq - spanFreq / 2;
-        float maxFreq = centerFreq + spanFreq / 2;
+        // float maxFreq = centerFreq + spanFreq / 2;
 
         // Vízesés-szerű megjelenítés
         for (int px = 0; px < bounds.width; px++) {

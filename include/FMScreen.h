@@ -32,12 +32,10 @@ class FMScreen : public RadioScreen, public CommonVerticalButtons::Mixin<FMScree
      * - UI komponensek layout létrehozás
      * - Event-driven gombkezelés beállítás
      */
-    FMScreen(TFT_eSPI &tft, Si4735Manager &si4735Manager);
-
-    /**
-     * @brief Virtuális destruktor - Automatikus cleanup
-     */
-    virtual ~FMScreen() = default;
+    FMScreen(TFT_eSPI &tft, Si4735Manager &si4735Manager); /**
+                                                            * @brief Virtuális destruktor - Automatikus cleanup
+                                                            */
+    virtual ~FMScreen();
 
     // ===================================================================
     // UIScreen interface megvalósítás

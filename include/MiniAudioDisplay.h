@@ -5,6 +5,9 @@
 #include "UIComponent.h"
 #include <TFT_eSPI.h>
 
+// Forward deklaráció
+class UIScreen;
+
 /**
  * @brief Mini audio megjelenítő komponens különböző módokkal
  *
@@ -26,7 +29,7 @@ class MiniAudioDisplay : public UIComponent {
 
     // CW/RTTY hangolási segéd típusok
     enum class TuningAidType : uint8_t { CW_TUNING, RTTY_TUNING, OFF_DECODER }; // Konstruktor
-    MiniAudioDisplay(TFT_eSPI &tft, const Rect &bounds, IAudioDataProvider *audioProvider, uint8_t &configModeRef, float maxDisplayFreqHz = 15000.0f);
+    MiniAudioDisplay(TFT_eSPI &tft, const Rect &bounds, IAudioDataProvider *audioProvider, uint8_t &configModeRef, UIScreen *parentScreen, float maxDisplayFreqHz = 15000.0f);
 
     virtual ~MiniAudioDisplay(); // UIComponent interface implementáció
     virtual void draw() override;
@@ -41,12 +44,14 @@ class MiniAudioDisplay : public UIComponent {
 
     void setTuningAidType(TuningAidType type);
     TuningAidType getTuningAidType() const { return currentTuningAidType; }
-
     void setMaxDisplayFreq(float freqHz) { maxDisplayFreqHz = freqHz; }
     void forceRedraw() {
         needsRedraw = true;
         memset(peakBuffer, 0, sizeof(peakBuffer)); // Peak clear is újrarajzolásnál
     }
+
+    // Parent screen kezelés - biztonságos képernyőváltáshoz
+    void clearParentScreen();
 
   private:
     // Rajzoló metódusok
@@ -65,17 +70,17 @@ class MiniAudioDisplay : public UIComponent {
 
     // Sprite kezelés
     void initializeSpectrumSprite();
-    void cleanupSpectrumSprite();
-
-    // Állapot változók
+    void cleanupSpectrumSprite(); // Állapot változók
     DisplayMode currentMode;
     TuningAidType currentTuningAidType;
     uint8_t &configModeFieldRef;
     IAudioDataProvider *audioProvider;
+    UIScreen *parentScreen; // Parent screen referencia a dialóg állapot ellenőrzéshez
     float maxDisplayFreqHz;
     uint32_t lastModeChangeTime;
     uint32_t lastTouchTime;
     uint32_t lastPeakResetTime; // Peak reset időzítőhöz
+    uint32_t constructionTime;  // Konstruktor idő - kezdeti várakozáshoz
     bool needsRedraw;
     bool modeIndicatorVisible;                                  // Buffer-ek a rajzoláshoz
     int peakBuffer[24];                                         // Csúcsértékek alacsony felbontású spektrumhoz

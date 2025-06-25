@@ -46,6 +46,20 @@ AMScreen::AMScreen(TFT_eSPI &tft, Si4735Manager &si4735Manager) : RadioScreen(tf
     layoutComponents();
 }
 
+/**
+ * @brief AMScreen destruktor - MiniAudioDisplay parent pointer törlése
+ * @details Biztosítja, hogy az MiniAudioDisplay ne próbáljon hozzáférni
+ * a törölt screen objektumhoz képernyőváltáskor
+ */
+AMScreen::~AMScreen() {
+    DEBUG("AMScreen::~AMScreen() - Destruktor hívása\n");
+    if (miniAudioDisplay) {
+        DEBUG("AMScreen::~AMScreen() - miniAudioDisplay parent pointer törlése\n");
+        miniAudioDisplay->clearParentScreen();
+    }
+    DEBUG("AMScreen::~AMScreen() - Destruktor befejezve\n");
+}
+
 // =====================================================================
 // UIScreen interface megvalósítás
 // =====================================================================
@@ -323,6 +337,7 @@ void AMScreen::layoutComponents() {
     miniAudioDisplay = std::make_shared<MiniAudioDisplay>(tft, miniAudioBounds,
                                                           g_audioProcessor,               // audio data provider
                                                           config.data.miniAudioFftModeAm, // config mód referencia
+                                                          this,                           // parent screen referencia
                                                           10000.0f                        // max freq Hz (10kHz AM audio)
     );
     addChild(miniAudioDisplay);

@@ -61,12 +61,10 @@ class AMScreen : public RadioScreen, public CommonVerticalButtons::Mixin<AMScree
      * - Event-driven gombkezelés beállítás
      * - MW band aktiválás alapértelmezettként
      */
-    AMScreen(TFT_eSPI &tft, Si4735Manager &si4735Manager);
-
-    /**
-     * @brief Virtuális destruktor - Automatikus cleanup
-     */
-    virtual ~AMScreen() = default;
+    AMScreen(TFT_eSPI &tft, Si4735Manager &si4735Manager); /**
+                                                            * @brief Virtuális destruktor - Automatikus cleanup
+                                                            */
+    virtual ~AMScreen();
 
     // ===================================================================
     // UIScreen interface megvalósítás
