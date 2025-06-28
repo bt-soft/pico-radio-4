@@ -482,8 +482,8 @@ void FMScreen::createMiniAudioDisplay() {
         return; // Audio kikapcsolva
     }
 
-    // Pozíció számítása - az S-Meter alatt
-    Rect audioDisplayBounds(2, 190, 240, 40); // x, y, width, height
+    // Pozíció 
+    Rect audioDisplayBounds(250, 50, 160, 80); // x, y, width, height
 
     // Audio display típus a config alapján
     MiniAudioDisplayType displayType = static_cast<MiniAudioDisplayType>(config.data.audioModeFM);
