@@ -358,17 +358,3 @@ void loop() {
         si4735Manager->loop();
     }
 }
-
-/**
- * @brief  Core1 Fő függvény, amely a második mag inicializálását végzi.
- * @details Ez a függvény inicializálja a második magot, és beállítja a
- * szükséges környezetet az audio feldolgozáshoz.
- *
- */
-void setup1() { core1_init(); }
-
-/**
- * @brief Core1 loop függvény, amely a második mag fő ciklusát kezeli.
- * @details Ez a függvény folyamatosan fut a második magon és kezeli az audio feldolgozást.
- */
-void loop1() { core1_loop(); }
