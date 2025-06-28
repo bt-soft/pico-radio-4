@@ -59,6 +59,11 @@ class MiniSpectrumAnalyzer : public MiniAudioDisplay {
      */
     void drawContent() override;
 
+    /**
+     * @brief Tartalom kirajzolása sprite-ra
+     */
+    void drawContentToSprite(TFT_eSprite *sprite) override;
+
   private:
     DisplayMode displayMode_;
     uint16_t bandCount_;

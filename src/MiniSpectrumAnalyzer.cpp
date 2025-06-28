@@ -217,6 +217,40 @@ void MiniSpectrumAnalyzer::drawFilledLine() {
     }
 }
 
+void MiniSpectrumAnalyzer::drawContentToSprite(TFT_eSprite *sprite) {
+    // Adatok frissítése (FFT lekérés, bandData update)
+    drawContent();
+    // Ezután sprite-ra rajzolás (mint eddig)
+    if (!bandData_)
+        return;
+    const Rect &bounds = getBounds();
+    uint16_t barWidth = bounds.width / bandCount_;
+    uint16_t barSpacing = std::max(1, barWidth / 4);
+    uint16_t actualBarWidth = barWidth - barSpacing;
+
+    for (uint16_t band = 0; band < bandCount_; band++) {
+        uint16_t barX = band * barWidth;
+        uint16_t barHeight = amplitudeToHeight(bandData_[band]);
+        uint16_t barY = bounds.height - barHeight;
+
+        // Sáv törlése sprite-on (háttérrel)
+        sprite->fillRect(barX, 0, actualBarWidth, bounds.height, backgroundColor_);
+
+        // Sáv kirajzolása
+        if (barHeight > 0) {
+            uint16_t barColor = getBarColor(bandData_[band], 1000.0f);
+            sprite->fillRect(barX, barY, actualBarWidth, barHeight, barColor);
+        }
+
+        // Peak hold kirajzolása (sárga vonal, lassú csökkenéssel)
+        uint16_t peakHeight = amplitudeToHeight(peakHold_[band]);
+        if (peakHeight > 0) {
+            uint16_t peakY = bounds.height - peakHeight;
+            sprite->drawFastHLine(barX, peakY, actualBarWidth, TFT_YELLOW);
+        }
+    }
+}
+
 uint16_t MiniSpectrumAnalyzer::amplitudeToHeight(float amplitude) {
     // Logaritmikus skálázás a jobb vizuális megjelenítéshez
     if (amplitude <= 0.0f) {

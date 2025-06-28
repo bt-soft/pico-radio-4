@@ -82,6 +82,7 @@ class MiniAudioDisplay : public UIComponent {
      * @brief Specifikus kirajzolás - ezt implementálják a leszármazott osztályok
      */
     virtual void drawContent() = 0;
+    virtual void drawContentToSprite(TFT_eSprite *sprite) { drawContent(); }
 
     /**
      * @brief Mód kijelzés rajzolása
@@ -110,6 +111,13 @@ class MiniAudioDisplay : public UIComponent {
 
     // Frissítési frekvencia
     static constexpr uint32_t UPDATE_INTERVAL_MS = 50; // 20 FPS
+
+    struct SpriteHolder {
+        TFT_eSprite *sprite = nullptr;
+        uint16_t width = 0;
+        uint16_t height = 0;
+    };
+    SpriteHolder spriteHolder;
 };
 
 #endif // MINI_AUDIO_DISPLAY_H

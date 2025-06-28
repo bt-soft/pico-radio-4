@@ -1,9 +1,10 @@
 #include "MiniAudioDisplay.h"
 #include "Core1Logic.h"
 #include "UIColorPalette.h"
+#include <TFT_eSPI.h>
 
 MiniAudioDisplay::MiniAudioDisplay(TFT_eSPI &tft, const Rect &bounds, const ColorScheme &colors)
-    : UIComponent(tft, bounds, colors), primaryColor_(UIColorPalette::audioSpectrumPrimary), secondaryColor_(UIColorPalette::audioSpectrumSecondary),
+    : UIComponent(tft, static_cast<const Rect &>(bounds), colors), primaryColor_(UIColorPalette::audioSpectrumPrimary), secondaryColor_(UIColorPalette::audioSpectrumSecondary),
       backgroundColor_(UIColorPalette::audioSpectrumBackground), lastUpdateTime_(0), showingModeDisplay_(false), modeDisplayStartTime_(0) {}
 
 void MiniAudioDisplay::draw() {
@@ -14,18 +15,29 @@ void MiniAudioDisplay::draw() {
     if (isRedrawNeeded()) {
         const Rect &bounds = getBounds();
 
-        // Háttér törlése
-        tft.fillRect(bounds.x, bounds.y, bounds.width, bounds.height, backgroundColor_);
+        // Sprite inicializálás vagy méretváltás
+        if (!spriteHolder.sprite || spriteHolder.width != bounds.width || spriteHolder.height != bounds.height) {
+            if (spriteHolder.sprite) {
+                spriteHolder.sprite->deleteSprite();
+                delete spriteHolder.sprite;
+            }
+            spriteHolder.sprite = new TFT_eSprite(&tft);
+            spriteHolder.sprite->setColorDepth(16);
+            spriteHolder.sprite->createSprite(bounds.width, bounds.height);
+            spriteHolder.width = bounds.width;
+            spriteHolder.height = bounds.height;
+        }
 
-        // Keret rajzolása debug módban
-#ifdef DRAW_DEBUG_FRAMES
-        tft.drawRect(bounds.x, bounds.y, bounds.width, bounds.height, TFT_RED);
-#endif
+        // Sprite törlése háttérszínnel
+        spriteHolder.sprite->fillSprite(backgroundColor_);
 
-        // Mindig a fő tartalom (grafikon)
-        drawContent();
+        // Minden tartalom sprite-ra rajzolódik
+        drawContentToSprite(spriteHolder.sprite);
 
-        // Ha aktív a mód kijelzés, akkor a feliratot a kijelző alatt jelenítjük meg
+        // Sprite kirajzolása a kijelzőre
+        spriteHolder.sprite->pushSprite(bounds.x, bounds.y);
+
+        // Ha aktív a mód kijelzés, akkor a feliratot a kijelző alatt jelenítjük meg (közvetlenül tft-re)
         if (showingModeDisplay_) {
             drawModeDisplay();
         }

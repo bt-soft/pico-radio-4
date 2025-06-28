@@ -48,6 +48,7 @@ class MiniVuMeter : public MiniAudioDisplay {
      * @brief Tartalom kirajzolása
      */
     void drawContent() override;
+    void drawContentToSprite(TFT_eSprite *sprite) override; // Sprite-alapú rajzolás
 
   private:
     Style style_;
@@ -56,11 +57,11 @@ class MiniVuMeter : public MiniAudioDisplay {
     uint32_t peakHoldTime_;
     uint32_t lastPeakTime_;
 
-    // Stílus specifikus rajzoló függvények
-    void drawHorizontalBar();
-    void drawVerticalBar();
-    void drawNeedle();
-    void drawLedStrip();
+    // Stílus specifikus rajzoló függvények (sprite-tal)
+    void drawHorizontalBar(TFT_eSprite *sprite);
+    void drawVerticalBar(TFT_eSprite *sprite);
+    void drawNeedle(TFT_eSprite *sprite);
+    void drawLedStrip(TFT_eSprite *sprite);
 
     // Segédfüggvények
     float calculateRMSLevel();
