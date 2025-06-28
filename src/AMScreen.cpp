@@ -764,6 +764,68 @@ void AMScreen::createMiniAudioDisplay() {
 
     if (miniAudioDisplay) {
         addChild(miniAudioDisplay);
+
+        // Touch callback beállítása a mód váltáshoz
+        miniAudioDisplay->setModeChangeCallback([this]() { cycleThroughAudioModes(); });
+
         DEBUG("AMScreen: Mini audio display created (type: %d)\n", static_cast<int>(displayType));
+    }
+}
+
+/**
+ * @brief Audio display módok közötti váltás
+ */
+void AMScreen::cycleThroughAudioModes() {
+    extern Config config;
+
+    // Következő mód kiszámítása
+    int currentMode = config.data.audioModeAM;
+    int nextMode = currentMode + 1;
+
+    // Ha elértük a végét, visszatérünk az elejére (NONE után SPECTRUM_BARS)
+    if (nextMode > static_cast<int>(MiniAudioDisplayType::VU_METER)) {
+        nextMode = static_cast<int>(MiniAudioDisplayType::SPECTRUM_BARS);
+    }
+
+    // Config frissítése
+    config.data.audioModeAM = nextMode;
+
+    // Mód név meghatározása
+    String modeName = getAudioModeDisplayName(static_cast<MiniAudioDisplayType>(nextMode));
+
+    // Régi display eltávolítása
+    if (miniAudioDisplay) {
+        removeChild(miniAudioDisplay);
+        miniAudioDisplay.reset();
+    }
+
+    // Új display létrehozása
+    createMiniAudioDisplay();
+
+    // Mód kijelzés megjelenítése
+    if (miniAudioDisplay) {
+        miniAudioDisplay->showModeDisplay(modeName);
+    }
+
+    DEBUG("AMScreen: Audio mode changed to: %s (%d)\n", modeName.c_str(), nextMode);
+}
+
+/**
+ * @brief Audio mód megjelenítendő nevének lekérése
+ */
+String AMScreen::getAudioModeDisplayName(MiniAudioDisplayType mode) {
+    switch (mode) {
+        case MiniAudioDisplayType::SPECTRUM_BARS:
+            return "Spectrum Bars";
+        case MiniAudioDisplayType::SPECTRUM_LINE:
+            return "Spectrum Line";
+        case MiniAudioDisplayType::VU_METER:
+            return "VU Meter";
+        case MiniAudioDisplayType::WATERFALL:
+            return "Waterfall";
+        case MiniAudioDisplayType::OSCILLOSCOPE:
+            return "Oscilloscope";
+        default:
+            return "Audio Display";
     }
 }

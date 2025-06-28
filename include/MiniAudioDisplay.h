@@ -4,6 +4,7 @@
 #include "AudioProcessor.h"
 #include "UIComponent.h"
 #include <TFT_eSPI.h>
+#include <functional>
 
 /**
  * @brief Mini audio display típusok
@@ -51,6 +52,21 @@ class MiniAudioDisplay : public UIComponent {
     virtual MiniAudioDisplayType getType() const = 0;
 
     /**
+     * @brief Touch esemény kezelése - mód váltáshoz
+     */
+    bool handleTouch(const TouchEvent &event) override;
+
+    /**
+     * @brief Következő módra váltás callback beállítása
+     */
+    void setModeChangeCallback(std::function<void()> callback);
+
+    /**
+     * @brief Mód név megjelenítése
+     */
+    void showModeDisplay(const String &modeName);
+
+    /**
      * @brief Engedélyezés/letiltás
      */
     void setEnabled(bool enabled);
@@ -68,6 +84,11 @@ class MiniAudioDisplay : public UIComponent {
     virtual void drawContent() = 0;
 
     /**
+     * @brief Mód kijelzés rajzolása
+     */
+    void drawModeDisplay();
+
+    /**
      * @brief AudioProcessor lekérése
      */
     AudioProcessor *getAudioProcessor();
@@ -79,6 +100,13 @@ class MiniAudioDisplay : public UIComponent {
 
     // Állapot
     uint32_t lastUpdateTime_;
+
+    // Mód váltás callback és kijelzés
+    std::function<void()> modeChangeCallback_;
+    String currentModeDisplayText_;
+    uint32_t modeDisplayStartTime_;
+    bool showingModeDisplay_;
+    static constexpr uint32_t MODE_DISPLAY_DURATION_MS = 3000; // 3 másodperc
 
     // Frissítési frekvencia
     static constexpr uint32_t UPDATE_INTERVAL_MS = 50; // 20 FPS

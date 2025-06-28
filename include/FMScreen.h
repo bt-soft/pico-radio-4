@@ -134,6 +134,16 @@ class FMScreen : public RadioScreen, public CommonVerticalButtons::Mixin<FMScree
      */
     void createMiniAudioDisplay();
 
+    /**
+     * @brief Audio display módok közötti váltás
+     */
+    void cycleThroughAudioModes();
+
+    /**
+     * @brief Audio mód megjelenítendő nevének lekérése
+     */
+    String getAudioModeDisplayName(MiniAudioDisplayType mode);
+
     // ===================================================================
     // Event-driven gombállapot szinkronizálás
     // ===================================================================

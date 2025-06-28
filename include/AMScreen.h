@@ -154,6 +154,16 @@ class AMScreen : public RadioScreen, public CommonVerticalButtons::Mixin<AMScree
     void createMiniAudioDisplay();
 
     /**
+     * @brief Audio display módok közötti váltás
+     */
+    void cycleThroughAudioModes();
+
+    /**
+     * @brief Audio mód megjelenítendő nevének lekérése
+     */
+    String getAudioModeDisplayName(MiniAudioDisplayType mode);
+
+    /**
      * @brief Frissíti a FreqDisplay szélességét az aktuális band típus alapján
      * @details Dinamikusan állítja be a frekvencia kijelző szélességét
      */
