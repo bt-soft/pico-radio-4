@@ -15,10 +15,6 @@
 #include "pins.h"
 #include "utils.h"
 
-//------------------ Audio Processing
-#include "ArmFFT.h"
-#include "DmaAudioProcessor.h"
-
 //-------------------- Config
 #include "BandStore.h"
 #include "Config.h"
@@ -246,11 +242,6 @@ void setup() {
 
     // Csippantunk egyet
     Utils::beepTick();
-
-    DEBUG("=== PICO RADIO v4 DEBUG OUTPUT ===\n");
-    DEBUG("FFT Implementation: %s\n", ArmFFT::getImplementationName());
-    DEBUG("Core0 (main): UI and radio control\n");
-    DEBUG("Core1 (audio): DMA, FFT, visualization\n");
 }
 
 /**
@@ -371,27 +362,10 @@ void loop() {
  * szükséges környezetet az audio feldolgozáshoz.
  *
  */
-void setup1() {
-    DEBUG("Core1 setup starting...\n");
-
-    // Audio processor létrehozása és inicializálása
-    if (!g_audioProcessor) {
-        g_audioProcessor = new DmaAudioProcessor();
-
-        if (g_audioProcessor->initialize()) {
-            DEBUG("Audio processor initialized successfully on Core1\n");
-        } else {
-            DEBUG("Audio processor initialization failed!\n");
-            delete g_audioProcessor;
-            g_audioProcessor = nullptr;
-        }
-    }
-}
+void setup1() {}
 
 /**
  * @brief Core1 loop függvény, amely a második mag fő ciklusát kezeli.
  * @details Ez a függvény folyamatosan fut a második magon és kezeli az audio feldolgozást.
  */
-void loop1() { // Audio processing entry point
-    audioProcessingCore1Entry();
-}
+void loop1() {}

@@ -16,21 +16,14 @@
 //--- ScreenNames ----
 #define SCREEN_NAME_FM "FMScreen"
 #define SCREEN_NAME_AM "AMScreen"
-#define SCREEN_NAME_TEST "TestScreen"
-#define SCREEN_NAME_EMPTY "EmptyScreen"
 #define SCREEN_NAME_SCREENSAVER "ScreenSaver"
 #define SCREEN_NAME_SETUP "SetupScreen"
 #define SCREEN_NAME_MEMORY "MemoryScreen"
 #define SCREEN_NAME_SCAN "ScanScreen"
 
-//--- Audio screens (for future use) ---
-#define SCREEN_NAME_AUDIO_SPECTRUM_LOW "AudioSpectrumLow"
-#define SCREEN_NAME_AUDIO_SPECTRUM_HIGH "AudioSpectrumHigh"
-#define SCREEN_NAME_AUDIO_OSCILLOSCOPE "AudioOscilloscope"
-#define SCREEN_NAME_AUDIO_ENVELOPE "AudioEnvelope"
-#define SCREEN_NAME_CW_TUNING "CwTuning"
-#define SCREEN_NAME_RTTY_TUNING "RttyTuning"
-#define SCREEN_NAME_SSTV_DISPLAY "SstvDisplay"
+#define SCREEN_NAME_TEST "TestScreen"
+#define SCREEN_NAME_EMPTY "EmptyScreen"
+
 
 //--- Debug ---
 #define __DEBUG // Debug mód vezérlése
@@ -40,7 +33,7 @@
 #define MEMORY_INFO_INTERVAL 20 * 1000 // 20mp
 
 // Soros portra várakozás a debug üzenetek előtt
-#define DEBUG_WAIT_FOR_SERIAL
+// #define DEBUG_WAIT_FOR_SERIAL
 
 // Debug keretek rajzolása a UI komponensek köré
 #define DRAW_DEBUG_FRAMES

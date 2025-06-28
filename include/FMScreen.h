@@ -8,7 +8,6 @@
 #define __FM_SCREEN_H
 #include "CommonVerticalButtons.h"
 #include "MemoryScreen.h"
-#include "MiniAudioDisplay.h"
 #include "RDSComponent.h"
 #include "RadioScreen.h"
 #include "StereoIndicator.h"
@@ -184,13 +183,6 @@ class FMScreen : public RadioScreen, public CommonVerticalButtons::Mixin<FMScree
 
     /// RDS (Radio Data System) komponens - FM rádió adatok megjelenítése
     std::shared_ptr<RDSComponent> rdsComponent;
-
-    // ===================================================================
-    // Mini Audio Display komponens kezelés
-    // ===================================================================
-
-    /// Mini Audio Display komponens - spektrum, oszcilloszkóp, stb.
-    std::shared_ptr<MiniAudioDisplay> miniAudioDisplay;
 
     /**
      * @brief Létrehozza az RDS komponenst

@@ -2,7 +2,6 @@
 #include "Band.h"
 #include "CommonVerticalButtons.h"
 #include "Config.h"
-#include "DmaAudioProcessor.h"
 #include "FreqDisplay.h"
 #include "MultiButtonDialog.h"
 #include "StatusLine.h"
@@ -51,14 +50,7 @@ AMScreen::AMScreen(TFT_eSPI &tft, Si4735Manager &si4735Manager) : RadioScreen(tf
  * @details Biztosítja, hogy az MiniAudioDisplay ne próbáljon hozzáférni
  * a törölt screen objektumhoz képernyőváltáskor
  */
-AMScreen::~AMScreen() {
-    DEBUG("AMScreen::~AMScreen() - Destruktor hívása\n");
-    if (miniAudioDisplay) {
-        DEBUG("AMScreen::~AMScreen() - miniAudioDisplay parent pointer törlése\n");
-        miniAudioDisplay->clearParentScreen();
-    }
-    DEBUG("AMScreen::~AMScreen() - Destruktor befejezve\n");
-}
+AMScreen::~AMScreen() { DEBUG("AMScreen::~AMScreen() - Destruktor hívása\n"); }
 
 // =====================================================================
 // UIScreen interface megvalósítás
@@ -192,18 +184,6 @@ void AMScreen::handleOwnLoop() {
     // S-Meter (jelerősség) időzített frissítése - Közös RadioScreen implementáció
     // ===================================================================
     updateSMeter(false /* AM mód */);
-
-    // ===================================================================
-    // Mini Audio Display frissítése (ritkábban)
-    // ===================================================================
-    static uint32_t lastMiniAudioUpdate = 0;
-    uint32_t currentTime = millis();
-    if (currentTime - lastMiniAudioUpdate >= 100) { // 100ms = 10 Hz
-        if (miniAudioDisplay) {
-            miniAudioDisplay->update();
-        }
-        lastMiniAudioUpdate = currentTime;
-    }
 }
 
 /**
@@ -319,12 +299,16 @@ void AMScreen::layoutComponents() {
     updateFreqDisplayWidth();
 
     // Finomhangolás jel (alulvonás) elrejtése a frekvencia kijelzőn, ha nem HAM sávban vagyunk
-    freqDisplayComp->setHideUnderline(!pSi4735Manager->isCurrentHamBand()); // ===================================================================
+    freqDisplayComp->setHideUnderline(!pSi4735Manager->isCurrentHamBand());
+
+    // ===================================================================
     // S-Meter komponens létrehozása - RadioScreen közös implementáció
     // ===================================================================
 
     Rect smeterBounds(2, FreqDisplayY + FreqDisplay::FREQDISPLAY_HEIGHT, SMeterConstants::SMETER_WIDTH, 60);
-    createSMeterComponent(smeterBounds); // ===================================================================
+    createSMeterComponent(smeterBounds);
+
+    // ===================================================================
     // Mini Audio Display komponens létrehozása
     // ===================================================================    // A S-Meter jobb oldalán helyezzük el (S-Meter szélessége: ~240px)
     uint16_t miniAudioX = SMeterConstants::SMETER_WIDTH + 10;                  // 10px hézag
@@ -333,14 +317,6 @@ void AMScreen::layoutComponents() {
     uint16_t miniAudioY = FreqDisplayY + FreqDisplay::FREQDISPLAY_HEIGHT - 50; // 50px-el feljebb emelve
 
     Rect miniAudioBounds(miniAudioX, miniAudioY, miniAudioWidth, miniAudioHeight); // Globális audio processor deklarálása (extern)
-    extern DmaAudioProcessor *g_audioProcessor;
-    miniAudioDisplay = std::make_shared<MiniAudioDisplay>(tft, miniAudioBounds,
-                                                          g_audioProcessor,               // audio data provider
-                                                          config.data.miniAudioFftModeAm, // config mód referencia
-                                                          this,                           // parent screen referencia
-                                                          10000.0f                        // max freq Hz (10kHz AM audio)
-    );
-    addChild(miniAudioDisplay);
 
     createCommonVerticalButtons(pSi4735Manager); // ButtonsGroupManager használata
     createCommonHorizontalButtons();             // Alsó közös + AM specifikus vízszintes gombsor

@@ -8,7 +8,6 @@
  * A SetupScreen a következő almenüket támogatja:
  * - Display Settings: kijelző és UI beállítások
  * - Si4735 Settings: rádió chip beállítások
- * - Decoder Settings: dekóderek beállításai
  * - System Information: rendszer információk megjelenítése
  * - Factory Reset: gyári beállítások visszaállítása
  *
@@ -51,8 +50,6 @@ void SetupScreen::populateMenuItems() {
     settingItems.push_back(SettingItem("System Settings", "", static_cast<int>(MainItemAction::DISPLAY_SETTINGS), true, "SETUP_SYSTEM"));
 
     settingItems.push_back(SettingItem("Si4735 Settings", "", static_cast<int>(MainItemAction::SI4735_SETTINGS), true, "SETUP_SI4735"));
-
-    settingItems.push_back(SettingItem("Decoder Settings", "", static_cast<int>(MainItemAction::DECODER_SETTINGS), true, "SETUP_DECODERS"));
 
     settingItems.push_back(SettingItem("System Information", "", static_cast<int>(MainItemAction::INFO)));
 

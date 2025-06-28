@@ -6,7 +6,6 @@
 #include "FMScreen.h"
 #include "MemoryScreen.h"
 #include "ScreenSaverScreen.h"
-#include "SetupDecodersScreen.h"
 #include "SetupScreen.h"
 #include "SetupSi4735Screen.h"
 #include "SetupSystemScreen.h"
@@ -28,7 +27,6 @@ void ScreenManager::registerDefaultScreenFactories() {
     registerScreenFactory(SCREEN_NAME_SETUP, [](TFT_eSPI &tft_param) { return std::make_shared<SetupScreen>(tft_param); });
     registerScreenFactory("SETUP_SYSTEM", [](TFT_eSPI &tft_param) { return std::make_shared<SetupSystemScreen>(tft_param); });
     registerScreenFactory("SETUP_SI4735", [](TFT_eSPI &tft_param) { return std::make_shared<SetupSi4735Screen>(tft_param); });
-    registerScreenFactory("SETUP_DECODERS", [](TFT_eSPI &tft_param) { return std::make_shared<SetupDecodersScreen>(tft_param); });
 
     // test képernyők regisztrálása
     registerScreenFactory(SCREEN_NAME_TEST, [](TFT_eSPI &tft_param) { return std::make_shared<TestScreen>(tft_param); });

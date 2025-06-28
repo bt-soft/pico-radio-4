@@ -13,7 +13,6 @@ class MessageDialog;
  * Ez a képernyő a fő setup menüt jeleníti meg, amely almenükre vezet:
  * - Display Settings (kijelző beállítások)
  * - Si4735 Settings (rádió chip beállítások)
- * - Decoder Settings (dekóder beállítások)
  * - System Information
  * - Factory Reset
  */
