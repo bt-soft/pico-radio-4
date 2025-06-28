@@ -17,6 +17,9 @@
 #ifndef __AM_SCREEN_H
 #define __AM_SCREEN_H
 #include "CommonVerticalButtons.h"
+#include "MiniAudioDisplay.h"
+#include "MiniSpectrumAnalyzer.h"
+#include "MiniVuMeter.h"
 #include "RadioScreen.h"
 #include "UIButton.h"
 #include "UIHorizontalButtonBar.h"
@@ -145,6 +148,12 @@ class AMScreen : public RadioScreen, public CommonVerticalButtons::Mixin<AMScree
     void layoutComponents();
 
     /**
+     * @brief Mini Audio Display komponens létrehozása
+     * @details A config alapján létrehozza a megfelelő típusú mini audio display-t
+     */
+    void createMiniAudioDisplay();
+
+    /**
      * @brief Frissíti a FreqDisplay szélességét az aktuális band típus alapján
      * @details Dinamikusan állítja be a frekvencia kijelző szélességét
      */
@@ -224,6 +233,12 @@ class AMScreen : public RadioScreen, public CommonVerticalButtons::Mixin<AMScree
     // ===================================================================
     // UI komponens objektumok - Smart pointer kezelés
     // ===================================================================
+
+    /**
+     * @brief Mini audio display komponens
+     * @details Kis méretű spektrum analizátor vagy VU meter a képernyő alján
+     */
+    std::shared_ptr<MiniAudioDisplay> miniAudioDisplay;
 
     // A horizontalButtonBar most a RadioScreen-ben van deklarálva
 };

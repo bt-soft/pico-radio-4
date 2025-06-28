@@ -199,6 +199,11 @@ class UIColorPalette {
         colors.disabledBorder = TFT_GREENYELLOW;
         return colors;
     }
+
+    // === AUDIO SPEKTRUM SZÍNEK ===
+    static constexpr uint16_t audioSpectrumPrimary = TFT_GREEN;    // Főszín
+    static constexpr uint16_t audioSpectrumSecondary = TFT_YELLOW; // Másodlagos szín
+    static constexpr uint16_t audioSpectrumBackground = TFT_BLACK; // Háttérszín
 };
 
 #endif // __UI_COLOR_PALETTE_H

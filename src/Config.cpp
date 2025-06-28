@@ -64,8 +64,8 @@ const Config_t DEFAULT_CONFIG = {
     .audioModeAM = 0,     // AudioComponentType::SPECTRUM_LOW_RES
     .audioModeFM = 0,     // AudioComponentType::SPECTRUM_LOW_RES
     .audioEnabled = true, // Audio vizualizáció engedélyezve
-    .audioFftSize = 1024, // Közepes FFT méret
-    .audioGain = 1.0f,    // Alapértelmezett erősítés
+    .audioFftSize = 256,  // Alapértelmezett FFT méret
+    .audioFftGain = 1.0f, // Alapértelmezett FFT erősítés
 };
 
 // Globális konfiguráció példány

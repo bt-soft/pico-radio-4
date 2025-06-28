@@ -184,6 +184,13 @@ void AMScreen::handleOwnLoop() {
     // S-Meter (jelerősség) időzített frissítése - Közös RadioScreen implementáció
     // ===================================================================
     updateSMeter(false /* AM mód */);
+
+    // ===================================================================
+    // Mini Audio Display frissítése
+    // ===================================================================
+    if (miniAudioDisplay) {
+        miniAudioDisplay->update();
+    }
 }
 
 /**
@@ -310,13 +317,8 @@ void AMScreen::layoutComponents() {
 
     // ===================================================================
     // Mini Audio Display komponens létrehozása
-    // ===================================================================    // A S-Meter jobb oldalán helyezzük el (S-Meter szélessége: ~240px)
-    uint16_t miniAudioX = SMeterConstants::SMETER_WIDTH + 10;                  // 10px hézag
-    uint16_t miniAudioWidth = 480 - miniAudioX - 90;                           // Maradék hely a jobb oldali gombok előtt (90px gomboknak)
-    uint16_t miniAudioHeight = 120;                                            // Kétszer olyan magas mint az S-Meter
-    uint16_t miniAudioY = FreqDisplayY + FreqDisplay::FREQDISPLAY_HEIGHT - 50; // 50px-el feljebb emelve
-
-    Rect miniAudioBounds(miniAudioX, miniAudioY, miniAudioWidth, miniAudioHeight); // Globális audio processor deklarálása (extern)
+    // ===================================================================
+    createMiniAudioDisplay();
 
     createCommonVerticalButtons(pSi4735Manager); // ButtonsGroupManager használata
     createCommonHorizontalButtons();             // Alsó közös + AM specifikus vízszintes gombsor
@@ -717,4 +719,51 @@ void AMScreen::updateFreqDisplayWidth() {
     }
 
     freqDisplayComp->setWidth(newWidth);
+}
+
+// ===================================================================
+// Mini Audio Display komponens létrehozása
+// ===================================================================
+
+/**
+ * @brief Mini Audio Display komponens létrehozása
+ * @details A config alapján létrehozza a megfelelő típusú mini audio display-t
+ */
+void AMScreen::createMiniAudioDisplay() {
+    extern Config config;
+
+    if (!config.data.audioEnabled) {
+        return; // Audio kikapcsolva
+    }
+
+    // Pozíció számítása - az S-Meter jobb oldalán
+    Rect audioDisplayBounds(SMeterConstants::SMETER_WIDTH + 10, 110, 180, 60); // x, y, width, height
+
+    // Audio display típus a config alapján
+    MiniAudioDisplayType displayType = static_cast<MiniAudioDisplayType>(config.data.audioModeAM);
+
+    switch (displayType) {
+        case MiniAudioDisplayType::SPECTRUM_BARS:
+        case MiniAudioDisplayType::SPECTRUM_LINE:
+            miniAudioDisplay = std::make_shared<MiniSpectrumAnalyzer>(
+                tft, audioDisplayBounds, (displayType == MiniAudioDisplayType::SPECTRUM_BARS) ? MiniSpectrumAnalyzer::DisplayMode::BARS : MiniSpectrumAnalyzer::DisplayMode::LINE);
+            // AM mód frekvencia tartomány beállítása (kisebb sávszélesség)
+            static_cast<MiniSpectrumAnalyzer *>(miniAudioDisplay.get())->setFrequencyRange(300.0f, 6000.0f);
+            break;
+
+        case MiniAudioDisplayType::VU_METER:
+            miniAudioDisplay = std::make_shared<MiniVuMeter>(tft, audioDisplayBounds, MiniVuMeter::Style::HORIZONTAL_BAR);
+            break;
+
+        default:
+            // Alapértelmezett spektrum analizátor
+            miniAudioDisplay = std::make_shared<MiniSpectrumAnalyzer>(tft, audioDisplayBounds);
+            static_cast<MiniSpectrumAnalyzer *>(miniAudioDisplay.get())->setFrequencyRange(300.0f, 6000.0f);
+            break;
+    }
+
+    if (miniAudioDisplay) {
+        addChild(miniAudioDisplay);
+        DEBUG("AMScreen: Mini audio display created (type: %d)\n", static_cast<int>(displayType));
+    }
 }

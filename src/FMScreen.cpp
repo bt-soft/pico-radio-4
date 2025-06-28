@@ -65,7 +65,7 @@ void FMScreen::layoutComponents() {
     // Frekvencia kijelző pozicionálás (képernyő közép)
     // ===================================================================
     uint16_t FreqDisplayY = 20;
-    Rect freqBounds(0, FreqDisplayY, FreqDisplay::FREQDISPLAY_WIDTH - 60, FreqDisplay::FREQDISPLAY_HEIGHT);
+    Rect freqBounds(0, FreqDisplayY, FreqDisplay::FREQDISPLAY_WIDTH - 60, FreqDisplay::FREQDISPLAY_HEIGHT - 20);
     UIScreen::createFreqDisplay(freqBounds);
     freqDisplayComp->setHideUnderline(true); // Alulvonás elrejtése a frekvencia kijelzőn
 
@@ -107,6 +107,7 @@ void FMScreen::layoutComponents() {
     // ===================================================================
     // Mini Audio Display komponens létrehozása
     // ===================================================================
+    createMiniAudioDisplay();
 
     // ===================================================================
     // Gombsorok létrehozása - Event-driven architektúra
@@ -194,6 +195,13 @@ void FMScreen::handleOwnLoop() {
             rdsComponent->updateRDS();
             lastRdsCall = currentTime;
         }
+    }
+
+    // ===================================================================
+    // Mini Audio Display frissítése
+    // ===================================================================
+    if (miniAudioDisplay) {
+        miniAudioDisplay->update();
     }
 
     // Néhány adatot csak ritkábban frissítünk
@@ -457,4 +465,51 @@ void FMScreen::createCommonVerticalButtonsWithCustomMemo() {
 
     // Gombok létrehozása és elhelyezése
     ButtonsGroupManager<FMScreen>::layoutVerticalButtonGroup(customDefs, &createdVerticalButtons, 0, 0, 5, 60, 32, 3, 4);
+}
+
+// ===================================================================
+// Mini Audio Display komponens létrehozása
+// ===================================================================
+
+/**
+ * @brief Mini Audio Display komponens létrehozása
+ * @details A config alapján létrehozza a megfelelő típusú mini audio display-t
+ */
+void FMScreen::createMiniAudioDisplay() {
+    extern Config config;
+
+    if (!config.data.audioEnabled) {
+        return; // Audio kikapcsolva
+    }
+
+    // Pozíció számítása - az S-Meter alatt
+    Rect audioDisplayBounds(2, 190, 240, 40); // x, y, width, height
+
+    // Audio display típus a config alapján
+    MiniAudioDisplayType displayType = static_cast<MiniAudioDisplayType>(config.data.audioModeFM);
+
+    switch (displayType) {
+        case MiniAudioDisplayType::SPECTRUM_BARS:
+        case MiniAudioDisplayType::SPECTRUM_LINE:
+            miniAudioDisplay = std::make_shared<MiniSpectrumAnalyzer>(
+                tft, audioDisplayBounds, (displayType == MiniAudioDisplayType::SPECTRUM_BARS) ? MiniSpectrumAnalyzer::DisplayMode::BARS : MiniSpectrumAnalyzer::DisplayMode::LINE);
+            // FM mód frekvencia tartomány beállítása
+            static_cast<MiniSpectrumAnalyzer *>(miniAudioDisplay.get())->setFrequencyRange(300.0f, 15000.0f);
+            break;
+
+        case MiniAudioDisplayType::VU_METER:
+            miniAudioDisplay = std::make_shared<MiniVuMeter>(tft, audioDisplayBounds, MiniVuMeter::Style::HORIZONTAL_BAR);
+            break;
+
+        default:
+            // Alapértelmezett spektrum analizátor
+            miniAudioDisplay = std::make_shared<MiniSpectrumAnalyzer>(tft, audioDisplayBounds);
+            static_cast<MiniSpectrumAnalyzer *>(miniAudioDisplay.get())->setFrequencyRange(300.0f, 15000.0f);
+            break;
+    }
+
+    if (miniAudioDisplay) {
+        addChild(miniAudioDisplay);
+        DEBUG("FMScreen: Mini audio display created (type: %d)\n", static_cast<int>(displayType));
+    }
 }
