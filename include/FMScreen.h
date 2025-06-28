@@ -8,9 +8,6 @@
 #define __FM_SCREEN_H
 #include "CommonVerticalButtons.h"
 #include "MemoryScreen.h"
-#include "MiniAudioDisplay.h"
-#include "MiniSpectrumAnalyzer.h"
-#include "MiniVuMeter.h"
 #include "RDSComponent.h"
 #include "RadioScreen.h"
 #include "StereoIndicator.h"
@@ -34,9 +31,11 @@ class FMScreen : public RadioScreen, public CommonVerticalButtons::Mixin<FMScree
      * - UI komponensek layout létrehozás
      * - Event-driven gombkezelés beállítás
      */
-    FMScreen(TFT_eSPI &tft, Si4735Manager &si4735Manager); /**
-                                                            * @brief Virtuális destruktor - Automatikus cleanup
-                                                            */
+    FMScreen(TFT_eSPI &tft, Si4735Manager &si4735Manager);
+
+    /**
+     * @brief Virtuális destruktor - Automatikus cleanup
+     */
     virtual ~FMScreen();
 
     // ===================================================================
@@ -128,22 +127,6 @@ class FMScreen : public RadioScreen, public CommonVerticalButtons::Mixin<FMScree
      */
     void createCommonVerticalButtonsWithCustomMemo();
 
-    /**
-     * @brief Mini Audio Display komponens létrehozása
-     * @details A config alapján létrehozza a megfelelő típusú mini audio display-t
-     */
-    void createMiniAudioDisplay();
-
-    /**
-     * @brief Audio display módok közötti váltás
-     */
-    void cycleThroughAudioModes();
-
-    /**
-     * @brief Audio mód megjelenítendő nevének lekérése
-     */
-    String getAudioModeDisplayName(MiniAudioDisplayType mode);
-
     // ===================================================================
     // Event-driven gombállapot szinkronizálás
     // ===================================================================
@@ -198,11 +181,7 @@ class FMScreen : public RadioScreen, public CommonVerticalButtons::Mixin<FMScree
      */
     std::shared_ptr<StereoIndicator> stereoIndicator;
 
-    /**
-     * @brief Mini audio display komponens
-     * @details Kis méretű spektrum analizátor vagy VU meter a képernyő alján
-     */
-    std::shared_ptr<MiniAudioDisplay> miniAudioDisplay; // ===================================================================
+    // ===================================================================
     // RDS komponens kezelés
     // ===================================================================
 

@@ -38,9 +38,6 @@ ScreenManager *screenManager = nullptr;
 #include "Si4735Manager.h"
 Si4735Manager *si4735Manager = nullptr; // Si4735Manager: NEM lehet (hardware inicializálás miatt) statikus, mert HW inicializálások is vannak benne
 
-//------------------ Core1 Audio Processing
-#include "Core1Logic.h"
-
 //------------------- Rotary Encoder
 #include <RPi_Pico_TimerInterrupt.h>
 RPI_PICO_Timer rotaryTimer(0); // 0-ás timer használata

@@ -17,9 +17,6 @@
 #ifndef __AM_SCREEN_H
 #define __AM_SCREEN_H
 #include "CommonVerticalButtons.h"
-#include "MiniAudioDisplay.h"
-#include "MiniSpectrumAnalyzer.h"
-#include "MiniVuMeter.h"
 #include "RadioScreen.h"
 #include "UIButton.h"
 #include "UIHorizontalButtonBar.h"
@@ -63,9 +60,11 @@ class AMScreen : public RadioScreen, public CommonVerticalButtons::Mixin<AMScree
      * - Event-driven gombkezelés beállítás
      * - MW band aktiválás alapértelmezettként
      */
-    AMScreen(TFT_eSPI &tft, Si4735Manager &si4735Manager); /**
-                                                            * @brief Virtuális destruktor - Automatikus cleanup
-                                                            */
+    AMScreen(TFT_eSPI &tft, Si4735Manager &si4735Manager);
+
+    /**
+     * @brief Virtuális destruktor - Automatikus cleanup
+     */
     virtual ~AMScreen();
 
     // ===================================================================
@@ -148,22 +147,6 @@ class AMScreen : public RadioScreen, public CommonVerticalButtons::Mixin<AMScree
     void layoutComponents();
 
     /**
-     * @brief Mini Audio Display komponens létrehozása
-     * @details A config alapján létrehozza a megfelelő típusú mini audio display-t
-     */
-    void createMiniAudioDisplay();
-
-    /**
-     * @brief Audio display módok közötti váltás
-     */
-    void cycleThroughAudioModes();
-
-    /**
-     * @brief Audio mód megjelenítendő nevének lekérése
-     */
-    String getAudioModeDisplayName(MiniAudioDisplayType mode);
-
-    /**
      * @brief Frissíti a FreqDisplay szélességét az aktuális band típus alapján
      * @details Dinamikusan állítja be a frekvencia kijelző szélességét
      */
@@ -239,18 +222,6 @@ class AMScreen : public RadioScreen, public CommonVerticalButtons::Mixin<AMScree
      * @details AM specifikus funkcionalitás
      */
     void handleStepButton(const UIButton::ButtonEvent &event);
-
-    // ===================================================================
-    // UI komponens objektumok - Smart pointer kezelés
-    // ===================================================================
-
-    /**
-     * @brief Mini audio display komponens
-     * @details Kis méretű spektrum analizátor vagy VU meter a képernyő alján
-     */
-    std::shared_ptr<MiniAudioDisplay> miniAudioDisplay;
-
-    // A horizontalButtonBar most a RadioScreen-ben van deklarálva
 };
 
 #endif // __AM_SCREEN_H

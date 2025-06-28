@@ -105,11 +105,6 @@ void FMScreen::layoutComponents() {
     createSMeterComponent(smeterBounds);
 
     // ===================================================================
-    // Mini Audio Display komponens létrehozása
-    // ===================================================================
-    createMiniAudioDisplay();
-
-    // ===================================================================
     // Gombsorok létrehozása - Event-driven architektúra
     // ===================================================================
     createCommonVerticalButtonsWithCustomMemo(); // ButtonsGroupManager alapú függőleges gombsor egyedi Memo kezelővel
@@ -195,13 +190,6 @@ void FMScreen::handleOwnLoop() {
             rdsComponent->updateRDS();
             lastRdsCall = currentTime;
         }
-    }
-
-    // ===================================================================
-    // Mini Audio Display frissítése
-    // ===================================================================
-    if (miniAudioDisplay) {
-        miniAudioDisplay->update();
     }
 
     // Néhány adatot csak ritkábban frissítünk
@@ -465,113 +453,4 @@ void FMScreen::createCommonVerticalButtonsWithCustomMemo() {
 
     // Gombok létrehozása és elhelyezése
     ButtonsGroupManager<FMScreen>::layoutVerticalButtonGroup(customDefs, &createdVerticalButtons, 0, 0, 5, 60, 32, 3, 4);
-}
-
-// ===================================================================
-// Mini Audio Display komponens létrehozása
-// ===================================================================
-
-/**
- * @brief Mini Audio Display komponens létrehozása
- * @details A config alapján létrehozza a megfelelő típusú mini audio display-t
- */
-void FMScreen::createMiniAudioDisplay() {
-    extern Config config;
-
-    if (!config.data.audioEnabled) {
-        return; // Audio kikapcsolva
-    }
-
-    // Pozíció
-    Rect audioDisplayBounds(250, 50, 160, 80); // x, y, width, height
-
-    // Audio display típus a config alapján
-    MiniAudioDisplayType displayType = static_cast<MiniAudioDisplayType>(config.data.audioModeFM);
-
-    switch (displayType) {
-        case MiniAudioDisplayType::SPECTRUM_BARS:
-        case MiniAudioDisplayType::SPECTRUM_LINE:
-            miniAudioDisplay = std::make_shared<MiniSpectrumAnalyzer>(
-                tft, audioDisplayBounds, (displayType == MiniAudioDisplayType::SPECTRUM_BARS) ? MiniSpectrumAnalyzer::DisplayMode::BARS : MiniSpectrumAnalyzer::DisplayMode::LINE);
-            // FM mód frekvencia tartomány beállítása
-            static_cast<MiniSpectrumAnalyzer *>(miniAudioDisplay.get())->setFrequencyRange(300.0f, 15000.0f);
-            break;
-
-        case MiniAudioDisplayType::VU_METER:
-            miniAudioDisplay = std::make_shared<MiniVuMeter>(tft, audioDisplayBounds, MiniVuMeter::Style::HORIZONTAL_BAR);
-            break;
-
-        default:
-            // Alapértelmezett spektrum analizátor
-            miniAudioDisplay = std::make_shared<MiniSpectrumAnalyzer>(tft, audioDisplayBounds);
-            static_cast<MiniSpectrumAnalyzer *>(miniAudioDisplay.get())->setFrequencyRange(300.0f, 15000.0f);
-            break;
-    }
-
-    if (miniAudioDisplay) {
-        addChild(miniAudioDisplay);
-
-        // Touch callback beállítása a mód váltáshoz
-        miniAudioDisplay->setModeChangeCallback([this]() { cycleThroughAudioModes(); });
-
-        DEBUG("FMScreen: Mini audio display created (type: %d)\n", static_cast<int>(displayType));
-    }
-}
-
-/**
- * @brief Audio display módok közötti váltás
- */
-void FMScreen::cycleThroughAudioModes() {
-    extern Config config;
-
-    // Következő mód kiszámítása
-    int currentMode = config.data.audioModeFM;
-    int nextMode = currentMode + 1;
-
-    // Ha elértük a végét, visszatérünk az elejére (NONE után SPECTRUM_BARS)
-    if (nextMode > static_cast<int>(MiniAudioDisplayType::VU_METER)) {
-        nextMode = static_cast<int>(MiniAudioDisplayType::SPECTRUM_BARS);
-    }
-
-    // Config frissítése
-    config.data.audioModeFM = nextMode;
-
-    // Mód név meghatározása
-    String modeName = getAudioModeDisplayName(static_cast<MiniAudioDisplayType>(nextMode));
-
-    // Régi display eltávolítása
-    if (miniAudioDisplay) {
-        removeChild(miniAudioDisplay);
-        miniAudioDisplay.reset();
-    }
-
-    // Új display létrehozása
-    createMiniAudioDisplay();
-
-    // Mód kijelzés megjelenítése
-    if (miniAudioDisplay) {
-        miniAudioDisplay->showModeDisplay(modeName);
-    }
-
-    DEBUG("FMScreen: Audio mode changed to: %s (%d)\n", modeName.c_str(), nextMode);
-}
-
-/**
- * @brief Audio mód megjelenítendő nevének lekérése
- */
-String FMScreen::getAudioModeDisplayName(MiniAudioDisplayType mode) {
-    switch (mode) {
-        case MiniAudioDisplayType::SPECTRUM_BARS:
-            return "Spectrum Bars";
-        case MiniAudioDisplayType::SPECTRUM_LINE:
-            return "Spectrum Line";
-        case MiniAudioDisplayType::VU_METER:
-            return "VU Meter";
-        case MiniAudioDisplayType::WATERFALL:
-            return "Waterfall";
-        case MiniAudioDisplayType::OSCILLOSCOPE:
-            return "Oscilloscope";
-        default:
-            return "Audio Display";
-    }
 }

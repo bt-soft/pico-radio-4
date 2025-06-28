@@ -184,13 +184,6 @@ void AMScreen::handleOwnLoop() {
     // S-Meter (jelerősség) időzített frissítése - Közös RadioScreen implementáció
     // ===================================================================
     updateSMeter(false /* AM mód */);
-
-    // ===================================================================
-    // Mini Audio Display frissítése
-    // ===================================================================
-    if (miniAudioDisplay) {
-        miniAudioDisplay->update();
-    }
 }
 
 /**
@@ -315,12 +308,7 @@ void AMScreen::layoutComponents() {
     Rect smeterBounds(2, FreqDisplayY + FreqDisplay::FREQDISPLAY_HEIGHT, SMeterConstants::SMETER_WIDTH, 60);
     createSMeterComponent(smeterBounds);
 
-    // ===================================================================
-    // Mini Audio Display komponens létrehozása
-    // ===================================================================
-    createMiniAudioDisplay();
-
-    createCommonVerticalButtons(pSi4735Manager); // ButtonsGroupManager használata
+      createCommonVerticalButtons(pSi4735Manager); // ButtonsGroupManager használata
     createCommonHorizontalButtons();             // Alsó közös + AM specifikus vízszintes gombsor
 }
 
@@ -719,113 +707,4 @@ void AMScreen::updateFreqDisplayWidth() {
     }
 
     freqDisplayComp->setWidth(newWidth);
-}
-
-// ===================================================================
-// Mini Audio Display komponens létrehozása
-// ===================================================================
-
-/**
- * @brief Mini Audio Display komponens létrehozása
- * @details A config alapján létrehozza a megfelelő típusú mini audio display-t
- */
-void AMScreen::createMiniAudioDisplay() {
-    extern Config config;
-
-    if (!config.data.audioEnabled) {
-        return; // Audio kikapcsolva
-    }
-
-    // Pozíció számítása - az S-Meter jobb oldalán
-    Rect audioDisplayBounds(SMeterConstants::SMETER_WIDTH + 10, 110, 180, 60); // x, y, width, height
-
-    // Audio display típus a config alapján
-    MiniAudioDisplayType displayType = static_cast<MiniAudioDisplayType>(config.data.audioModeAM);
-
-    switch (displayType) {
-        case MiniAudioDisplayType::SPECTRUM_BARS:
-        case MiniAudioDisplayType::SPECTRUM_LINE:
-            miniAudioDisplay = std::make_shared<MiniSpectrumAnalyzer>(
-                tft, audioDisplayBounds, (displayType == MiniAudioDisplayType::SPECTRUM_BARS) ? MiniSpectrumAnalyzer::DisplayMode::BARS : MiniSpectrumAnalyzer::DisplayMode::LINE);
-            // AM mód frekvencia tartomány beállítása (kisebb sávszélesség)
-            static_cast<MiniSpectrumAnalyzer *>(miniAudioDisplay.get())->setFrequencyRange(300.0f, 6000.0f);
-            break;
-
-        case MiniAudioDisplayType::VU_METER:
-            miniAudioDisplay = std::make_shared<MiniVuMeter>(tft, audioDisplayBounds, MiniVuMeter::Style::HORIZONTAL_BAR);
-            break;
-
-        default:
-            // Alapértelmezett spektrum analizátor
-            miniAudioDisplay = std::make_shared<MiniSpectrumAnalyzer>(tft, audioDisplayBounds);
-            static_cast<MiniSpectrumAnalyzer *>(miniAudioDisplay.get())->setFrequencyRange(300.0f, 6000.0f);
-            break;
-    }
-
-    if (miniAudioDisplay) {
-        addChild(miniAudioDisplay);
-
-        // Touch callback beállítása a mód váltáshoz
-        miniAudioDisplay->setModeChangeCallback([this]() { cycleThroughAudioModes(); });
-
-        DEBUG("AMScreen: Mini audio display created (type: %d)\n", static_cast<int>(displayType));
-    }
-}
-
-/**
- * @brief Audio display módok közötti váltás
- */
-void AMScreen::cycleThroughAudioModes() {
-    extern Config config;
-
-    // Következő mód kiszámítása
-    int currentMode = config.data.audioModeAM;
-    int nextMode = currentMode + 1;
-
-    // Ha elértük a végét, visszatérünk az elejére (NONE után SPECTRUM_BARS)
-    if (nextMode > static_cast<int>(MiniAudioDisplayType::VU_METER)) {
-        nextMode = static_cast<int>(MiniAudioDisplayType::SPECTRUM_BARS);
-    }
-
-    // Config frissítése
-    config.data.audioModeAM = nextMode;
-
-    // Mód név meghatározása
-    String modeName = getAudioModeDisplayName(static_cast<MiniAudioDisplayType>(nextMode));
-
-    // Régi display eltávolítása
-    if (miniAudioDisplay) {
-        removeChild(miniAudioDisplay);
-        miniAudioDisplay.reset();
-    }
-
-    // Új display létrehozása
-    createMiniAudioDisplay();
-
-    // Mód kijelzés megjelenítése
-    if (miniAudioDisplay) {
-        miniAudioDisplay->showModeDisplay(modeName);
-    }
-
-    DEBUG("AMScreen: Audio mode changed to: %s (%d)\n", modeName.c_str(), nextMode);
-}
-
-/**
- * @brief Audio mód megjelenítendő nevének lekérése
- */
-String AMScreen::getAudioModeDisplayName(MiniAudioDisplayType mode) {
-    switch (mode) {
-        case MiniAudioDisplayType::SPECTRUM_BARS:
-            return "Spectrum Bars";
-        case MiniAudioDisplayType::SPECTRUM_LINE:
-            return "Spectrum Line";
-        case MiniAudioDisplayType::VU_METER:
-            return "VU Meter";
-        case MiniAudioDisplayType::WATERFALL:
-            return "Waterfall";
-        case MiniAudioDisplayType::OSCILLOSCOPE:
-            return "Oscilloscope";
-        default:
-            return "Audio Display";
-    }
 }
